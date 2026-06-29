@@ -2,11 +2,11 @@
 
 | 字段 | 内容 |
 |------|------|
-| 当前分支 | dev |
+| 当前分支 | feature/websocket |
 | 总任务数 | 18 |
-| 已完成 | 7 |
+| 已完成 | 9 |
 | 进行中 | 无 |
-| 下一步 | 任务 8：重构 index.html 数据读写 — 优先 API，降级 localStorage |
+| 下一步 | 任务 10：前端接入 WebSocket（index.html 连接 + 实时通知） |
 
 ---
 
@@ -17,4 +17,5 @@
 - [x] 任务 5：创建 server/storage.js — JSON 文件读写模块（读/写/列出所有会话）
 - [x] 任务 6：创建 server/routes/sessions.js — 会话 REST API（5 个接口）
 - [x] 任务 7：验证后端能启动 — /api/health 返回 ok，/api/sessions 返回 []
-- [ ] 任务 8：重构 index.html 数据读写 —— 优先调用后端 API，失败降级 localStorage
+- [x] 任务 8：重构 index.html 数据读写 — API 优先（双写），localStorage 降级
+- [x] 任务 9：WebSocket 通道 — server/ws.js（房间/广播/断连清理），挂载到 app.js

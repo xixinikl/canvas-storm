@@ -22,6 +22,9 @@ app.get('/api/health', (req, res) => {
 });
 
 // 启动服务
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`CanvasStorm 服务已启动 → http://localhost:${PORT}`);
 });
+
+// WebSocket 协作通道
+require('./ws')(server);
