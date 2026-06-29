@@ -16,11 +16,11 @@ router.get('/', (req, res) => {
 // POST /api/sessions — 创建新会话
 router.post('/', (req, res) => {
   try {
-    const { id, name, nodes, edges, createdAt } = req.body;
+    const { id, name } = req.body;
     if (!id || !name) {
       return res.status(400).json({ code: 400, message: '缺少 id 或 name' });
     }
-    const session = { id, name, nodes: nodes || [], edges: edges || [], createdAt: createdAt || new Date().toISOString() };
+    const session = { nodes: [], edges: [], createdAt: new Date().toISOString(), ...req.body };
     storage.saveSession(session);
     res.json({ code: 200, data: session });
   } catch (e) {
