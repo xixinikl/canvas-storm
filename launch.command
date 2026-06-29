@@ -20,4 +20,5 @@ fi
 
 echo "🚀 启动服务 → http://localhost:3000"
 echo ""
+open http://localhost:3000
 node server/app.js
