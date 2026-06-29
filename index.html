@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CanvasStorm - 头脑风暴画布</title>
+<style>
+:root {
+  --bg: #f0f2f5; --surface: #fafbfc; --surface2: #eef0f2;
+  --border: #e0e3e8; --text: #1b1e24; --text2: #6b7280;
+  --accent: #4361ee; --accent-light: #eff2ff;
+  --green: #059669; --orange: #d97706;
+  --red: #dc2626; --purple: #7c3aed;
+  --node-bg: #ffffff;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 20px rgba(0,0,0,0.06);
+  --shadow-lg: 0 12px 36px rgba(0,0,0,0.08);
+  --radius: 12px; --radius-sm: 8px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC","Microsoft YaHei",sans-serif;
+  height:100vh;overflow:hidden;user-select:none;display:flex;flex-direction:column;
+}
+
+/* 顶栏 */
+.toolbar{
+  height:44px;background:var(--surface);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 14px;gap:8px;
+  z-index:100;flex-shrink:0;box-shadow:var(--shadow-sm);
+}
+.toolbar .logo{font-weight:800;font-size:14px;letter-spacing:-0.02em;color:var(--text)}
+.toolbar .logo span{color:var(--accent)}
+.toolbar .sep{width:1px;height:18px;background:var(--border);margin:0 4px}
+.tb{
+  padding:5px 10px;border:none;border-radius:var(--radius-sm);
+  background:transparent;color:var(--text2);font-size:11px;
+  cursor:pointer;transition:all 0.15s;font-weight:500;white-space:nowrap;
+  display:flex;align-items:center;gap:4px;
+}
+.tb:hover{background:var(--surface2);color:var(--text)}
+.tb.pri{background:var(--accent);color:#fff;font-weight:600}
+.tb.pri:hover{filter:brightness(1.08)}
+.tb.warn:hover{background:rgba(220,38,38,0.08);color:var(--red)}
+.tb:disabled{opacity:0.35;pointer-events:none}
+.spacer{flex:1}
+.zoom-info{font-size:11px;color:var(--text2);min-width:46px;text-align:center;background:var(--surface2);border-radius:var(--radius-sm);padding:3px 8px}
+
+/* 主体 */
+.main-layout{flex:1;display:flex;overflow:hidden;position:relative}
+
+/* 左侧会话面板 */
+.session-panel{
+  width:240px;background:var(--surface);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;flex-shrink:0;transition:width 0.25s;
+}
+.session-panel.collapsed{width:0;overflow:hidden;border-right:none}
+.session-panel .sp-header{
+  padding:12px 14px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.sp-header h3{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em}
+.sp-header .new-session-btn{
+  width:26px;height:26px;border:none;border-radius:var(--radius-sm);background:var(--accent);color:#fff;
+  font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:filter 0.15s;
+}
+.sp-header .new-session-btn:hover{filter:brightness(1.1)}
+.session-list{flex:1;overflow-y:auto;padding:6px}
+.session-item{
+  padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;margin-bottom:2px;
+  border:1px solid transparent;transition:all 0.15s;display:flex;align-items:center;gap:8px;
+}
+.session-item:hover{background:var(--surface2)}
+.session-item.active{background:var(--accent-light);border-color:var(--accent)}
+.session-item .s-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:var(--accent)}
+.session-item .s-info{flex:1;min-width:0}
+.session-item .s-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.session-item .s-meta{font-size:10px;color:var(--text2);margin-top:2px}
+.session-item .s-del{
+  width:20px;height:20px;border:none;border-radius:3px;background:transparent;color:var(--text2);
+  cursor:pointer;font-size:13px;opacity:0;transition:all 0.15s;flex-shrink:0;
+}
+.session-item:hover .s-del{opacity:1}
+.session-item .s-del:hover{background:rgba(220,38,38,0.08);color:var(--red)}
+
+/* 画布区 */
+.canvas-wrapper{flex:1;position:relative;overflow:hidden}
+.canvas-container{
+  width:100%;height:100%;position:relative;overflow:hidden;
+  cursor:grab;background:var(--bg);
+}
+.canvas-container:active{cursor:grabbing}
+.canvas-container.panning{cursor:grabbing}
+.canvas-layer{position:absolute;top:0;left:0;transform-origin:0 0;width:12000px;height:12000px}
+.edges-svg{position:absolute;top:0;left:0;width:12000px;height:12000px;pointer-events:none;z-index:0}
+
+/* 网格背景（圆点图案） */
+.grid-bg{
+  position:absolute;top:0;left:0;width:12000px;height:12000px;
+  pointer-events:none;z-index:-1;
+  background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity: 0.22;
+}
+
+/* 输入引导遮罩 */
+.entry-overlay{
+  position:absolute;inset:0;z-index:400;
+  background:rgba(240,242,245,0.94);
+  display:flex;align-items:center;justify-content:center;
+  backdrop-filter:blur(8px);transition:opacity 0.4s,visibility 0.4s;
+}
+.entry-overlay.hidden{opacity:0;visibility:hidden;pointer-events:none}
+.entry-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:16px;padding:36px 30px;width:460px;
+  display:flex;flex-direction:column;gap:14px;
+  box-shadow:var(--shadow-lg);
+}
+.entry-card h2{font-size:24px;font-weight:800;text-align:center;letter-spacing:-0.02em;margin:0}
+.entry-card h2 span{color:var(--accent)}
+.entry-card .sub{text-align:center;font-size:12px;color:var(--text2);margin:-4px 0 4px}
+.entry-card .field-label{font-size:10px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:-8px}
+.entry-card textarea{
+  width:100%;min-height:90px;background:var(--bg);border:1px solid var(--border);
+  border-radius:var(--radius);color:var(--text);padding:12px;font-size:13px;
+  resize:vertical;font-family:inherit;line-height:1.65;
+}
+.entry-card textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(67,97,238,0.08)}
+.entry-card textarea::placeholder{color:var(--text2)}
+.param-row{display:flex;gap:8px;align-items:flex-end}
+.param-item{display:flex;flex-direction:column;gap:4px}
+.param-label{font-size:10px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+.param-item input{
+  background:var(--bg);border:1px solid var(--border);
+  border-radius:var(--radius-sm);color:var(--text);padding:8px 12px;font-size:13px;
+  text-align:center;font-weight:600;
+}
+.param-item input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(67,97,238,0.08)}
+.param-row select{
+  flex:1;background:var(--bg);border:1px solid var(--border);
+  border-radius:var(--radius-sm);color:var(--text);padding:8px 12px;font-size:13px;cursor:pointer;
+}
+.param-row select:focus{outline:none;border-color:var(--accent)}
+.api-row{display:flex;gap:6px;align-items:center}
+.api-row input{
+  flex:1;background:var(--bg);border:1px solid var(--border);
+  border-radius:var(--radius-sm);color:var(--text);padding:7px 10px;font-size:11px;
+}
+.api-row input:focus{outline:none;border-color:var(--accent)}
+.api-row button{
+  padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);
+  background:var(--surface2);color:var(--text2);font-size:11px;cursor:pointer;white-space:nowrap;
+}
+.api-row button:hover{border-color:var(--accent);color:var(--accent)}
+.btn-launch{
+  width:100%;padding:12px;border:none;border-radius:var(--radius);
+  background:var(--accent);color:#fff;font-weight:700;font-size:14px;
+  cursor:pointer;transition:all 0.15s;
+}
+.btn-launch:hover{filter:brightness(1.08)}
+.btn-launch:active{transform:scale(0.98)}
+.btn-launch.loading{opacity:0.7;pointer-events:none}
+.entry-footer{text-align:center;font-size:10px;color:var(--text2);line-height:1.6}
+
+/* 节点 */
+.node{
+  position:absolute;z-index:10;background:var(--node-bg);
+  border:1px solid var(--border);border-radius:var(--radius);
+  padding:14px 16px 14px 14px;width:240px;cursor:pointer;
+  transition:border-color 0.2s,box-shadow 0.2s,transform 0.15s;
+  box-shadow:var(--shadow-sm);
+  border-left:3px solid var(--border);
+}
+.node:hover{
+  border-color:var(--accent);border-left-color:var(--accent);
+  box-shadow:var(--shadow-md);transform:translateY(-1px);
+}
+.node.root{
+  width:380px;padding:18px 20px 16px 18px;
+  background:var(--node-bg);
+  border-color:var(--accent);border-left-color:var(--accent);
+  box-shadow:var(--shadow-md);
+}
+.node.selected{
+  border-color:var(--accent);border-left-color:var(--accent);
+  box-shadow:0 0 0 2px rgba(67,97,238,0.2),var(--shadow-md);
+}
+.node.thinking{
+  animation:thinking-pulse 1.8s ease-in-out infinite;
+}
+@keyframes thinking-pulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,0.35),var(--shadow-md);border-color:rgba(124,58,237,0.5)}
+  50%{box-shadow:0 0 0 12px rgba(124,58,237,0),var(--shadow-md);border-color:var(--purple)}
+}
+.node .node-title{
+  font-size:13px;font-weight:700;margin-bottom:5px;
+  display:flex;align-items:flex-start;gap:7px;line-height:1.4;
+  color:var(--text);
+}
+.node.root .node-title{font-size:17px}
+.node .node-title .icon{font-size:15px;flex-shrink:0;margin-top:1px;opacity:0.85}
+.node .node-desc{font-size:11px;color:var(--text2);line-height:1.55;margin-bottom:10px}
+.node .scores{display:flex;flex-direction:column;gap:4px}
+.score-row{display:flex;align-items:center;gap:7px;font-size:10px}
+.score-label{width:22px;color:var(--text2);text-align:right;flex-shrink:0;font-size:10px;font-weight:500}
+.score-track{flex:1;height:4px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.score-fill{height:100%;border-radius:3px}
+.score-fill.diff{background:var(--red)}
+.score-fill.inno{background:var(--purple)}
+.score-fill.prac{background:var(--green)}
+.score-val{width:26px;font-size:10px;text-align:left;font-weight:600;color:var(--text)}
+
+.node .category-tag{
+  font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;
+  padding:2px 8px;border-radius:10px;
+  display:inline-flex;align-items:center;gap:3px;
+  background:var(--accent-light);color:var(--accent);
+}
+
+.node .thinking-badge{
+  display:flex;align-items:center;gap:8px;font-size:12px;color:var(--purple);
+  margin-top:10px;font-weight:700;padding:8px 12px;
+  background:rgba(124,58,237,0.06);border-radius:8px;
+}
+
+/* 上下文菜单 */
+.ctx-menu{
+  position:fixed;z-index:500;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:var(--shadow-lg);padding:4px;min-width:140px;
+  animation:menuIn 0.12s ease-out;
+}
+@keyframes menuIn{from{opacity:0;transform:scale(0.92)}to{opacity:1;transform:scale(1)}}
+.ctx-menu-item{
+  padding:8px 12px;border-radius:var(--radius-sm);font-size:12px;cursor:pointer;
+  display:flex;align-items:center;gap:8px;transition:background 0.1s;font-weight:500;
+}
+.ctx-menu-item:hover{background:var(--accent-light)}
+.ctx-menu-item .mi-icon{font-size:14px;width:18px;text-align:center}
+.ctx-menu-item .mi-label{flex:1}
+.ctx-menu-item .mi-short{font-size:10px;color:var(--text2)}
+.ctx-menu-item.delete:hover{background:rgba(220,38,38,0.06);color:var(--red)}
+.ctx-menu-sep{height:1px;background:var(--border);margin:4px 0}
+
+/* Toast */
+.toast{
+  position:fixed;bottom:28px;left:50%;transform:translateX(-50%);
+  background:var(--text);color:#fff;border-radius:8px;
+  padding:10px 22px;font-size:12px;font-weight:500;
+  opacity:0;transition:opacity 0.3s;z-index:999;pointer-events:none;
+  box-shadow:0 4px 16px rgba(0,0,0,0.2);
+}
+.toast.show{opacity:1}
+
+/* 加载脉冲 */
+@keyframes thinking-pulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,0.3)}
+  50%{box-shadow:0 0 0 8px rgba(124,58,237,0)}
+}
+
+@keyframes nodeIn{
+  from{opacity:0;transform:scale(0.7) translateY(8px)}
+  to{opacity:1;transform:scale(1) translateY(0)}
+}
+.node.new{animation:nodeIn 0.4s cubic-bezier(0.34,1.56,0.64,1)}
+
+/* 脉冲点动画 */
+@keyframes dot-bounce{
+  0%,80%,100%{transform:scale(0)}
+  40%{transform:scale(1)}
+}
+.thinking-dots{display:inline-flex;gap:3px;align-items:center}
+.thinking-dots span{
+  width:5px;height:5px;background:var(--purple);border-radius:50%;
+  display:inline-block;animation:dot-bounce 1.2s infinite ease-in-out;
+}
+.thinking-dots span:nth-child(2){animation-delay:0.15s}
+.thinking-dots span:nth-child(3){animation-delay:0.3s}
+
+.spinner{
+  display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.25);
+  border-top-color:#fff;border-radius:50%;animation:spin 0.6s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* 全局思考状态栏 */
+.thinking-bar{
+  width:100%;padding:10px 0;
+  background:linear-gradient(90deg,rgba(124,58,237,0.12),rgba(124,58,237,0.18),rgba(124,58,237,0.12));
+  border-bottom:1px solid rgba(124,58,237,0.25);
+  animation:bar-shimmer 2s ease-in-out infinite;
+}
+@keyframes bar-shimmer{
+  0%,100%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+}
+.thinking-bar-inner{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  font-size:14px;font-weight:600;color:var(--purple);
+}
+.thinking-bar-dots{display:flex;gap:5px;align-items:center}
+.thinking-bar-dots span{
+  display:block;width:8px;height:8px;border-radius:50%;background:var(--purple);
+  animation:bar-dot 1.2s ease-in-out infinite;
+}
+.thinking-bar-dots span:nth-child(2){animation-delay:0.15s}
+.thinking-bar-dots span:nth-child(3){animation-delay:0.3s}
+@keyframes bar-dot{
+  0%,80%,100%{opacity:0.2;transform:scale(0.7)}
+  40%{opacity:1;transform:scale(1.2)}
+}
+</style>
+</head>
+<body>
+
+<!-- 顶栏 -->
+<div class="toolbar">
+  <div class="logo">Canvas<span>Storm</span></div>
+  <div class="sep"></div>
+  <button class="tb" onclick="toggleSessionPanel()">&#x2630; 会话列表</button>
+  <button class="tb" id="btnUndo" onclick="undo()" disabled>&#x21A9; 撤回</button>
+  <button class="tb" onclick="tidyLayout()">&#x25F0; 整理布局</button>
+  <button class="tb" onclick="fitView()">&#x2316; 适应画布</button>
+  <button class="tb" onclick="resetZoom()">1:1</button>
+  <button class="tb" onclick="exportMD()">导出MD</button>
+  <span class="spacer"></span>
+  <span class="zoom-info" id="zoomInfo">100%</span>
+</div>
+
+<!-- 全局思考状态栏 -->
+<div class="thinking-bar" id="thinkingBar" style="display:none">
+  <div class="thinking-bar-inner">
+    <span class="thinking-bar-dots"><span></span><span></span><span></span></span>
+    大模型正在思考中，请稍候...
+  </div>
+</div>
+
+<div class="main-layout">
+
+  <!-- 左侧会话面板 -->
+  <div class="session-panel" id="sessionPanel">
+    <div class="sp-header">
+      <h3>我的会话</h3>
+      <button class="new-session-btn" onclick="createNewSession()" title="新建会话">+</button>
+    </div>
+    <div class="session-list" id="sessionList"></div>
+  </div>
+
+  <!-- 画布 -->
+  <div class="canvas-wrapper">
+    <div class="canvas-container" id="canvasContainer">
+      <div class="grid-bg"></div>
+      <div class="canvas-layer" id="canvasLayer">
+        <svg class="edges-svg" id="edgesSvg"></svg>
+      </div>
+
+      <!-- 输入引导遮罩 -->
+      <div class="entry-overlay" id="entryOverlay">
+        <div class="entry-card">
+          <h2>Canvas<span>Storm</span></h2>
+          <p class="sub">输入项目想法，AI 帮你发散创新功能点</p>
+          <div class="field-label">DeepSeek API Key</div>
+          <div class="api-row">
+            <input type="password" id="apiKeyInput" placeholder="sk-...">
+            <button onclick="saveApiKey()">保存</button>
+          </div>
+          <div class="field-label">描述你的项目</div>
+          <textarea id="projectInput" placeholder="例如：一个面向独立开发者的项目管理工具，需要任务看板、时间追踪、自动排期..."></textarea>
+          <div class="param-row">
+            <div class="param-item">
+              <span class="param-label">生成数量</span>
+              <input type="number" id="countInput" value="6" min="2" max="15" style="width:60px">
+            </div>
+            <select id="styleSelect">
+              <option value="balanced">均衡发散</option>
+              <option value="bold">大胆创新</option>
+              <option value="practical">务实优先</option>
+            </select>
+          </div>
+          <button class="btn-launch" id="btnLaunch" onclick="launchSession()">&#x2728; 开始发散</button>
+          <p class="entry-footer">点击节点弹出操作菜单 · 滚轮缩放 · 拖拽平移 · Ctrl+Z 撤回</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="ctx-menu" id="ctxMenu" style="display:none"></div>
+
+<script>
+// ============ 存储层 ============
+const SESSIONS_KEY='cs_sessions', ACTIVE_KEY='cs_active', API_KEY_KEY='cs_apikey';
+const MID=6000;
+
+function loadSessions(){try{return JSON.parse(localStorage.getItem(SESSIONS_KEY)||'[]')}catch(e){return[]}}
+function saveSessions(s){localStorage.setItem(SESSIONS_KEY,JSON.stringify(s))}
+function getActiveId(){return localStorage.getItem(ACTIVE_KEY)}
+function setActiveId(id){localStorage.setItem(ACTIVE_KEY,id)}
+
+// ============ 运行时状态 ============
+let currentSession=null, selectedId=null;
+let zoom=1, panX=0, panY=0;
+const MAX_UNDO=50;
+let undoStack=[];
+
+// DOM
+const canvasContainer=document.getElementById('canvasContainer');
+const canvasLayer=document.getElementById('canvasLayer');
+const edgesSvg=document.getElementById('edgesSvg');
+const zoomInfo=document.getElementById('zoomInfo');
+const entryOverlay=document.getElementById('entryOverlay');
+const ctxMenu=document.getElementById('ctxMenu');
+const btnUndo=document.getElementById('btnUndo');
+
+// ============ 撤回系统 ============
+function pushUndo() {
+  if(!currentSession) return;
+  undoStack.push({
+    nodes: JSON.parse(JSON.stringify(currentSession.nodes)),
+    edges: JSON.parse(JSON.stringify(currentSession.edges)),
+    nextId: currentSession.nextId,
+  });
+  if(undoStack.length>MAX_UNDO) undoStack.shift();
+  updateUndoButton();
+}
+function undo() {
+  if(undoStack.length===0) return;
+  const snap=undoStack.pop();
+  currentSession.nodes=snap.nodes;
+  currentSession.edges=snap.edges;
+  currentSession.nextId=snap.nextId;
+  selectedId=null;
+  saveCurrentSession();
+  renderAll();
+  closeContextMenu();
+  updateUndoButton();
+  showToast('已撤回');
+}
+function updateUndoButton(){btnUndo.disabled=undoStack.length===0}
+
+// ============ 会话管理 ============
+function createNewSession(){
+  const name=prompt('输入会话名称：');
+  if(!name||!name.trim())return;
+  const sessions=loadSessions();
+  const id='cs_'+Date.now();
+  sessions.unshift({id,name:name.trim(),nodes:[],edges:[],nextId:1,createdAt:new Date().toISOString()});
+  saveSessions(sessions);
+  switchToSession(id);
+  // 空会话 → 显示输入引导
+  entryOverlay.classList.remove('hidden');
+  document.getElementById('projectInput').value='';
+  document.getElementById('projectInput').focus();
+  showToast('请输入项目想法，然后点击「开始发散」');
+}
+function switchToSession(id){
+  const sessions=loadSessions();
+  const session=sessions.find(s=>s.id===id);
+  if(!session)return;
+  setActiveId(id);
+  currentSession=JSON.parse(JSON.stringify(session));
+  selectedId=null;undoStack=[];
+  const hasNodes=currentSession.nodes&&currentSession.nodes.length>0;
+  if(hasNodes){
+    entryOverlay.classList.add('hidden');
+  } else {
+    entryOverlay.classList.remove('hidden');
+    document.getElementById('projectInput').focus();
+  }
+  updateUndoButton();
+  renderAll();
+  renderSessionList();
+  if(hasNodes) fitView();
+}
+function saveCurrentSession(){
+  if(!currentSession)return;
+  const sessions=loadSessions();
+  const idx=sessions.findIndex(s=>s.id===currentSession.id);
+  if(idx!==-1)sessions[idx]={...sessions[idx],nodes:currentSession.nodes,edges:currentSession.edges,nextId:currentSession.nextId};
+  else sessions.unshift(currentSession);
+  saveSessions(sessions);
+  renderSessionList();
+}
+function deleteSession(id,e){
+  e.stopPropagation();
+  if(!confirm('确定删除这个会话？'))return;
+  const sessions=loadSessions().filter(s=>s.id!==id);
+  saveSessions(sessions);
+  if(getActiveId()===id){
+    if(sessions.length>0)switchToSession(sessions[0].id);
+    else{currentSession=null;selectedId=null;renderAll();entryOverlay.classList.remove('hidden')}
+  }
+  renderSessionList();
+}
+function renderSessionList(){
+  const sessions=loadSessions();
+  const list=document.getElementById('sessionList');
+  const activeId=currentSession?.id;
+  list.innerHTML=sessions.map(s=>`
+    <div class="session-item${s.id===activeId?' active':''}" onclick="switchToSession('${s.id}')">
+      <span class="s-dot"></span>
+      <div class="s-info">
+        <div class="s-name">${escHtml(s.name)}</div>
+        <div class="s-meta">${(s.nodes||[]).length} 节点 · ${fmtDate(s.createdAt)}</div>
+      </div>
+      <button class="s-del" onclick="deleteSession('${s.id}',event)">×</button>
+    </div>`).join('');
+}
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function fmtDate(iso){if(!iso)return'';const d=new Date(iso);return`${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`}
+function toggleSessionPanel(){document.getElementById('sessionPanel').classList.toggle('collapsed')}
+
+// ============ 节点布局算法（扇形辐射，动态防重叠） ============
+function layoutChildren(parentId) {
+  if(!currentSession) return;
+  const children = currentSession.nodes.filter(n => n.parentId === parentId);
+  if(children.length === 0) return;
+  const parent = currentSession.nodes.find(n => n.id === parentId);
+  if(!parent) return;
+
+  const isRoot = parent.parentId === null;
+  const pW = isRoot ? 380 : 240;
+  const pH = isRoot ? 200 : 160;
+  const cW = 240, cH = 160;
+  const gap = 24; // 节点间最小间距
+
+  const cx = parent.x + pW/2;
+  const cy = parent.y + pH/2;
+
+  // 按创新度排序（低→高，从左下到右上）
+  children.sort((a,b) => (a.innovation||0)-(b.innovation||0));
+
+  if(children.length === 1){
+    children[0].x = cx + 200 - cW/2;
+    children[0].y = cy - cH/2;
+    return;
+  }
+
+  // 动态计算：确保相邻节点不重叠
+  const arcSpan = isRoot ? 150 : 100;          // 扇形展开角度
+  const maxRadius = isRoot ? 700 : 550;         // 最大半径上限
+  const minRadius = isRoot ? 300 : 220;         // 最小半径
+
+  // 相邻节点角度间隔
+  const stepDeg = arcSpan / (children.length - 1);
+  const stepRad = stepDeg * Math.PI / 180;
+
+  // 不重叠所需最小半径：弦长 ≥ cW + gap
+  const needRadius = (cW + gap) / (2 * Math.sin(stepRad / 2));
+  const radius = Math.min(maxRadius, Math.max(minRadius, needRadius));
+
+  const startDeg = -arcSpan / 2;
+
+  children.forEach((child, i) => {
+    const angle = (startDeg + i * stepDeg) * Math.PI / 180;
+    child.x = cx + radius * Math.cos(angle) - cW/2;
+    child.y = cy + radius * Math.sin(angle) - cH/2;
+  });
+}
+
+// 整理所有节点布局
+function tidyLayout(){
+  if(!currentSession) return;
+  pushUndo();
+  // 收集所有有子节点的节点，从根开始递归整理
+  function tidyChildren(pid){
+    layoutChildren(pid);
+    const kids = currentSession.nodes.filter(n => n.parentId === pid);
+    kids.forEach(k => tidyChildren(k.id));
+  }
+  tidyChildren('root');
+  saveCurrentSession();
+  renderAll();
+  showToast('布局已整理');
+}
+
+function getDepth(nodeId) {
+  let d = 0;
+  let cur = nodeId;
+  while(cur) {
+    const node = currentSession.nodes.find(n=>n.id===cur);
+    if(!node || node.parentId===null) break;
+    cur = node.parentId;
+    d++;
+  }
+  return d;
+}
+
+// ============ 启动会话 ============
+async function launchSession(){
+  const input=document.getElementById('projectInput').value.trim();
+  if(!input){showToast('请输入项目想法');return}
+  const btn=document.getElementById('btnLaunch');
+  btn.classList.add('loading');
+  btn.innerHTML='<span class="spinner"></span> AI 发散中...';
+
+  const name=input.length>20?input.substring(0,20)+'...':input;
+  let session;
+
+  // 如果当前已有空会话，复用；否则新建
+  if(currentSession && currentSession.nodes && currentSession.nodes.length===0){
+    session = {
+      ...currentSession,
+      name,
+      nodes:[{id:'root',parentId:null,name:name,desc:input,x:MID,y:MID,thinking:true}],
+      nextId:1,
+    };
+    // 更新存储
+    const sessions=loadSessions();
+    const idx=sessions.findIndex(s=>s.id===currentSession.id);
+    if(idx!==-1) sessions[idx] = session;
+    saveSessions(sessions);
+  } else {
+    const id='cs_'+Date.now();
+    session={id,name,nodes:[{id:'root',parentId:null,name:name,desc:input,x:MID,y:MID,thinking:true}],edges:[],nextId:1,createdAt:new Date().toISOString()};
+    const sessions=loadSessions();
+    sessions.unshift(session);
+    saveSessions(sessions);
+  }
+
+  currentSession=JSON.parse(JSON.stringify(session));
+  selectedId=null;undoStack=[];
+  entryOverlay.classList.add('hidden');
+  renderAll();renderSessionList();
+  pushUndo();saveCurrentSession();
+
+  document.getElementById('projectInput').value='';
+
+  await divergeNodeAPI('root');
+  btn.classList.remove('loading');
+  btn.innerHTML='&#x2728; 开始发散';
+  fitView();
+}
+
+// ============ DeepSeek API ============
+function getApiKey(){return localStorage.getItem(API_KEY_KEY)||''}
+function saveApiKey(){const k=document.getElementById('apiKeyInput').value.trim();if(k){localStorage.setItem(API_KEY_KEY,k);showToast('API Key 已保存')}}
+
+function buildSystemPrompt(style){
+  const styleMap={
+    balanced:'发散时难度、创新、实用各维度均匀分布。',
+    bold:'优先产出高创新度(≥7分)的功能点。不少于一半的创新度≥7。',
+    practical:'优先产出高实用(≥7分)+低难度(≤5分)的功能点。',
+  };
+  return `你是顶级产品策略顾问，专门做"扎根式功能发散"。
+
+## 核心规则
+1. 只能围绕用户描述的项目领域延伸，不得偏离核心场景。
+2. 批内功能点必须差异化，本质相同的只保留更好的。
+
+## 评分标准
+创新度 1-10：1-3=市场标配，4-6=少量竞品有，7-8=鲜有同类，9-10=开创性。
+难度 1-10：1-3=几小时纯前端，4-6=1-2周需后端，7-8=1-2月复杂系统，9-10=自研模型/硬件。
+实用度 1-10：1-3=少数人偶尔用，4-6=部分用户需要，7-8=多数目标用户需要，9-10=核心刚需。
+
+## 输出格式
+只输出纯JSON数组，无markdown包裹。每个元素：
+{"name":"≤10字","desc":"25-50字","difficulty":整数,"innovation":一位小数,"practicality":一位小数,"category":"AI/ML|交互体验|效率工具|协作社交|数据分析|增长留存","impl_note":"15-30字技术方案"}
+
+风格：${styleMap[style]||styleMap.balanced}`;
+}
+
+function buildUserPrompt(userInput,count,depthContext){
+  return `项目：${userInput}\n\n生成 ${count} 个功能点。${depthContext||''}`;
+}
+
+async function callDeepSeek(systemPrompt,userPrompt){
+  const apiKey=getApiKey();
+  if(!apiKey)throw new Error('请先设置 DeepSeek API Key');
+  const resp=await fetch('https://api.deepseek.com/chat/completions',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},
+    body:JSON.stringify({model:'deepseek-chat',messages:[{role:'system',content:systemPrompt},{role:'user',content:userPrompt}],temperature:0.8,max_tokens:4096})
+  });
+  if(!resp.ok){const err=await resp.text();throw new Error(`API ${resp.status}: ${err}`)}
+  return (await resp.json()).choices?.[0]?.message?.content||'';
+}
+
+function parseIdeasFromResponse(content){
+  let json=content.trim();
+  const match=json.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if(match)json=match[1].trim();
+  try{const ideas=JSON.parse(json);if(Array.isArray(ideas))return ideas}catch(e){}
+  const arrMatch=json.match(/\[[\s\S]*\]/);
+  if(arrMatch)try{return JSON.parse(arrMatch[0])}catch(e2){}
+  throw new Error('无法解析AI返回的数据');
+}
+
+// ============ 发散（API） ============
+async function divergeNodeAPI(nodeId){
+  if(!currentSession)return;
+  const node=currentSession.nodes.find(n=>n.id===nodeId);
+  if(!node)return;
+  const count=parseInt(document.getElementById('countInput').value);
+  const style=document.getElementById('styleSelect').value;
+  const isRoot=node.parentId===null;
+
+  try{
+    const systemPrompt=buildSystemPrompt(style);
+    const depthContext=isRoot?'':`基于"${node.name}"做深度延伸子功能。`;
+    const userPrompt=buildUserPrompt(isRoot?node.desc:node.name,count,depthContext);
+    const content=await callDeepSeek(systemPrompt,userPrompt);
+    const ideas=parseIdeasFromResponse(content);
+    addChildren(nodeId,ideas);
+    return true;
+  }catch(err){
+    console.error(err);
+    showToast('API调用失败：'+err.message+'，使用本地备用数据');
+    addChildrenMock(nodeId);
+    return false;
+  }
+}
+
+function addChildren(nodeId,ideas){
+  if(!currentSession)return;
+  pushUndo();
+
+  // 清除 thinking 标记
+  const parentNode=currentSession.nodes.find(n=>n.id===nodeId);
+  if(parentNode) delete parentNode.thinking;
+
+  ideas.forEach((idea,i)=>{
+    const child={
+      id:'n'+(currentSession.nextId++),parentId:nodeId,
+      name:idea.name||'未命名',desc:idea.desc||'',
+      difficulty:Math.max(1,Math.min(10,Math.round(idea.difficulty||5))),
+      innovation:Math.max(1,Math.min(10,parseFloat((idea.innovation||5).toFixed(1)))),
+      practicality:Math.max(1,Math.min(10,parseFloat((idea.practicality||5).toFixed(1)))),
+      category:idea.category||'效率工具',impl_note:idea.impl_note||'',
+      x:0,y:0,
+    };
+    currentSession.nodes.push(child);
+    currentSession.edges.push({from:nodeId,to:child.id});
+  });
+
+  // 布局
+  layoutChildren(nodeId);
+
+  saveCurrentSession();
+  renderAll();
+
+  // 渐入动画
+  ideas.forEach((_,i)=>{
+    const childId='n'+(currentSession.nextId-ideas.length+i);
+    setTimeout(()=>{
+      const el=document.getElementById(childId);
+      if(el)el.classList.add('new');
+    },i*60);
+  });
+
+  updateUndoButton();
+  showToast(`已发散 ${ideas.length} 个功能点`);
+}
+
+// ============ Mock 降级 ============
+const MOCK_POOL=[
+  {name:'AI精力曲线学习',desc:'分析历史数据自动学习高效时段动态调整任务排期',difficulty:6,innovation:8.5,practicality:9.2,category:'AI/ML',impl_note:'滑动窗口统计+本地ONNX推理'},
+  {name:'语音快速建任务',desc:'自然语言语音转结构化任务自动识别日期和优先级',difficulty:3,innovation:6.5,practicality:8.0,category:'交互体验',impl_note:'SpeechRecognition API+正则提取'},
+  {name:'虚拟Coworking房间',desc:'多人同时静音在线工作集成番茄钟同步',difficulty:8,innovation:9.0,practicality:6.5,category:'协作社交',impl_note:'WebRTC P2P同步'},
+  {name:'跨时区协作感知',desc:'自动检测双方时区推荐最佳会议时间',difficulty:2,innovation:5.0,practicality:8.5,category:'效率工具',impl_note:'Intl.DateTimeFormat API'},
+  {name:'智能提醒引擎',desc:'结合紧急度和用户状态智能决定提醒时机',difficulty:5,innovation:7.5,practicality:9.0,category:'AI/ML',impl_note:'多因子加权模型'},
+  {name:'习惯养成追踪',desc:'重复任务转习惯计划可视化连续天数',difficulty:3,innovation:6.0,practicality:8.8,category:'增长留存',impl_note:'热力图+streak计数'},
+  {name:'多日历智能聚合',desc:'聚合多日历源语义去重合并相似事件',difficulty:4,innovation:6.5,practicality:8.5,category:'效率工具',impl_note:'OAuth2+NLP相似度'},
+  {name:'任务依赖图谱',desc:'识别任务依赖关系高亮关键路径',difficulty:7,innovation:8.0,practicality:7.5,category:'数据分析',impl_note:'DAG+拓扑排序'},
+  {name:'情绪感知排程',desc:'心情打卡后动态调整任务难度分配',difficulty:5,innovation:8.5,practicality:7.0,category:'AI/ML',impl_note:'情绪向量→任务匹配'},
+  {name:'一键周报生成',desc:'日程数据自动生成结构化周报',difficulty:3,innovation:6.0,practicality:9.0,category:'效率工具',impl_note:'模板引擎+数据聚合'},
+  {name:'场景化工作模式',desc:'预设深度工作/会议日模式自动调整布局',difficulty:3,innovation:5.5,practicality:8.2,category:'交互体验',impl_note:'CSS切换+通知过滤'},
+  {name:'进度预测引擎',desc:'基于历史速度预测里程碑达成时间',difficulty:6,innovation:7.5,practicality:8.0,category:'AI/ML',impl_note:'蒙特卡洛模拟'},
+  {name:'协作冲突自动调解',desc:'多人日程冲突自动提议替代方案',difficulty:7,innovation:8.2,practicality:7.5,category:'协作社交',impl_note:'约束满足问题求解'},
+  {name:'自动化规则引擎',desc:'IFTTT式触发动作规则任务逾期自动重排',difficulty:4,innovation:5.5,practicality:8.5,category:'效率工具',impl_note:'事件驱动引擎'},
+  {name:'自然语言查询',desc:'对话式查询项目状态如本周哪些任务延期',difficulty:5,innovation:7.0,practicality:8.5,category:'AI/ML',impl_note:'LLM+结构化查询'},
+];
+
+function addChildrenMock(nodeId){
+  if(!currentSession)return;
+  const node=currentSession.nodes.find(n=>n.id===nodeId);
+  if(!node)return;
+  const count=parseInt(document.getElementById('countInput').value);
+  const style=document.getElementById('styleSelect').value;
+  let pool=[...MOCK_POOL].sort(()=>Math.random()-0.5);
+  if(style==='bold')pool.sort((a,b)=>b.innovation-a.innovation);
+  if(style==='practical')pool.sort((a,b)=>b.practicality-a.practicality);
+  const ideas=pool.slice(0,count);
+
+  // 清除 thinking 标记
+  const parentNode=currentSession.nodes.find(n=>n.id===nodeId);
+  if(parentNode) delete parentNode.thinking;
+
+  pushUndo();
+  ideas.forEach(idea=>{
+    const child={
+      id:'n'+(currentSession.nextId++),parentId:nodeId,
+      name:idea.name,desc:idea.desc,
+      difficulty:idea.difficulty,innovation:idea.innovation,
+      practicality:idea.practicality,category:idea.category,impl_note:idea.impl_note,
+      x:0,y:0,
+    };
+    currentSession.nodes.push(child);
+    currentSession.edges.push({from:nodeId,to:child.id});
+  });
+  layoutChildren(nodeId);
+  saveCurrentSession();
+  renderAll();
+  ideas.forEach((_,i)=>{
+    const childId='n'+(currentSession.nextId-ideas.length+i);
+    setTimeout(()=>{const el=document.getElementById(childId);if(el)el.classList.add('new')},i*60);
+  });
+  updateUndoButton();
+}
+
+// ============ 渲染 ============
+function renderAll(){
+  renderNodes();renderEdges();
+  // 更新全局思考状态栏
+  const thinkingBar=document.getElementById('thinkingBar');
+  const hasThinking=currentSession?.nodes?.some(n=>n.thinking);
+  thinkingBar.style.display=hasThinking?'block':'none';
+}
+
+function renderNodes(){
+  canvasLayer.querySelectorAll('.node').forEach(el=>el.remove());
+  if(!currentSession)return;
+  currentSession.nodes.forEach(node=>{
+    const el=document.createElement('div');
+    const isRoot=node.parentId===null;
+    const isThinking=!!node.thinking;
+    el.className='node'+(isRoot?' root':'')+(selectedId===node.id?' selected':'')+(isThinking?' thinking':'');
+    el.id=node.id;
+    el.style.left=node.x+'px';
+    el.style.top=node.y+'px';
+    el.dataset.nodeId=node.id;
+
+    let statusHTML;
+    if(isThinking){
+      statusHTML=`
+      <div class="thinking-badge">
+        <div class="thinking-dots"><span></span><span></span><span></span></div>
+        大模型思考中...
+      </div>`;
+    } else if(isRoot){
+      statusHTML=''; // 根节点不发散时不显示评分
+    } else {
+      statusHTML=`
+      <div class="scores">
+        <div class="score-row"><span class="score-label">难度</span><div class="score-track"><div class="score-fill diff" style="width:${node.difficulty*10}%"></div></div><span class="score-val">${node.difficulty}/10</span></div>
+        <div class="score-row"><span class="score-label">创新</span><div class="score-track"><div class="score-fill inno" style="width:${node.innovation*10}%"></div></div><span class="score-val">${node.innovation}</span></div>
+        <div class="score-row"><span class="score-label">实用</span><div class="score-track"><div class="score-fill prac" style="width:${node.practicality*10}%"></div></div><span class="score-val">${node.practicality}</span></div>
+      </div>`;
+    }
+
+    el.innerHTML=`
+      <div class="node-title"><span class="icon">${isRoot?'🎯':'💡'}</span>${escHtml(node.name)}</div>
+      <div class="node-desc">${escHtml(node.desc)}</div>
+      ${statusHTML}
+      ${node.category?`<div class="category-tag">${escHtml(node.category)}</div>`:''}`;
+
+    // 点击节点 → 弹出上下文菜单
+    el.addEventListener('click',(e)=>{
+      e.stopPropagation();
+      selectNode(node.id);
+      if(isRoot) return; // 根节点不弹菜单
+      showContextMenu(e.clientX,e.clientY,node);
+    });
+
+    // 双击节点 → 直接发散
+    el.addEventListener('dblclick',(e)=>{
+      e.stopPropagation();
+      closeContextMenu();
+      divergeNode(node.id);
+    });
+
+    // 拖拽
+    el.addEventListener('mousedown',(e)=>{
+      if(e.button!==0)return;
+      closeContextMenu();
+      startNodeDrag(e,node);
+    });
+
+    canvasLayer.appendChild(el);
+  });
+}
+
+function renderEdges(){
+  if(!currentSession){edgesSvg.innerHTML='';return}
+  let svg='';
+  currentSession.edges.forEach(e=>{
+    const fn=currentSession.nodes.find(n=>n.id===e.from);
+    const tn=currentSession.nodes.find(n=>n.id===e.to);
+    if(!fn||!tn)return;
+    const fromRoot=fn.parentId===null;
+    const toRoot=tn.parentId===null;
+    const fx=fn.x+(fromRoot?190:120), fy=fn.y+(fromRoot?100:80);
+    const tx=tn.x+(toRoot?190:120), ty=tn.y+(toRoot?100:80);
+    const cx1=fx+(tx-fx)*0.45, cy1=fy;
+    const cx2=tx-(tx-fx)*0.45, cy2=ty;
+    svg+=`<path d="M${fx},${fy} C${cx1},${cy1} ${cx2},${cy2} ${tx},${ty}" stroke="#bcc3ce" stroke-width="1.5" fill="none" stroke-dasharray="6,4" opacity="0.5"/>`;
+  });
+  edgesSvg.innerHTML=svg;
+}
+
+// ============ 上下文菜单 ============
+function showContextMenu(x,y,node){
+  const canDiverge=!node.thinking && currentSession;
+  ctxMenu.innerHTML=`
+    <div class="ctx-menu-item${canDiverge?'':' disabled'}" ${canDiverge?`onclick="closeContextMenu();divergeNode('${node.id}')"`:`onclick="closeContextMenu()"`}>
+      <span class="mi-icon">↻</span><span class="mi-label">发散子功能</span><span class="mi-short">${node.thinking?'思考中...':'双击'}</span>
+    </div>
+    <div class="ctx-menu-sep"></div>
+    <div class="ctx-menu-item delete" onclick="closeContextMenu();deleteNode('${node.id}')">
+      <span class="mi-icon">×</span><span class="mi-label">删除节点</span><span class="mi-short">Del</span>
+    </div>`;
+  ctxMenu.style.display='block';
+  // 确保菜单在视口内
+  const mw=ctxMenu.offsetWidth||150, mh=ctxMenu.offsetHeight||100;
+  let lx=x, ly=y;
+  if(x+mw>window.innerWidth)lx=window.innerWidth-mw-8;
+  if(y+mh>window.innerHeight)ly=window.innerHeight-mh-8;
+  ctxMenu.style.left=lx+'px';
+  ctxMenu.style.top=ly+'px';
+}
+
+function closeContextMenu(){ctxMenu.style.display='none'}
+document.addEventListener('click',(e)=>{
+  if(!ctxMenu.contains(e.target)&&!e.target.closest('.node'))closeContextMenu();
+});
+
+// ============ 节点操作 ============
+function divergeNode(nodeId){
+  if(!currentSession)return;
+  const node=currentSession.nodes.find(n=>n.id===nodeId);
+  if(!node)return;
+  // 设置思考中标记
+  node.thinking=true;
+  saveCurrentSession();
+  renderAll();
+  divergeNodeAPI(nodeId);
+}
+
+function deleteNode(nodeId){
+  if(!currentSession)return;
+  const node=currentSession.nodes.find(n=>n.id===nodeId);
+  if(!node||node.parentId===null)return; // 不能删根节点
+
+  pushUndo();
+
+  // 递归删除子节点
+  const delRecursive=(id)=>{
+    currentSession.nodes.filter(n=>n.parentId===id).forEach(c=>{
+      delRecursive(c.id);
+      currentSession.nodes=currentSession.nodes.filter(n=>n.id!==c.id);
+      currentSession.edges=currentSession.edges.filter(e=>e.to!==c.id);
+    });
+  };
+  delRecursive(nodeId);
+  currentSession.nodes=currentSession.nodes.filter(n=>n.id!==nodeId);
+  currentSession.edges=currentSession.edges.filter(e=>e.from!==nodeId&&e.to!==nodeId);
+
+  if(selectedId===nodeId)selectedId=null;
+  renderAll();
+  saveCurrentSession();
+  updateUndoButton();
+  showToast('已删除节点');
+}
+
+function selectNode(id){
+  selectedId=id;
+  document.querySelectorAll('.node').forEach(el=>el.classList.toggle('selected',el.dataset.nodeId===id));
+}
+
+// ============ 节点拖拽 ============
+let dragNode=null, dsx,dsy,nsx,nsy,wasDragged=false;
+function startNodeDrag(e,node){
+  dragNode=node;wasDragged=false;
+  dsx=e.clientX;dsy=e.clientY;nsx=node.x;nsy=node.y;
+  selectNode(node.id);
+}
+window.addEventListener('mousemove',(e)=>{
+  if(!dragNode)return;
+  const dx=(e.clientX-dsx)/zoom, dy=(e.clientY-dsy)/zoom;
+  if(Math.abs(dx)>2||Math.abs(dy)>2)wasDragged=true;
+  dragNode.x=nsx+dx;dragNode.y=nsy+dy;
+  const el=document.getElementById(dragNode.id);
+  if(el){el.style.left=dragNode.x+'px';el.style.top=dragNode.y+'px'}
+  renderEdges();
+});
+window.addEventListener('mouseup',()=>{
+  if(dragNode&&wasDragged){
+    pushUndo();
+    saveCurrentSession();
+    updateUndoButton();
+  }
+  dragNode=null;
+});
+
+// ============ 画布平移/缩放 ============
+let isPanning=false, pStart, panOX, panOY;
+canvasContainer.addEventListener('mousedown',(e)=>{
+  if(e.target===canvasContainer||e.target.classList.contains('grid-bg')||e.target===canvasLayer||e.target===edgesSvg){
+    isPanning=true;canvasContainer.classList.add('panning');
+    pStart={x:e.clientX,y:e.clientY};panOX=panX;panOY=panY;
+  }
+});
+window.addEventListener('mousemove',(e)=>{
+  if(!isPanning)return;
+  panX=panOX+(e.clientX-pStart.x);panY=panOY+(e.clientY-pStart.y);
+  applyTransform();
+});
+window.addEventListener('mouseup',()=>{isPanning=false;canvasContainer.classList.remove('panning')});
+canvasContainer.addEventListener('wheel',(e)=>{
+  e.preventDefault();
+  const rect=canvasContainer.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  const oldZ=zoom;
+  const newZ=Math.max(0.12,Math.min(3,oldZ*(1-e.deltaY*0.001)));
+  panX=mx-(mx-panX)*(newZ/oldZ);
+  panY=my-(my-panY)*(newZ/oldZ);
+  zoom=newZ;applyTransform();
+});
+function applyTransform(){
+  canvasLayer.style.transform=`translate(${panX}px,${panY}px) scale(${zoom})`;
+  zoomInfo.textContent=Math.round(zoom*100)+'%';
+}
+
+// ============ 视图 ============
+function fitView(){
+  if(!currentSession||currentSession.nodes.length===0)return;
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  currentSession.nodes.forEach(n=>{
+    const w=n.parentId===null?300:240;
+    if(n.x<minX)minX=n.x;if(n.y<minY)minY=n.y;
+    if(n.x+w>maxX)maxX=n.x+w;if(n.y+200>maxY)maxY=n.y+200;
+  });
+  const rect=canvasContainer.getBoundingClientRect();
+  const cw=maxX-minX+200,ch=maxY-minY+200;
+  const zx=rect.width/cw,zy=rect.height/ch;
+  zoom=Math.max(0.15,Math.min(zx,zy,1.2));
+  panX=rect.width/2-(minX+cw/2)*zoom;
+  panY=rect.height/2-(minY+ch/2)*zoom;
+  applyTransform();
+}
+function resetZoom(){zoom=1;panX=0;panY=0;applyTransform()}
+
+// ============ 导出 ============
+function exportMD(){
+  if(!currentSession||currentSession.nodes.length<=1){showToast('没有可导出的内容');return}
+  const root=currentSession.nodes.find(n=>n.parentId===null);
+  let md=`# ${root?.name||'头脑风暴'}\n\n> ${root?.desc||''}\n\n`;
+  function w(pid,d){
+    currentSession.nodes.filter(n=>n.parentId===pid).forEach(c=>{
+      md+=`${'#'.repeat(Math.min(d+2,4))} ${c.name}\n\n`;
+      md+=`- 分类: ${c.category}\n- 难度: ${c.difficulty}/10 · 创新: ${c.innovation}/10 · 实用: ${c.practicality}/10\n- ${c.desc}\n`;
+      if(c.impl_note)md+=`- 实现: ${c.impl_note}\n`;
+      md+='\n';w(c.id,d+1);
+    });
+  }
+  if(root)w(root.id,0);
+  downloadFile('brainstorm_'+currentSession.name.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g,'_')+'.md',md);
+  showToast('已导出 Markdown');
+}
+function downloadFile(fn,ct){const b=new Blob([ct],{type:'text/plain'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=fn;a.click();URL.revokeObjectURL(u)}
+
+// ============ Toast ============
+let tt;
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2200)}
+
+// ============ 键盘 ============
+window.addEventListener('keydown',(e)=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;
+  if(e.key==='f'||e.key==='F')fitView();
+  if(e.key==='0')resetZoom();
+  if((e.key==='z'||e.key==='Z')&&(e.metaKey||e.ctrlKey)){e.preventDefault();undo();return}
+  if(e.key==='Delete'&&selectedId){
+    deleteNode(selectedId);
+  }
+  if(e.key==='Escape')closeContextMenu();
+});
+
+// ============ 初始化 ============
+function init(){
+  document.getElementById('apiKeyInput').value=getApiKey();
+  const sessions=loadSessions();
+  const activeId=getActiveId();
+  let targetSession = null;
+  if(activeId) targetSession=sessions.find(s=>s.id===activeId);
+  if(!targetSession && sessions.length>0) targetSession=sessions[0];
+
+  if(targetSession){
+    switchToSession(targetSession.id);
+    // switchToSession 内部会根据有无节点决定显示/隐藏 entryOverlay
+  } else {
+    entryOverlay.classList.remove('hidden');
+  }
+  renderSessionList();
+}
+init();
+</script>
+</body>
+</html>
