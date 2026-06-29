@@ -5,12 +5,13 @@
 | 当前分支 | dev |
 | 总任务数 | 18 |
 | 已完成 | 3 |
-| 进行中 | 任务 4：创建 server/app.js |
-| 下一步 | 任务 4：创建 server/app.js — Express 入口 |
+| 进行中 | 任务 5：创建 server/storage.js |
+| 下一步 | 任务 5：创建 server/storage.js — JSON 文件读写模块 |
 
 ---
 
 ## 进度日志
 
 - [x] 任务 1-3：项目骨架完成 — package.json（Express/ws/dotenv）、.env.example、.gitignore
-- [ ] 任务 4：创建 server/app.js — Express 入口，加载中间件，启动 HTTP 服务
+- [x] 任务 4：创建 server/app.js — Express 入口，加载中间件，启动 HTTP 服务
+- [ ] 任务 5：创建 server/storage.js — JSON 文件读写模块（读/写/列出所有会话）
