@@ -1,0 +1,267 @@
+/**
+ * CanvasStorm 后端 REST API 集成测试
+ * 运行方式: node tests/api-backend.test.js
+ * 自动启动 Express 服务器 → 执行测试 → 关闭服务器
+ */
+
+const http = require('http');
+const path = require('path');
+
+// 设置测试专用存储目录（必须在 require routes 之前）
+process.env.DATA_DIR = path.join(__dirname, '..', 'data-test');
+
+// 独立构建 app（避免 app.js 的自动 listen）
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+const express = require('express');
+const app = express();
+app.use(express.json());
+app.use('/api/sessions', require('../server/routes/sessions'));
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+let server;
+let BASE;
+const createdIds = []; // 追踪创建的 session ID 用于清理
+
+// ============ 测试工具 ============
+let passed = 0;
+let failed = 0;
+const failures = [];
+
+function assert(condition, msg) {
+  if (condition) { passed++; return; }
+  failed++;
+  failures.push(msg);
+  console.error(`  FAIL: ${msg}`);
+}
+
+async function api(method, path, body) {
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(`${BASE}${path}`, opts);
+  const data = await res.json();
+  return { status: res.status, data };
+}
+
+function cleanup() {
+  const fs = require('fs');
+  const dir = process.env.DATA_DIR;
+  if (fs.existsSync(dir)) {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+// ============ 启动服务器 ============
+async function startServer() {
+  return new Promise((resolve, reject) => {
+    server = http.createServer(app);
+    server.listen(0, () => {
+      const port = server.address().port;
+      BASE = `http://localhost:${port}`;
+      resolve();
+    });
+    server.on('error', reject);
+  });
+}
+
+// ============ 测试用例 ============
+async function runTests() {
+  console.log('\n=== 测试 1: Health Check ===');
+  {
+    const { status, data } = await api('GET', '/api/health');
+    assert(status === 200, `health 返回 200，实际 ${status}`);
+    assert(data && data.status === 'ok', `health 返回 ok，实际 ${JSON.stringify(data)}`);
+  }
+
+  console.log('\n=== 测试 2: 空列表 ===');
+  {
+    const { status, data } = await api('GET', '/api/sessions');
+    assert(status === 200, `空列表返回 200，实际 ${status}`);
+    assert(data.code === 200, `code=200，实际 ${data.code}`);
+    assert(Array.isArray(data.data), 'data 是数组');
+    assert(data.data.length === 0, `空列表，实际长度 ${data.data.length}`);
+  }
+
+  console.log('\n=== 测试 3: 创建会话 (POST) ===');
+  {
+    const session = {
+      id: 'cs_test_001',
+      name: '测试会话 Alpha',
+      nodes: [{ id: 'n1', title: '节点A', x: 0, y: 0 }],
+      edges: [],
+      nextId: 2,
+      createdAt: new Date().toISOString(),
+    };
+    const { status, data } = await api('POST', '/api/sessions', session);
+    assert(status === 200, `创建返回 200，实际 ${status}`);
+    assert(data.code === 200, `code=200，实际 ${data.code}`);
+    assert(data.data.name === '测试会话 Alpha', `名称匹配，实际 ${data.data.name}`);
+    createdIds.push('cs_test_001');
+  }
+
+  console.log('\n=== 测试 4: 创建第二个会话 ===');
+  {
+    const session = {
+      id: 'cs_test_002',
+      name: '测试会话 Beta',
+      nodes: [],
+      edges: [],
+      nextId: 1,
+      createdAt: new Date().toISOString(),
+    };
+    const { status, data } = await api('POST', '/api/sessions', session);
+    assert(status === 200, `创建返回 200`);
+    createdIds.push('cs_test_002');
+  }
+
+  console.log('\n=== 测试 5: 获取列表 (含2条) ===');
+  {
+    const { status, data } = await api('GET', '/api/sessions');
+    assert(status === 200, `列表返回 200`);
+    assert(data.data.length === 2, `列表长度=2，实际 ${data.data.length}`);
+  }
+
+  console.log('\n=== 测试 6: 获取单个会话 (GET /:id) ===');
+  {
+    const { status, data } = await api('GET', '/api/sessions/cs_test_001');
+    assert(status === 200, `获取单个返回 200`);
+    assert(data.data.name === '测试会话 Alpha', '名称匹配');
+    assert(data.data.nodes.length === 1, `节点数=1，实际 ${data.data.nodes.length}`);
+    assert(data.data.nodes[0].title === '节点A', '节点标题匹配');
+    assert(data.data.nextId === 2, `nextId=2，实际 ${data.data.nextId}`);
+  }
+
+  console.log('\n=== 测试 7: 获取不存在的会话 (404) ===');
+  {
+    const { status, data } = await api('GET', '/api/sessions/cs_nonexist');
+    assert(status === 404, `返回 404，实际 ${status}`);
+    assert(data.code === 404, `code=404，实际 ${data.code}`);
+  }
+
+  console.log('\n=== 测试 8: 更新会话 (PUT) ===');
+  {
+    const updates = { name: '测试会话 Alpha(改)', nextId: 5 };
+    const { status, data } = await api('PUT', '/api/sessions/cs_test_001', updates);
+    assert(status === 200, `更新返回 200`);
+    assert(data.data.name === '测试会话 Alpha(改)', `名称已更新`);
+    assert(data.data.nextId === 5, `nextId=5，实际 ${data.data.nextId}`);
+    assert(data.data.nodes.length === 1, '原有节点未丢失');
+  }
+
+  console.log('\n=== 测试 9: 保存含大量节点/边的会话 ===');
+  {
+    const bigSession = {
+      id: 'cs_test_003',
+      name: '大会话',
+      nodes: Array.from({ length: 50 }, (_, i) => ({
+        id: `n${i}`, title: `节点${i}`, x: i * 10, y: i * 10,
+        score: i % 5 + 1, category: i % 3 === 0 ? '技术' : '市场',
+      })),
+      edges: Array.from({ length: 30 }, (_, i) => ({
+        id: `e${i}`, from: `n${i}`, to: `n${i + 1}`,
+      })),
+      nextId: 50,
+      createdAt: new Date().toISOString(),
+    };
+    const { status } = await api('POST', '/api/sessions', bigSession);
+    assert(status === 200, '大会话创建成功');
+    createdIds.push('cs_test_003');
+
+    // 读取验证
+    const { data: readBack } = await api('GET', '/api/sessions/cs_test_003');
+    assert(readBack.data.nodes.length === 50, `节点数=50，实际 ${readBack.data.nodes.length}`);
+    assert(readBack.data.edges.length === 30, `边数=30，实际 ${readBack.data.edges.length}`);
+  }
+
+  console.log('\n=== 测试 10: 删除会话 (DELETE) ===');
+  {
+    const { status } = await api('DELETE', '/api/sessions/cs_test_002');
+    assert(status === 200, `删除返回 200`);
+
+    // 验证已删除
+    const { status: s2, data: d2 } = await api('GET', '/api/sessions/cs_test_002');
+    assert(s2 === 404, `删除后 GET 返回 404，实际 ${s2}`);
+
+    // 列表应剩 2 条
+    const { data: list } = await api('GET', '/api/sessions');
+    assert(list.data.length === 2, `剩余 2 条，实际 ${list.data.length}`);
+  }
+
+  console.log('\n=== 测试 11: 删除不存在会话 ===');
+  {
+    const { status } = await api('DELETE', '/api/sessions/cs_nonexist');
+    assert(status === 404, `删除不存在返回 404`);
+  }
+
+  console.log('\n=== 测试 12: 创建缺字段请求 (400) ===');
+  {
+    const { status } = await api('POST', '/api/sessions', { name: '无ID' });
+    assert(status === 400, `缺 id 返回 400`);
+  }
+
+  console.log('\n=== 测试 13: 前后端数据完整性（模拟真实工作流） ===');
+  {
+    // 场景：用户创建会话 → 发散节点 → 保存 → 关闭 → 重新打开
+    const sessionId = 'cs_workflow_test';
+    createdIds.push(sessionId);
+
+    // Step 1: 创建
+    await api('POST', '/api/sessions', {
+      id: sessionId, name: '工作流测试',
+      nodes: [], edges: [], nextId: 1,
+      createdAt: new Date().toISOString(),
+    });
+
+    // Step 2: 添加3个节点
+    const nodes = [
+      { id: 'root', title: '产品规划', x: 0, y: 0, score: 5, category: '产品' },
+      { id: 'n1', title: '用户调研', x: 200, y: 100, score: 4, category: '调研' },
+      { id: 'n2', title: '竞品分析', x: 200, y: -100, score: 3, category: '调研' },
+    ];
+    await api('PUT', `/api/sessions/${sessionId}`, { nodes, edges: [], nextId: 3 });
+
+    // Step 3: 读取验证
+    const { data: reloaded } = await api('GET', `/api/sessions/${sessionId}`);
+    assert(reloaded.data.nodes.length === 3, `工作流节点=3`);
+    assert(reloaded.data.nodes[1].title === '用户调研', '节点1标题正确');
+    assert(reloaded.data.nodes[0].score === 5, 'root评分=5');
+  }
+
+  // 清理测试数据
+  console.log('\n--- 清理测试会话 ---');
+  for (const id of createdIds) {
+    await api('DELETE', `/api/sessions/${id}`);
+  }
+  const { data: finalList } = await api('GET', '/api/sessions');
+  assert(finalList.data.length === 0, `清理后列表为空，实际 ${finalList.data.length}`);
+
+  // 打印结果
+  console.log(`\n========================================`);
+  console.log(`  结果: ${passed} passed, ${failed} failed`);
+  if (failures.length > 0) {
+    console.log(`\n  失败详情:`);
+    failures.forEach(f => console.log(`    - ${f}`));
+  }
+  console.log(`========================================\n`);
+}
+
+// ============ 主流程 ============
+(async () => {
+  try {
+    cleanup();
+    await startServer();
+    console.log(`后端已启动: ${BASE}`);
+    await runTests();
+  } catch (e) {
+    console.error('测试异常:', e.message);
+    failed++;
+  } finally {
+    if (server) server.close();
+    cleanup();
+    process.exit(failed > 0 ? 1 : 0);
+  }
+})();
