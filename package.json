@@ -1,0 +1,17 @@
+{
+  "name": "canvas-storm",
+  "version": "1.0.0",
+  "description": "DeepSeek 头脑风暴画布 — 多人在线协作版",
+  "main": "server/app.js",
+  "scripts": {
+    "start": "node server/app.js",
+    "dev": "node --watch server/app.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "ws": "^8.18.0",
+    "dotenv": "^16.4.0"
+  },
+  "keywords": ["brainstorm", "mindmap", "ai"],
+  "license": "MIT"
+}
