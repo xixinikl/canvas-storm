@@ -312,6 +312,56 @@ body{
   0%,80%,100%{opacity:0.2;transform:scale(0.7)}
   40%{opacity:1;transform:scale(1.2)}
 }
+
+/* 数据恢复提示条 */
+.recover-banner{
+  background:linear-gradient(135deg,#fef3c7,#fde68a);border-bottom:1px solid #f59e0b;
+  padding:10px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+}
+.recover-msg{flex:1;font-size:11px;color:#92400e;min-width:0;line-height:1.5}
+.recover-btn{
+  font-size:10px;font-weight:600;padding:4px 10px;border:none;
+  border-radius:6px;background:#f59e0b;color:#fff;cursor:pointer;white-space:nowrap;
+}
+.recover-btn:hover{background:#d97706}
+.recover-close{
+  font-size:16px;border:none;background:transparent;color:#92400e;
+  cursor:pointer;padding:0 2px;line-height:1;
+}
+
+/* 导入弹窗 */
+.import-modal-overlay{
+  position:fixed;inset:0;z-index:600;
+  background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;
+  backdrop-filter:blur(4px);
+}
+.import-modal{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:16px;padding:28px 24px;width:480px;max-height:90vh;overflow-y:auto;
+  box-shadow:var(--shadow-lg);
+}
+.import-modal h3{font-size:18px;font-weight:700;margin-bottom:8px}
+.import-modal p{font-size:12px;color:var(--text2);margin-bottom:8px}
+.import-modal ol{font-size:11px;color:var(--text2);padding-left:18px;margin-bottom:12px;line-height:1.8}
+.import-modal ol code{
+  background:var(--accent-light);color:var(--accent);padding:1px 5px;
+  border-radius:3px;font-size:11px;word-break:break-all;
+}
+.import-modal textarea{
+  width:100%;min-height:160px;background:var(--bg);border:1px solid var(--border);
+  border-radius:var(--radius);color:var(--text);padding:12px;font-size:12px;
+  resize:vertical;font-family:monospace;line-height:1.5;margin-bottom:12px;
+}
+.import-modal textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(67,97,238,0.08)}
+.import-btns{display:flex;gap:8px;justify-content:flex-end}
+.import-cancel,.import-submit{
+  padding:7px 16px;border:none;border-radius:var(--radius-sm);font-size:12px;
+  font-weight:600;cursor:pointer;
+}
+.import-cancel{background:var(--surface2);color:var(--text2)}
+.import-cancel:hover{filter:brightness(0.95)}
+.import-submit{background:var(--accent);color:#fff}
+.import-submit:hover{filter:brightness(1.08)}
 </style>
 </head>
 <body>
@@ -342,6 +392,12 @@ body{
 
   <!-- 左侧会话面板 -->
   <div class="session-panel" id="sessionPanel">
+    <!-- 数据恢复提示条 -->
+    <div class="recover-banner" id="recoverBanner" style="display:none">
+      <div class="recover-msg">检测到本地无会话数据。是否有旧版 file:// 域下的数据需要恢复？</div>
+      <button class="recover-btn" onclick="showImportModal()">导入旧数据</button>
+      <button class="recover-close" onclick="dismissRecoverBanner()">&times;</button>
+    </div>
     <div class="sp-header">
       <h3>我的会话</h3>
       <button class="new-session-btn" onclick="createNewSession()" title="新建会话">+</button>
@@ -392,6 +448,26 @@ body{
 <div class="toast" id="toast"></div>
 <div class="ctx-menu" id="ctxMenu" style="display:none"></div>
 
+<!-- 数据导入弹窗 -->
+<div class="import-modal-overlay" id="importOverlay" style="display:none">
+  <div class="import-modal">
+    <h3>导入旧版数据</h3>
+    <p>如果之前用 file:// 协议打开过此页面，请按以下步骤操作：</p>
+    <ol>
+      <li>在浏览器新标签页打开之前的 file:// URL（如 file:///Users/.../index.html）</li>
+      <li>按 F12 打开开发者工具 → Console 标签</li>
+      <li>输入 <code>localStorage.getItem('cs_sessions')</code> 并回车</li>
+      <li>复制输出的 JSON 字符串，粘贴到下方</li>
+    </ol>
+    <textarea id="importData" placeholder='[{"id":"...","name":"...","nodes":[...],"edges":[...]...}]'></textarea>
+    <div class="import-btns">
+      <button onclick="dismissImportModal()" class="import-cancel">取消</button>
+      <button onclick="doImportData()" class="import-submit">导入</button>
+    </div>
+    <p id="importResult" style="margin-top:8px;font-size:12px;color:var(--green);display:none"></p>
+  </div>
+</div>
+
 <script>
 // ============ 存储层 ============
 const SESSIONS_KEY='cs_sessions', ACTIVE_KEY='cs_active', API_KEY_KEY='cs_apikey';
@@ -430,6 +506,43 @@ function loadSessions(){try{return JSON.parse(localStorage.getItem(SESSIONS_KEY)
 function saveSessions(s){localStorage.setItem(SESSIONS_KEY,JSON.stringify(s))}
 function getActiveId(){return localStorage.getItem(ACTIVE_KEY)}
 function setActiveId(id){localStorage.setItem(ACTIVE_KEY,id)}
+
+// ============ 数据恢复与导入 ============
+function showRecoverBannerIfNeeded(){
+  const sessions=loadSessions();
+  const banner=document.getElementById('recoverBanner');
+  if(banner && sessions.length===0 && localStorage.getItem('cs_recover_dismissed')!=='1'){
+    banner.style.display='flex';
+  }
+}
+function dismissRecoverBanner(){
+  document.getElementById('recoverBanner').style.display='none';
+  localStorage.setItem('cs_recover_dismissed','1');
+}
+function showImportModal(){document.getElementById('importOverlay').style.display='flex'}
+function dismissImportModal(){document.getElementById('importOverlay').style.display='none'}
+function doImportData(){
+  const raw=document.getElementById('importData').value.trim();
+  const result=document.getElementById('importResult');
+  if(!raw){showToast('请粘贴 JSON 数据');return}
+  let data;
+  try{data=JSON.parse(raw)}catch(e){showToast('JSON 格式错误，请重新粘贴');return}
+  if(!Array.isArray(data)){showToast('数据格式错误：需要数组');return}
+  const sessions=loadSessions();
+  let imported=0;
+  for(const s of data){
+    if(!s.id||!s.name){continue}
+    const exists=sessions.findIndex(x=>x.id===s.id);
+    if(exists>=0){sessions[exists]=s}else{sessions.push(s)}
+    imported++;
+  }
+  if(imported===0){showToast('未识别到有效会话数据');return}
+  saveSessions(sessions);
+  result.textContent='成功导入 '+imported+' 个会话';
+  result.style.display='block';
+  document.getElementById('importData').value='';
+  setTimeout(()=>{dismissImportModal();renderSessionList();},600);
+}
 
 // ============ 运行时状态 ============
 var currentSession=null, selectedId=null;
@@ -1135,6 +1248,7 @@ function init(){
     entryOverlay.classList.remove('hidden');
   }
   renderSessionList();
+  showRecoverBannerIfNeeded();
 }
 init();
 </script>
