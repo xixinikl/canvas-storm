@@ -2,9 +2,9 @@
 
 ## 第一阶段：项目骨架
 
-- [ ] 1. 创建 package.json（含 Express、ws、dotenv 依赖）
-- [ ] 2. 创建 .env.example 环境变量模板
-- [ ] 3. 创建 .gitignore（忽略 node_modules、.env、sessions 数据目录）
+- [x] 1. 创建 package.json（含 Express、ws、dotenv 依赖）
+- [x] 2. 创建 .env.example 环境变量模板
+- [x] 3. 创建 .gitignore（忽略 node_modules、.env、sessions 数据目录）
 
 ## 第二阶段：后端基础
 
