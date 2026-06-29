@@ -9,7 +9,7 @@
 ## 第二阶段：后端基础
 
 - [x] 4. 创建 server/app.js — Express 入口，加载中间件，启动 HTTP 服务
-- [ ] 5. 创建 server/storage.js — JSON 文件读写模块（读/写/列出所有会话）
+- [x] 5. 创建 server/storage.js — JSON 文件读写模块（读/写/列出所有会话）
 - [ ] 6. 创建 server/routes/sessions.js — 会话 REST API（GET 列表、POST 创建、GET 单个、PUT 更新、DELETE 删除）
 - [ ] 7. 验证后端能启动：npm install 后 node server/app.js 无报错
 
