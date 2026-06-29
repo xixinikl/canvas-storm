@@ -485,12 +485,13 @@ function switchToSession(id){
   const hasNodes=currentSession.nodes&&currentSession.nodes.length>0;
   if(hasNodes){
     entryOverlay.classList.add('hidden');
+    tidyLayout();
   } else {
     entryOverlay.classList.remove('hidden');
     document.getElementById('projectInput').focus();
   }
   updateUndoButton();
-  renderAll();
+  if(!hasNodes) renderAll();
   renderSessionList();
   if(hasNodes) fitView();
 }
