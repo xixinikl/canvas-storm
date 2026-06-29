@@ -144,17 +144,6 @@ body{
   border-radius:var(--radius-sm);color:var(--text);padding:8px 12px;font-size:13px;cursor:pointer;
 }
 .param-row select:focus{outline:none;border-color:var(--accent)}
-.api-row{display:flex;gap:6px;align-items:center}
-.api-row input{
-  flex:1;background:var(--bg);border:1px solid var(--border);
-  border-radius:var(--radius-sm);color:var(--text);padding:7px 10px;font-size:11px;
-}
-.api-row input:focus{outline:none;border-color:var(--accent)}
-.api-row button{
-  padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);
-  background:var(--surface2);color:var(--text2);font-size:11px;cursor:pointer;white-space:nowrap;
-}
-.api-row button:hover{border-color:var(--accent);color:var(--accent)}
 .btn-launch{
   width:100%;padding:12px;border:none;border-radius:var(--radius);
   background:var(--accent);color:#fff;font-weight:700;font-size:14px;
@@ -361,12 +350,7 @@ body{
       <div class="entry-overlay" id="entryOverlay">
         <div class="entry-card">
           <h2>Canvas<span>Storm</span></h2>
-          <p class="sub">输入项目想法，AI 帮你发散创新功能点</p>
-          <div class="field-label">DeepSeek API Key</div>
-          <div class="api-row">
-            <input type="password" id="apiKeyInput" placeholder="sk-...">
-            <button onclick="saveApiKey()">保存</button>
-          </div>
+          <p class="sub">输入项目想法，AI 帮你发散创新功能点（Key 已配置在后端）</p>
           <div class="field-label">描述你的项目</div>
           <textarea id="projectInput" placeholder="例如：一个面向独立开发者的项目管理工具，需要任务看板、时间追踪、自动排期..."></textarea>
           <div class="param-row">
@@ -394,7 +378,7 @@ body{
 
 <script>
 // ============ 存储层 ============
-const SESSIONS_KEY='cs_sessions', ACTIVE_KEY='cs_active', API_KEY_KEY='cs_apikey';
+const SESSIONS_KEY='cs_sessions', ACTIVE_KEY='cs_active';
 const MID=6000;
 const API_BASE=(()=>{
   if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return 'http://localhost:3000/api';
@@ -411,7 +395,7 @@ async function apiFetch(method,path,body){
 }
 
 // 启动时探测后端 + 拉取远程数据（远程优先）
-(async function initAPI(){
+async function pullRemoteSessions(){
   try{await apiFetch('GET','/health');apiOnline=true}catch(e){return}
   try{
     const list=await apiFetch('GET','/sessions');
@@ -424,7 +408,7 @@ async function apiFetch(method,path,body){
       localStorage.setItem(SESSIONS_KEY,JSON.stringify(full));
     }
   }catch(e){apiOnline=false}
-})();
+}
 
 function loadSessions(){try{return JSON.parse(localStorage.getItem(SESSIONS_KEY)||'[]')}catch(e){return[]}}
 function saveSessions(s){localStorage.setItem(SESSIONS_KEY,JSON.stringify(s))}
@@ -677,8 +661,6 @@ async function launchSession(){
 }
 
 // ============ DeepSeek API ============
-function getApiKey(){return localStorage.getItem(API_KEY_KEY)||''}
-function saveApiKey(){const k=document.getElementById('apiKeyInput').value.trim();if(k){localStorage.setItem(API_KEY_KEY,k);showToast('API Key 已保存')}}
 
 function buildSystemPrompt(style){
   const styleMap={
@@ -709,15 +691,9 @@ function buildUserPrompt(userInput,count,depthContext){
 }
 
 async function callDeepSeek(systemPrompt,userPrompt){
-  const apiKey=getApiKey();
-  if(!apiKey)throw new Error('请先设置 DeepSeek API Key');
-  const resp=await fetch('https://api.deepseek.com/chat/completions',{
-    method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},
-    body:JSON.stringify({model:'deepseek-chat',messages:[{role:'system',content:systemPrompt},{role:'user',content:userPrompt}],temperature:0.8,max_tokens:4096})
-  });
-  if(!resp.ok){const err=await resp.text();throw new Error(`API ${resp.status}: ${err}`)}
-  return (await resp.json()).choices?.[0]?.message?.content||'';
+  const resp=await apiFetch('POST','/storm',{systemPrompt,userPrompt,temperature:0.8,max_tokens:4096});
+  if(resp.code!==200)throw new Error(resp.error||'API 调用失败');
+  return resp.data?.choices?.[0]?.message?.content||'';
 }
 
 function parseIdeasFromResponse(content){
@@ -1120,8 +1096,8 @@ window.addEventListener('keydown',(e)=>{
 });
 
 // ============ 初始化 ============
-function init(){
-  document.getElementById('apiKeyInput').value=getApiKey();
+async function init(){
+  await pullRemoteSessions();
   const sessions=loadSessions();
   const activeId=getActiveId();
   let targetSession = null;
