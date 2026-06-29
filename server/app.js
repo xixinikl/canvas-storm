@@ -13,7 +13,10 @@ app.use(express.json());
 // 静态文件：前端页面
 app.use(express.static(path.join(__dirname, '..')));
 
-// 路由占位（后续任务填充）
+// 路由
+app.use('/api/sessions', require('./routes/sessions'));
+
+// 健康检查
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
