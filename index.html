@@ -476,10 +476,14 @@ function updateUndoButton(){btnUndo.disabled=undoStack.length===0}
 function createNewSession(){
   const name=prompt('输入会话名称：');
   if(!name||!name.trim())return;
-  const sessions=loadSessions();
   const id='cs_'+Date.now();
-  sessions.unshift({id,name:name.trim(),nodes:[],edges:[],nextId:1,createdAt:new Date().toISOString()});
+  const newSession={id,name:name.trim(),nodes:[],edges:[],nextId:1,createdAt:new Date().toISOString()};
+  const sessions=loadSessions();
+  sessions.unshift(newSession);
   saveSessions(sessions);
+  if(apiOnline){
+    (async()=>{try{await apiFetch('POST','/sessions',newSession)}catch(e){apiOnline=false}})();
+  }
   switchToSession(id);
   // 空会话 → 显示输入引导
   entryOverlay.classList.remove('hidden');
@@ -510,14 +514,20 @@ function saveCurrentSession(){
   if(!currentSession)return;
   const sessions=loadSessions();
   const idx=sessions.findIndex(s=>s.id===currentSession.id);
-  if(idx!==-1)sessions[idx]={...sessions[idx],nodes:currentSession.nodes,edges:currentSession.edges,nextId:currentSession.nextId};
+  if(idx!==-1)sessions[idx]={...sessions[idx],nodes:currentSession.nodes,edges:currentSession.edges,nextId:currentSession.nextId,name:currentSession.name};
   else sessions.unshift(currentSession);
   saveSessions(sessions);
+  if(apiOnline){
+    (async()=>{try{await apiFetch('PUT','/sessions/'+currentSession.id,currentSession)}catch(e){apiOnline=false}})();
+  }
   renderSessionList();
 }
-function deleteSession(id,e){
-  e.stopPropagation();
+async function deleteSession(id,e){
+  e&&e.stopPropagation();
   if(!confirm('确定删除这个会话？'))return;
+  if(apiOnline){
+    try{await apiFetch('DELETE','/sessions/'+id)}catch(e){apiOnline=false}
+  }
   const sessions=loadSessions().filter(s=>s.id!==id);
   saveSessions(sessions);
   if(getActiveId()===id){
