@@ -16,6 +16,7 @@ app.use(express.static(path.join(__dirname, '..')));
 // 路由
 app.use('/api/sessions', require('./routes/sessions'));
 app.use('/api/storm', require('./routes/storm'));
+app.use('/api/layout', require('./routes/layout'));
 
 // 健康检查
 app.get('/api/health', (req, res) => {

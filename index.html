@@ -311,6 +311,7 @@ body{
   <div class="sep"></div>
   <button class="tb" onclick="toggleSessionPanel()">&#x2630; 会话列表</button>
   <button class="tb" id="btnUndo" onclick="undo()" disabled>&#x21A9; 撤回</button>
+  <button class="tb pri" onclick="addManualNode()">+ 添加节点</button>
   <button class="tb" onclick="tidyLayout()">&#x25F0; 整理布局</button>
   <button class="tb" onclick="fitView()">&#x2316; 适应画布</button>
   <button class="tb" onclick="resetZoom()">1:1</button>
@@ -396,16 +397,19 @@ async function apiFetch(method,path,body){
 
 // 启动时探测后端 + 拉取远程数据（远程优先）
 async function pullRemoteSessions(){
-  try{await apiFetch('GET','/health');apiOnline=true}catch(e){return}
+  try{await apiFetch('GET','/health');apiOnline=true;console.log('[pull] API online, health OK')}catch(e){console.warn('[pull] health check failed:',e.message);return}
   try{
     const list=await apiFetch('GET','/sessions');
+    console.log('[pull] sessions list:',list);
     if(list.code===200&&list.data.length){
       const full=[];
       for(const s of list.data){
         const r=await apiFetch('GET',`/sessions/${s.id}`);
+        console.log('[pull] session',s.id,r.code);
         if(r.code===200)full.push(r.data);
       }
       localStorage.setItem(SESSIONS_KEY,JSON.stringify(full));
+      console.log('[pull] synced',full.length,'sessions to localStorage');
     }
   }catch(e){apiOnline=false}
 }
@@ -485,15 +489,16 @@ function switchToSession(id){
   const hasNodes=currentSession.nodes&&currentSession.nodes.length>0;
   if(hasNodes){
     entryOverlay.classList.add('hidden');
-    tidyLayout();
+    tidyLayout().then(() => {
+      updateUndoButton();
+      renderSessionList();
+      fitView();
+    });
   } else {
     entryOverlay.classList.remove('hidden');
     document.getElementById('projectInput').focus();
   }
-  updateUndoButton();
-  if(!hasNodes) renderAll();
-  renderSessionList();
-  if(hasNodes) fitView();
+  if(!hasNodes) { renderAll(); updateUndoButton(); renderSessionList(); }
 }
 function saveCurrentSession(){
   if(!currentSession)return;
@@ -539,81 +544,122 @@ function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(
 function fmtDate(iso){if(!iso)return'';const d=new Date(iso);return`${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`}
 function toggleSessionPanel(){document.getElementById('sessionPanel').classList.toggle('collapsed')}
 
-// ============ 节点布局算法（扇形辐射，动态防重叠） ============
-function layoutChildren(parentId) {
-  if(!currentSession) return;
-  const children = currentSession.nodes.filter(n => n.parentId === parentId);
-  if(children.length === 0) return;
-  const parent = currentSession.nodes.find(n => n.id === parentId);
-  if(!parent) return;
+// ============ 节点布局算法（Buchheim non-layered tidy tree / XMind Standard） ============
+// 参考: leungwensen/mindmap-layouts, "Drawing Non-layered Tidy Trees in Linear Time" (Buchheim 2006)
 
-  const isRoot = parent.parentId === null;
-  const pW = isRoot ? 380 : 240;
-  const pH = isRoot ? 200 : 160;
-  const cW = 240, cH = 160;
-  const gap = 24; // 节点间最小间距
+const PEM = 18;
+// 节点原始尺寸（层级越深越小）；之后 addGap 会加 hgap/vgap
+function getNodeRawSize(d) {
+  if (d === 0) return {w: 380, h: 200};
+  if (d === 1) return {w: 240, h: 160};
+  if (d === 2) return {w: 200, h: 130};
+  return {w: 170, h: 110};
+}
+function getHGap(d) { return d <= 1 ? 80 : 50; }
+function getVGap(d) { return d <= 1 ? 24 : 16; }
 
-  const cx = parent.x + pW/2;
-  const cy = parent.y + pH/2;
-
-  // 按创新度排序（低→高，从左下到右上）
-  children.sort((a,b) => (a.innovation||0)-(b.innovation||0));
-
-  if(children.length === 1){
-    children[0].x = cx + 200 - cW/2;
-    children[0].y = cy - cH/2;
-    return;
-  }
-
-  // 动态计算：确保相邻节点不重叠
-  const arcSpan = isRoot ? 150 : 100;          // 扇形展开角度
-  const maxRadius = isRoot ? 700 : 550;         // 最大半径上限
-  const minRadius = isRoot ? 300 : 220;         // 最小半径
-
-  // 相邻节点角度间隔
-  const stepDeg = arcSpan / (children.length - 1);
-  const stepRad = stepDeg * Math.PI / 180;
-
-  // 不重叠所需最小半径：弦长 ≥ cW + gap
-  const needRadius = (cW + gap) / (2 * Math.sin(stepRad / 2));
-  const radius = Math.min(maxRadius, Math.max(minRadius, needRadius));
-
-  const startDeg = -arcSpan / 2;
-
-  children.forEach((child, i) => {
-    const angle = (startDeg + i * stepDeg) * Math.PI / 180;
-    child.x = cx + radius * Math.cos(angle) - cW/2;
-    child.y = cy + radius * Math.sin(angle) - cH/2;
-  });
+// ---- TreeNode（包含布局所需完整属性）----
+function buildTreeNode(flatNode, depth) {
+  const raw = getNodeRawSize(depth);
+  const hgap = getHGap(depth), vgap = getVGap(depth);
+  return {
+    id: flatNode.id,
+    depth,
+    width: raw.w,         // 原始宽（addGap 后再扩展）
+    height: raw.h,
+    hgap, vgap,
+    x: 0, y: 0,
+    children: [],
+    parent: null,
+    _rawW: raw.w, _rawH: raw.h,
+  };
 }
 
-// 整理所有节点布局
-function tidyLayout(){
-  if(!currentSession) return;
-  pushUndo();
-  // 收集所有有子节点的节点，从根开始递归整理
-  function tidyChildren(pid){
-    layoutChildren(pid);
-    const kids = currentSession.nodes.filter(n => n.parentId === pid);
-    kids.forEach(k => tidyChildren(k.id));
+function buildTree(rootId, depth, nmap, vis) {
+  if (vis.has(rootId)) return null;
+  vis.add(rootId);
+  const fn = nmap.get(rootId);
+  if (!fn || fn._hidden) return null;
+  const tn = buildTreeNode(fn, depth);
+  const kids = currentSession.nodes.filter(n => n.parentId === rootId && !n._hidden);
+  kids.forEach(k => {
+    const c = buildTree(k.id, depth + 1, nmap, vis);
+    if (c) { c.parent = tn; tn.children.push(c); }
+  });
+  return tn;
+}
+
+// ---- mindmap-layouts API bridge ----
+// 将前端 TreeNode 转为纯 JSON（发给服务端布局 API）
+function treeToJSON(tn) {
+  const obj = { id: tn.id, depth: tn.depth };
+  if (tn.children.length) obj.children = tn.children.map(treeToJSON);
+  return obj;
+}
+
+async function xmindLayout() {
+  if (!currentSession) return;
+  const root = currentSession.nodes.find(n => n.parentId === null);
+  if (!root) return;
+  const nmap = new Map();
+  currentSession.nodes.forEach(n => { nmap.set(n.id, n); n._hidden = (n._expanded === false); });
+
+  const rootKids = currentSession.nodes.filter(n => n.parentId === root.id && !n._hidden);
+
+  // 构建完整树（Standard 布局会内部做左右分割）
+  const vis = new Set();
+  const fullTree = buildTreeNode(root, 0);
+  for (const kid of rootKids) {
+    const c = buildTree(kid.id, 1, nmap, vis);
+    if (c) { c.parent = fullTree; fullTree.children.push(c); }
   }
-  tidyChildren('root');
+
+  try {
+    const resp = await fetch('/api/layout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ root: treeToJSON(fullTree) })
+    });
+    const data = await resp.json();
+    if (data.error) { console.error('Layout API error:', data.error); return; }
+
+    // layout.getNodes() 返回: {id, x, y, hgap, vgap, actualWidth, actualHeight, depth}
+    // 前端 flat node 位置 = 内部左上角 = x+hgap, y+vgap
+    const layoutMap = new Map();
+    for (const ln of data.nodes) {
+      ln._ix = ln.x + ln.hgap;
+      ln._iy = ln.y + ln.vgap;
+      ln._rw = ln.actualWidth;
+      ln._rh = ln.actualHeight;
+      layoutMap.set(ln.id, ln);
+    }
+
+    for (const fn of currentSession.nodes) {
+      if (fn._hidden) continue;
+      const ln = layoutMap.get(fn.id);
+      if (ln) {
+        fn._depth = ln.depth;
+        fn.x = ln._ix;
+        fn.y = ln._iy;
+        fn._layoutW = ln._rw;
+        fn._layoutH = ln._rh;
+      }
+    }
+  } catch (err) {
+    console.error('Layout failed:', err);
+  }
+  currentSession.nodes.forEach(n => { delete n._hidden; });
+}
+
+async function tidyLayout() {
+  if (!currentSession) return;
+  pushUndo();
+  await xmindLayout();
   saveCurrentSession();
   renderAll();
   showToast('布局已整理');
 }
-
-function getDepth(nodeId) {
-  let d = 0;
-  let cur = nodeId;
-  while(cur) {
-    const node = currentSession.nodes.find(n=>n.id===cur);
-    if(!node || node.parentId===null) break;
-    cur = node.parentId;
-    d++;
-  }
-  return d;
-}
+function layoutChildren(pid) { return xmindLayout(); }
 
 // ============ 启动会话 ============
 async function launchSession(){
@@ -722,7 +768,7 @@ async function divergeNodeAPI(nodeId){
     const userPrompt=buildUserPrompt(isRoot?node.desc:node.name,count,depthContext);
     const content=await callDeepSeek(systemPrompt,userPrompt);
     const ideas=parseIdeasFromResponse(content);
-    addChildren(nodeId,ideas);
+    await addChildren(nodeId,ideas);
     return true;
   }catch(err){
     console.error(err);
@@ -732,7 +778,7 @@ async function divergeNodeAPI(nodeId){
   }
 }
 
-function addChildren(nodeId,ideas){
+async function addChildren(nodeId,ideas){
   if(!currentSession)return;
   pushUndo();
 
@@ -755,7 +801,7 @@ function addChildren(nodeId,ideas){
   });
 
   // 布局
-  layoutChildren(nodeId);
+  await layoutChildren(nodeId);
 
   saveCurrentSession();
   renderAll();
@@ -819,14 +865,15 @@ function addChildrenMock(nodeId){
     currentSession.nodes.push(child);
     currentSession.edges.push({from:nodeId,to:child.id});
   });
-  layoutChildren(nodeId);
-  saveCurrentSession();
-  renderAll();
-  ideas.forEach((_,i)=>{
-    const childId='n'+(currentSession.nextId-ideas.length+i);
-    setTimeout(()=>{const el=document.getElementById(childId);if(el)el.classList.add('new')},i*60);
+  layoutChildren(nodeId).then(() => {
+    saveCurrentSession();
+    renderAll();
+    ideas.forEach((_,i)=>{
+      const childId='n'+(currentSession.nextId-ideas.length+i);
+      setTimeout(()=>{const el=document.getElementById(childId);if(el)el.classList.add('new')},i*60);
+    });
+    updateUndoButton();
   });
-  updateUndoButton();
 }
 
 // ============ 渲染 ============
@@ -845,10 +892,15 @@ function renderNodes(){
     const el=document.createElement('div');
     const isRoot=node.parentId===null;
     const isThinking=!!node.thinking;
+    const depth = (node._depth !== undefined) ? node._depth : (isRoot ? 0 : 1);
+    const w = node._layoutW || getNodeRawSize(depth).w;
+    const h = node._layoutH || getNodeRawSize(depth).h;
     el.className='node'+(isRoot?' root':'')+(selectedId===node.id?' selected':'')+(isThinking?' thinking':'');
     el.id=node.id;
     el.style.left=node.x+'px';
     el.style.top=node.y+'px';
+    el.style.width=w+'px';
+    el.style.height=h+'px';
     el.dataset.nodeId=node.id;
 
     let statusHTML;
@@ -908,10 +960,14 @@ function renderEdges(){
     const fn=currentSession.nodes.find(n=>n.id===e.from);
     const tn=currentSession.nodes.find(n=>n.id===e.to);
     if(!fn||!tn)return;
-    const fromRoot=fn.parentId===null;
-    const toRoot=tn.parentId===null;
-    const fx=fn.x+(fromRoot?190:120), fy=fn.y+(fromRoot?100:80);
-    const tx=tn.x+(toRoot?190:120), ty=tn.y+(toRoot?100:80);
+    const fromDepth = (fn._depth !== undefined) ? fn._depth : (fn.parentId===null ? 0 : 1);
+    const toDepth = (tn._depth !== undefined) ? tn._depth : (tn.parentId===null ? 0 : 1);
+    const fw = fn._layoutW || getNodeRawSize(fromDepth).w;
+    const fh = fn._layoutH || getNodeRawSize(fromDepth).h;
+    const tw = tn._layoutW || getNodeRawSize(toDepth).w;
+    const th = tn._layoutH || getNodeRawSize(toDepth).h;
+    const fx=fn.x+fw/2, fy=fn.y+fh/2;
+    const tx=tn.x+tw/2, ty=tn.y+th/2;
     const cx1=fx+(tx-fx)*0.45, cy1=fy;
     const cx2=tx-(tx-fx)*0.45, cy2=ty;
     svg+=`<path d="M${fx},${fy} C${cx1},${cy1} ${cx2},${cy2} ${tx},${ty}" stroke="#bcc3ce" stroke-width="1.5" fill="none" stroke-dasharray="6,4" opacity="0.5"/>`;
@@ -946,6 +1002,56 @@ document.addEventListener('click',(e)=>{
 });
 
 // ============ 节点操作 ============
+function addManualNode(){
+  if(!currentSession) return showToast('请先创建或选择会话');
+  const name = prompt('请输入节点名称（≤15字）：');
+  if(!name || !name.trim()) return;
+  const trimmed = name.trim().substring(0,15);
+  pushUndo();
+
+  const parentId = selectedId || null;
+  // 自动计算位置：有父节点则放在父节点附近，无则放画布可见区域中心
+  let x = 0, y = 0;
+  if(parentId){
+    const parent = currentSession.nodes.find(n=>n.id===parentId);
+    if(parent){ x = parent.x + 280; y = parent.y; }
+  } else {
+    // 画布可见中心（考虑当前缩放和平移）
+    const wrapper = document.querySelector('.canvas-wrapper');
+    const r = wrapper.getBoundingClientRect();
+    const layer = document.querySelector('.canvas-layer');
+    const tx = parseFloat(layer.style.transform.replace(/[^0-9\-.,]/g,'').split(',')[4]||0);
+    const ty = parseFloat(layer.style.transform.replace(/[^0-9\-.,]/g,'').split(',')[5]||0);
+    x = (r.width/2 - tx) / zoom - 190;
+    y = (r.height/2 - ty) / zoom - 100;
+  }
+
+  const newNode = {
+    id: 'mn'+(currentSession.nextId++),
+    parentId,
+    name: trimmed,
+    desc: '',
+    difficulty: 5, innovation: 5, practicality: 5,
+    category: '效率工具',
+    x, y,
+  };
+  currentSession.nodes.push(newNode);
+  if(parentId) currentSession.edges.push({from:parentId, to:newNode.id});
+
+  if(parentId) layoutChildren(parentId).then(() => {
+    saveCurrentSession();
+    renderAll();
+    updateUndoButton();
+    showToast('已添加节点：'+trimmed);
+  });
+  else {
+    saveCurrentSession();
+    renderAll();
+    updateUndoButton();
+    showToast('已添加节点：'+trimmed);
+  }
+}
+
 function divergeNode(nodeId){
   if(!currentSession)return;
   const node=currentSession.nodes.find(n=>n.id===nodeId);
@@ -1047,9 +1153,11 @@ function fitView(){
   if(!currentSession||currentSession.nodes.length===0)return;
   let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
   currentSession.nodes.forEach(n=>{
-    const w=n.parentId===null?300:240;
-    if(n.x<minX)minX=n.x;if(n.y<minY)minY=n.y;
-    if(n.x+w>maxX)maxX=n.x+w;if(n.y+200>maxY)maxY=n.y+200;
+    const depth = (n._depth !== undefined) ? n._depth : (n.parentId===null ? 0 : 1);
+    const w = n._layoutW || getNodeRawSize(depth).w;
+    const h = n._layoutH || getNodeRawSize(depth).h;
+    if(n.x<minX)minX=n.x; if(n.y<minY)minY=n.y;
+    if(n.x+w>maxX)maxX=n.x+w; if(n.y+h>maxY)maxY=n.y+h;
   });
   const rect=canvasContainer.getBoundingClientRect();
   const cw=maxX-minX+200,ch=maxY-minY+200;
