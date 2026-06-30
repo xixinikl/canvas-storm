@@ -303,33 +303,13 @@ body{
   40%{opacity:1;transform:scale(1.2)}
 }
 
-/* 聚焦模式导航条 */
-.focus-nav{
-  display:flex;align-items:center;gap:10px;
-  padding:4px 12px;border-radius:var(--radius-sm);
-  background:var(--surface);border:1px solid var(--accent);
-  box-shadow:0 0 0 2px var(--accent-light);
-}
-.focus-breadcrumb{
-  font-size:12px;color:var(--text2);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px;
-}
-.focus-breadcrumb span{color:var(--accent);font-weight:600}
-.focus-controls{display:flex;gap:2px}
-.focus-btn{
-  width:28px;height:24px;border:none;border-radius:4px;
-  background:transparent;color:var(--text2);
-  font-size:13px;cursor:pointer;transition:all 0.15s;
-  display:flex;align-items:center;justify-content:center;
-  line-height:1;
-}
-.focus-btn:hover{background:var(--accent-light);color:var(--accent)}
-.focus-btn:active{background:var(--accent);color:#fff}
-.focus-btn.exit-btn:hover{background:rgba(220,38,38,0.1);color:var(--red)}
+/* 选中节点高亮 */
+.node.selected{border-color:var(--accent)!important;box-shadow:0 0 20px rgba(67,97,238,0.4)!important;z-index:20!important}
 
-/* 聚焦模式节点样式 */
-.node.focus-context-dim{opacity:0.25;filter:grayscale(0.6);pointer-events:none}
-.node.focus-active{border-color:var(--accent)!important;box-shadow:0 0 16px rgba(67,97,238,0.35)!important;z-index:20!important}
+/* 面包屑 & 提示 */
+.focus-breadcrumb{font-size:12px;color:var(--text2);white-space:nowrap;max-width:300px;overflow:hidden;text-overflow:ellipsis}
+.focus-breadcrumb span{color:var(--accent);font-weight:600}
+.focus-hint{font-size:11px;color:var(--text2);background:var(--accent-light);padding:2px 8px;border-radius:4px}
 </style>
 </head>
 <body>
@@ -346,18 +326,9 @@ body{
   <button class="tb" onclick="resetZoom()">1:1</button>
   <button class="tb" onclick="exportMD()">导出MD</button>
   <span class="spacer"></span>
+  <span class="focus-hint" id="focusHint" style="display:none">←→↑↓ 浏览节点 · Esc 显示全部</span>
+  <span class="focus-breadcrumb" id="focusBreadcrumb" style="display:none"></span>
   <span class="zoom-info" id="zoomInfo">100%</span>
-  <!-- 聚焦导航条 -->
-  <div class="focus-nav" id="focusNav" style="display:none">
-    <div class="focus-breadcrumb" id="focusBreadcrumb"></div>
-    <div class="focus-controls">
-      <button class="focus-btn" title="上一个兄弟 (←)" onclick="focusPrevSibling()">◀</button>
-      <button class="focus-btn" title="下一个兄弟 (→)" onclick="focusNextSibling()">▶</button>
-      <button class="focus-btn" title="进入子层 (↓)" onclick="focusDrillDown()">↓</button>
-      <button class="focus-btn" title="返回上层 (↑)" onclick="focusDrillUp()">↑</button>
-      <button class="focus-btn" title="显示全部 (Esc)" onclick="focusExit()">⊞</button>
-    </div>
-  </div>
 </div>
 
 <!-- 全局思考状态栏 -->
@@ -462,7 +433,6 @@ function setActiveId(id){localStorage.setItem(ACTIVE_KEY,id)}
 // ============ 运行时状态 ============
 var currentSession=null, selectedId=null;
 let zoom=1, panX=0, panY=0;
-var focusState = null; // { nodeId } — 当前聚焦的节点 ID
 const MAX_UNDO=50;
 let undoStack=[];
 
@@ -937,12 +907,6 @@ function renderNodes(){
     const w = node._layoutW || getNodeRawSize(depth).w;
     const h = node._layoutH || getNodeRawSize(depth).h;
     el.className='node'+(isRoot?' root':'')+(selectedId===node.id?' selected':'')+(isThinking?' thinking':'');
-    // 聚焦模式样式
-    if(focusState){
-      const {scopeIds} = focusInScope();
-      if(node.id===focusState.nodeId) el.className+=' focus-active';
-      else if(!scopeIds.has(node.id)) el.className+=' focus-context-dim';
-    }
     el.id=node.id;
     el.style.left=node.x+'px';
     el.style.top=node.y+'px';
@@ -982,11 +946,11 @@ function renderNodes(){
       showContextMenu(e.clientX,e.clientY,node);
     });
 
-    // 双击节点 → 进入聚焦模式
+    // 双击节点 → 发散
     el.addEventListener('dblclick',(e)=>{
       e.stopPropagation();
       closeContextMenu();
-      enterFocus(node.id);
+      divergeNode(node.id);
     });
 
     // 拖拽
@@ -1137,8 +1101,7 @@ function deleteNode(nodeId){
 }
 
 function selectNode(id){
-  selectedId=id;
-  document.querySelectorAll('.node').forEach(el=>el.classList.toggle('selected',el.dataset.nodeId===id));
+  selectAndZoom(id);
 }
 
 // ============ 节点拖拽 ============
@@ -1216,133 +1179,89 @@ function fitView(){
 }
 function resetZoom(){zoom=1;panX=0;panY=0;applyTransform()}
 
-// ============ 焦点聚焦模式 (Focus Drill) ============
-function focusBreadcrumb() {
-  if (!focusState || !currentSession) return [];
+// ============ 方向键节点导航 ============
+function getSiblings(nodeId) {
+  if (!currentSession) return [];
+  const fn = currentSession.nodes.find(n => n.id === nodeId);
+  if (!fn) return [];
+  return currentSession.nodes.filter(n => n.parentId === fn.parentId).map(n => n.id);
+}
+
+function buildBreadcrumb(nodeId) {
+  if (!currentSession) return '';
   const chain = [];
-  let node = currentSession.nodes.find(n => n.id === focusState.nodeId);
+  let node = currentSession.nodes.find(n => n.id === nodeId);
   while (node) {
-    chain.unshift({ id: node.id, name: node.name });
+    chain.unshift(escHtml(node.name));
     node = node.parentId ? currentSession.nodes.find(n => n.id === node.parentId) : null;
   }
-  return chain;
+  return chain.map((c, i) => (i > 0 ? ' / ' : '') + '<span>' + c + '</span>').join('');
 }
 
-function focusInScope() {
-  // 返回聚焦节点的"局部上下文"节点 ID 集合：父节点 + 同层兄弟 + 全部子节点
-  if (!focusState || !currentSession) return { scopeIds: new Set(), siblings: [], childrenIds: [] };
-  const fn = currentSession.nodes.find(n => n.id === focusState.nodeId);
-  if (!fn) return { scopeIds: new Set(), siblings: [], childrenIds: [] };
-  const siblings = currentSession.nodes.filter(n => n.parentId === fn.parentId);
-  const siblingIds = siblings.map(s => s.id);
-  const childrenIds = currentSession.nodes.filter(n => n.parentId === focusState.nodeId).map(n => n.id);
-  const scopeIds = new Set([...siblingIds, ...childrenIds]);
-  if (fn.parentId) scopeIds.add(fn.parentId);
-  scopeIds.add(focusState.nodeId);
-  return { scopeIds, siblings: siblingIds, childrenIds };
-}
-
-async function enterFocus(nodeId) {
+function zoomToNode(nodeId) {
   if (!currentSession) return;
-  focusState = { nodeId };
-  await xmindLayout(); // 确保布局坐标最新
-  focusToNode(nodeId);
-  updateFocusUI();
+  const node = currentSession.nodes.find(n => n.id === nodeId);
+  if (!node || node.x === undefined || node.y === undefined) return;
+  const depth = (node._depth !== undefined) ? node._depth : (node.parentId === null ? 0 : 1);
+  const w = node._layoutW || getNodeRawSize(depth).w;
+  const h = node._layoutH || getNodeRawSize(depth).h;
+  const rect = canvasContainer.getBoundingClientRect();
+  zoom = Math.min(1.1, rect.width / (w + 200), rect.height / (h + 200));
+  zoom = Math.max(0.3, zoom);
+  panX = rect.width / 2 - (node.x + w / 2) * zoom;
+  panY = rect.height / 2 - (node.y + h / 2) * zoom;
+  applyTransform();
 }
 
-function focusExit() {
-  focusState = null;
-  document.getElementById('focusNav').style.display = 'none';
+function selectAndZoom(nodeId) {
+  if (!currentSession) return;
+  selectedId = nodeId;
+  renderAll();
+  zoomToNode(nodeId);
+  // 面包屑
+  const bc = document.getElementById('focusBreadcrumb');
+  bc.innerHTML = buildBreadcrumb(nodeId);
+  bc.style.display = '';
+  // 快捷键提示
+  document.getElementById('focusHint').style.display = '';
+}
+
+function navNextSibling() {
+  if (!selectedId) { selectRoot(); return; }
+  const siblings = getSiblings(selectedId);
+  const idx = siblings.indexOf(selectedId);
+  if (idx >= 0 && idx < siblings.length - 1) { selectAndZoom(siblings[idx + 1]); return; }
+  // 无兄弟则进入子节点
+  navChild();
+}
+function navPrevSibling() {
+  if (!selectedId) { selectRoot(); return; }
+  const siblings = getSiblings(selectedId);
+  const idx = siblings.indexOf(selectedId);
+  if (idx > 0) { selectAndZoom(siblings[idx - 1]); return; }
+  // 无兄弟则返回父节点
+  navParent();
+}
+function navChild() {
+  if (!selectedId) { selectRoot(); return; }
+  const children = currentSession.nodes.filter(n => n.parentId === selectedId);
+  if (children.length > 0) selectAndZoom(children[0].id);
+}
+function navParent() {
+  if (!selectedId) return;
+  const node = currentSession.nodes.find(n => n.id === selectedId);
+  if (node && node.parentId) selectAndZoom(node.parentId);
+}
+function navReset() {
+  selectedId = null;
+  document.getElementById('focusBreadcrumb').style.display = 'none';
+  document.getElementById('focusHint').style.display = 'none';
   fitView();
   renderAll();
 }
-
-function focusNextSibling() {
-  if (!focusState || !currentSession) return;
-  const { siblings } = focusInScope();
-  const idx = siblings.indexOf(focusState.nodeId);
-  if (idx >= 0 && idx < siblings.length - 1) {
-    focusState.nodeId = siblings[idx + 1];
-    focusToNode(focusState.nodeId);
-    updateFocusUI();
-  }
-}
-
-function focusPrevSibling() {
-  if (!focusState || !currentSession) return;
-  const { siblings } = focusInScope();
-  const idx = siblings.indexOf(focusState.nodeId);
-  if (idx > 0) {
-    focusState.nodeId = siblings[idx - 1];
-    focusToNode(focusState.nodeId);
-    updateFocusUI();
-  }
-}
-
-function focusDrillDown() {
-  if (!focusState || !currentSession) return;
-  const children = currentSession.nodes.filter(n => n.parentId === focusState.nodeId);
-  if (children.length > 0) {
-    focusState.nodeId = children[0].id;
-    focusToNode(focusState.nodeId);
-    updateFocusUI();
-  }
-}
-
-function focusDrillUp() {
-  if (!focusState || !currentSession) return;
-  const fn = currentSession.nodes.find(n => n.id === focusState.nodeId);
-  if (fn && fn.parentId) {
-    focusState.nodeId = fn.parentId;
-    focusToNode(focusState.nodeId);
-    updateFocusUI();
-  }
-}
-
-function focusToNode(nodeId) {
-  if (!currentSession) return;
-  const fn = currentSession.nodes.find(n => n.id === nodeId);
-  if (!fn) return;
-  const { scopeIds } = focusInScope();
-  // 计算 Scope 节点的包围盒（含出界处理）
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  let any = false;
-  currentSession.nodes.forEach(n => {
-    if (!scopeIds.has(n.id)) return;
-    const depth = (n._depth !== undefined) ? n._depth : (n.parentId === null ? 0 : 1);
-    const w = n._layoutW || getNodeRawSize(depth).w;
-    const h = n._layoutH || getNodeRawSize(depth).h;
-    if (n.x === undefined || n.y === undefined) return;
-    if (n.x < minX) minX = n.x;
-    if (n.y < minY) minY = n.y;
-    if (n.x + w > maxX) maxX = n.x + w;
-    if (n.y + h > maxY) maxY = n.y + h;
-    any = true;
-  });
-  if (!any) return;
-  const rect = canvasContainer.getBoundingClientRect();
-  const pad = 120;
-  const cw = maxX - minX + pad * 2;
-  const ch = maxY - minY + pad * 2;
-  const zx = rect.width / cw;
-  const zy = rect.height / ch;
-  zoom = Math.max(0.15, Math.min(zx, zy, 1.2));
-  panX = rect.width / 2 - (minX + cw / 2) * zoom;
-  panY = rect.height / 2 - (minY + ch / 2) * zoom;
-  applyTransform();
-  renderAll();
-}
-
-function updateFocusUI() {
-  if (!focusState) return;
-  const nav = document.getElementById('focusNav');
-  nav.style.display = 'flex';
-  // 面包屑
-  const chain = focusBreadcrumb();
-  const bcHtml = chain.map((c, i) =>
-    `${i > 0 ? ' / ' : ''}<span>${escHtml(c.name)}</span>`
-  ).join('');
-  document.getElementById('focusBreadcrumb').innerHTML = bcHtml;
+function selectRoot() {
+  const root = currentSession.nodes.find(n => n.parentId === null);
+  if (root) selectAndZoom(root.id);
 }
 
 // ============ 导出 ============
@@ -1375,16 +1294,12 @@ window.addEventListener('keydown',(e)=>{
   if(e.key==='0'){resetZoom();return}
   if((e.key==='z'||e.key==='Z')&&(e.metaKey||e.ctrlKey)){e.preventDefault();undo();return}
   if(e.key==='Delete'&&selectedId){deleteNode(selectedId);return}
-  // 聚焦模式快捷键
-  if(focusState){
-    if(e.key==='Escape'){focusExit();return}
-    if(e.key==='ArrowLeft'){e.preventDefault();focusPrevSibling();return}
-    if(e.key==='ArrowRight'){e.preventDefault();focusNextSibling();return}
-    if(e.key==='ArrowDown'){e.preventDefault();focusDrillDown();return}
-    if(e.key==='ArrowUp'){e.preventDefault();focusDrillUp();return}
-    return;
-  }
-  if(e.key==='Escape')closeContextMenu();
+  // 方向键导航：← → 兄弟  ↓ 子节点  ↑ 父节点  Esc 显示全部
+  if(e.key==='ArrowLeft'){e.preventDefault();navPrevSibling();return}
+  if(e.key==='ArrowRight'){e.preventDefault();navNextSibling();return}
+  if(e.key==='ArrowDown'){e.preventDefault();navChild();return}
+  if(e.key==='ArrowUp'){e.preventDefault();navParent();return}
+  if(e.key==='Escape'){navReset();return}
 });
 
 // ============ 初始化 ============
