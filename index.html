@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CanvasStorm - 头脑风暴画布</title>
+<!-- v2.2-fix-diverge-deep -->
 <style>
 :root {
   --bg: #f0f2f5; --surface: #fafbfc; --surface2: #eef0f2;
@@ -93,7 +94,7 @@ body{
 }
 .canvas-container:active{cursor:grabbing}
 .canvas-container.panning{cursor:grabbing}
-.canvas-container{transition:transform 0.35s cubic-bezier(.4,0,.2,1)}
+.canvas-container{transition:transform 0.4s cubic-bezier(.4,0,.2,1)}
 .canvas-layer{position:absolute;top:0;left:0;transform-origin:0 0;width:12000px;height:12000px}
 .edges-svg{position:absolute;top:0;left:0;width:12000px;height:12000px;pointer-events:none;z-index:0}
 
@@ -163,6 +164,7 @@ body{
   transition:border-color 0.2s,box-shadow 0.2s,transform 0.15s;
   box-shadow:var(--shadow-sm);
   border-left:3px solid var(--border);
+  overflow:hidden;
 }
 .node:hover{
   border-color:var(--accent);border-left-color:var(--accent);
@@ -203,6 +205,54 @@ body{
 .score-fill.prac{background:var(--green)}
 .score-val{width:26px;font-size:10px;text-align:left;font-weight:600;color:var(--text)}
 
+#divergeOverlay{
+  position:absolute;top:0;left:0;width:100%;height:100%;
+  pointer-events:none;z-index:30;
+}
+#divergeOverlay .diverge-btn{
+  position:absolute;display:inline-flex;align-items:center;justify-content:center;gap:5px;
+  font-size:11px;font-weight:500;color:var(--text2);
+  background:var(--node-bg);border:1px solid var(--border);
+  padding:5px 14px;border-radius:6px;cursor:pointer;
+  transition:all 0.18s;min-height:30px;pointer-events:auto;
+  white-space:nowrap;user-select:none;
+}
+#divergeOverlay .diverge-btn:hover{
+  background:var(--accent);color:#fff;border-color:var(--accent);
+  box-shadow:0 2px 8px rgba(67,97,238,0.18);
+}
+#divergeOverlay .diverge-btn:disabled{opacity:0.35;cursor:not-allowed;filter:grayscale(0.3)}
+#divergeOverlay .diverge-panel{
+  position:absolute;padding:14px 14px 12px;background:var(--node-bg);
+  border-radius:var(--radius);display:flex;flex-direction:column;gap:12px;
+  border:1px solid var(--border);border-left:3px solid var(--accent);
+  box-shadow:var(--shadow-lg);pointer-events:auto;width:180px;
+  z-index:35;
+}
+.dpanel-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.dpanel-label{font-size:11px;color:var(--text2);font-weight:500}
+.dpanel-stepper{display:flex;align-items:center;gap:6px}
+.dpanel-stepper button{
+  width:26px;height:26px;border:1px solid var(--border);border-radius:5px;
+  background:var(--node-bg);color:var(--text2);font-size:14px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;line-height:1;
+  transition:all 0.12s;
+}
+.dpanel-stepper button:hover{background:var(--accent-light);color:var(--accent);border-color:var(--accent)}
+.dpanel-count{font-size:13px;font-weight:600;min-width:18px;text-align:center;color:var(--text)}
+.dpanel-row select{
+  font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:5px;
+  background:var(--node-bg);color:var(--text);cursor:pointer;font-weight:500;
+  appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%236b7280'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 8px center;padding-right:22px;
+}
+.dpanel-confirm{
+  width:100%;padding:7px 0;font-size:11px;font-weight:600;
+  background:transparent;color:var(--accent);border:1.5px solid var(--accent);
+  border-radius:6px;cursor:pointer;
+  transition:all 0.18s;letter-spacing:0.02em;margin-top:2px;
+}
+.dpanel-confirm:hover{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(67,97,238,0.2)}
 .node .category-tag{
   font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;
   padding:2px 8px;border-radius:10px;
@@ -323,10 +373,10 @@ body{
   <button class="tb pri" onclick="addManualNode()">+ 添加节点</button>
   <button class="tb" onclick="tidyLayout()">&#x25F0; 整理布局</button>
   <button class="tb" onclick="fitView()">&#x2316; 适应画布</button>
-  <button class="tb" onclick="resetZoom()">1:1</button>
   <button class="tb" onclick="exportMD()">导出MD</button>
   <span class="spacer"></span>
-  <span class="focus-hint" id="focusHint" style="display:none">←→↑↓ 浏览节点 · Esc 显示全部</span>
+  <span style="background:#059669;color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:700;">v2.2</span>
+  <span class="focus-hint" id="focusHint">← 返回 · → 深入 · ↑↓ 同级 · Esc 全览</span>
   <span class="focus-breadcrumb" id="focusBreadcrumb" style="display:none"></span>
   <span class="zoom-info" id="zoomInfo">100%</span>
 </div>
@@ -357,6 +407,7 @@ body{
       <div class="canvas-layer" id="canvasLayer">
         <svg class="edges-svg" id="edgesSvg"></svg>
       </div>
+      <div id="divergeOverlay"></div>
 
       <!-- 输入引导遮罩 -->
       <div class="entry-overlay" id="entryOverlay">
@@ -368,7 +419,7 @@ body{
           <div class="param-row">
             <div class="param-item">
               <span class="param-label">生成数量</span>
-              <input type="number" id="countInput" value="6" min="2" max="15" style="width:60px">
+              <input type="number" id="countInput" value="3" min="1" max="10" style="width:60px">
             </div>
             <select id="styleSelect">
               <option value="balanced">均衡发散</option>
@@ -439,6 +490,7 @@ let undoStack=[];
 // DOM
 const canvasContainer=document.getElementById('canvasContainer');
 const canvasLayer=document.getElementById('canvasLayer');
+const divergeOverlay=document.getElementById('divergeOverlay');
 const edgesSvg=document.getElementById('edgesSvg');
 const zoomInfo=document.getElementById('zoomInfo');
 const entryOverlay=document.getElementById('entryOverlay');
@@ -497,6 +549,8 @@ function switchToSession(id){
   setActiveId(id);
   currentSession=JSON.parse(JSON.stringify(session));
   selectedId=null;undoStack=[];
+  // 清除僵死的 thinking 标记（上次会话刷新/崩溃可能残留）
+  if(currentSession.nodes) currentSession.nodes.forEach(n=>delete n.thinking);
   const hasNodes=currentSession.nodes&&currentSession.nodes.length>0;
   if(hasNodes){
     entryOverlay.classList.add('hidden');
@@ -561,10 +615,10 @@ function toggleSessionPanel(){document.getElementById('sessionPanel').classList.
 const PEM = 18;
 // 节点原始尺寸（层级越深越小）；之后 addGap 会加 hgap/vgap
 function getNodeRawSize(d) {
-  if (d === 0) return {w: 380, h: 200};
-  if (d === 1) return {w: 240, h: 160};
-  if (d === 2) return {w: 200, h: 130};
-  return {w: 170, h: 110};
+  if (d === 0) return {w: 380, h: 260};
+  if (d === 1) return {w: 240, h: 220};
+  if (d === 2) return {w: 200, h: 200};
+  return {w: 170, h: 170};
 }
 function getHGap(d) { return d <= 1 ? 80 : 50; }
 function getVGap(d) { return d <= 1 ? 24 : 16; }
@@ -672,6 +726,36 @@ async function tidyLayout() {
 }
 function layoutChildren(pid) { return xmindLayout(); }
 
+// 本地树形布局：从左到右思维导图风格（layout API 不可用时降级）
+function localTreeLayoutKids(parent, kids) {
+  const GAP_X = 220;        // 父子水平间距
+  const NODE_GAP = 30;       // 相邻子节点垂直间隙
+  const pw = parent._layoutW || getNodeRawSize(parent.parentId===null?0:1).w;
+  const ph = parent._layoutH || getNodeRawSize(parent.parentId===null?0:1).h;
+  const kidW = getNodeRawSize(1).w;  // 子节点宽度
+  const kidH = getNodeRawSize(1).h;
+
+  // 计算总高度
+  let totalH = 0;
+  kids.forEach(k => {
+    const h = k._layoutH || kidH;
+    totalH += h + NODE_GAP;
+  });
+  totalH -= NODE_GAP;  // 最后一个不需要间隙
+
+  // 垂直起始：父节点垂直居中
+  const startY = parent.y + (ph - totalH) / 2;
+  const startX = parent.x + pw + GAP_X;
+
+  let cy = startY;
+  kids.forEach(k => {
+    const h = k._layoutH || kidH;
+    k.x = startX;
+    k.y = cy;
+    cy += h + NODE_GAP;
+  });
+}
+
 // ============ 启动会话 ============
 async function launchSession(){
   const input=document.getElementById('projectInput').value.trim();
@@ -712,7 +796,7 @@ async function launchSession(){
 
   document.getElementById('projectInput').value='';
 
-  await divergeNodeAPI('root');
+  await divergeNodeAPI('root', parseInt(document.getElementById('countInput').value), document.getElementById('styleSelect').value);
   btn.classList.remove('loading');
   btn.innerHTML='&#x2728; 开始发散';
   fitView();
@@ -765,12 +849,11 @@ function parseIdeasFromResponse(content){
 }
 
 // ============ 发散（API） ============
-async function divergeNodeAPI(nodeId){
+async function divergeNodeAPI(nodeId, count, style){
   if(!currentSession)return;
+  nodeId = currentSession.nodes.find(n=>String(n.id)===String(nodeId))?.id ?? nodeId;
   const node=currentSession.nodes.find(n=>n.id===nodeId);
   if(!node)return;
-  const count=parseInt(document.getElementById('countInput').value);
-  const style=document.getElementById('styleSelect').value;
   const isRoot=node.parentId===null;
 
   try{
@@ -784,7 +867,7 @@ async function divergeNodeAPI(nodeId){
   }catch(err){
     console.error(err);
     showToast('API调用失败：'+err.message+'，使用本地备用数据');
-    addChildrenMock(nodeId);
+    addChildrenMock(nodeId, count, style);
     return false;
   }
 }
@@ -814,8 +897,18 @@ async function addChildren(nodeId,ideas){
   // 布局
   await layoutChildren(nodeId);
 
+  // 布局失败降级：用本地树形布局（从左到右思维导图风格）
+  const parentNode2 = currentSession.nodes.find(n=>n.id===nodeId);
+  if(parentNode2) {
+    const kids = currentSession.nodes.filter(n=>n.parentId===nodeId && (n.x===0 && n.y===0));
+    if(kids.length>0) {
+      localTreeLayoutKids(parentNode2, kids);
+    }
+  }
+
   saveCurrentSession();
   renderAll();
+  fitView(); // 自动适应画布
 
   // 渐入动画
   ideas.forEach((_,i)=>{
@@ -849,14 +942,13 @@ const MOCK_POOL=[
   {name:'自然语言查询',desc:'对话式查询项目状态如本周哪些任务延期',difficulty:5,innovation:7.0,practicality:8.5,category:'AI/ML',impl_note:'LLM+结构化查询'},
 ];
 
-function addChildrenMock(nodeId){
+function addChildrenMock(nodeId, count, style){
   if(!currentSession)return;
+  nodeId = currentSession.nodes.find(n=>String(n.id)===String(nodeId))?.id ?? nodeId;
   const node=currentSession.nodes.find(n=>n.id===nodeId);
   if(!node)return;
-  const count=parseInt(document.getElementById('countInput').value);
-  const style=document.getElementById('styleSelect').value;
   let pool=[...MOCK_POOL].sort(()=>Math.random()-0.5);
-  if(style==='bold')pool.sort((a,b)=>b.innovation-a.innovation);
+  if(style==='creative')pool.sort((a,b)=>b.innovation-a.innovation);
   if(style==='practical')pool.sort((a,b)=>b.practicality-a.practicality);
   const ideas=pool.slice(0,count);
 
@@ -877,8 +969,17 @@ function addChildrenMock(nodeId){
     currentSession.edges.push({from:nodeId,to:child.id});
   });
   layoutChildren(nodeId).then(() => {
+    // 布局失败降级：本地树形布局
+    const parentNode2 = currentSession?.nodes?.find(n=>n.id===nodeId);
+    if(parentNode2) {
+      const kids = currentSession.nodes.filter(n=>n.parentId===nodeId && (n.x===0 && n.y===0));
+      if(kids.length>0) {
+        localTreeLayoutKids(parentNode2, kids);
+      }
+    }
     saveCurrentSession();
     renderAll();
+    fitView();
     ideas.forEach((_,i)=>{
       const childId='n'+(currentSession.nextId-ideas.length+i);
       setTimeout(()=>{const el=document.getElementById(childId);if(el)el.classList.add('new')},i*60);
@@ -936,7 +1037,8 @@ function renderNodes(){
       <div class="node-title"><span class="icon">${isRoot?'🎯':'💡'}</span>${escHtml(node.name)}</div>
       <div class="node-desc">${escHtml(node.desc)}</div>
       ${statusHTML}
-      ${node.category?`<div class="category-tag">${escHtml(node.category)}</div>`:''}`;
+      ${node.category?`<div class="category-tag">${escHtml(node.category)}</div>`:''}
+      `;
 
     // 点击节点 → 弹出上下文菜单
     el.addEventListener('click',(e)=>{
@@ -946,22 +1048,88 @@ function renderNodes(){
       showContextMenu(e.clientX,e.clientY,node);
     });
 
-    // 双击节点 → 发散
-    el.addEventListener('dblclick',(e)=>{
-      e.stopPropagation();
-      closeContextMenu();
-      divergeNode(node.id);
-    });
-
     // 拖拽
     el.addEventListener('mousedown',(e)=>{
       if(e.button!==0)return;
+      // 点击发散按钮/面板/面板内元素时不触发拖拽和选节点
+      if(e.target.closest('.diverge-btn, .diverge-panel, .dpanel-row, .dpanel-stepper, .dpanel-row select, .dpanel-confirm'))return;
       closeContextMenu();
       startNodeDrag(e,node);
     });
 
     canvasLayer.appendChild(el);
   });
+  // 渲染后测量实际高度，动态补足固定尺寸的不足
+  requestAnimationFrame(() => {
+    currentSession.nodes.forEach(node => {
+      const el = document.getElementById(node.id);
+      if (!el) return;
+      const scrollH = el.scrollHeight;
+      const curH = parseFloat(el.style.height) || 0;
+      if (scrollH > curH + 4) {
+        node._layoutH = scrollH;
+        el.style.height = scrollH + 'px';
+      }
+    });
+    renderEdges();
+    renderDivergeOverlays();
+  });
+}
+
+function renderDivergeOverlays(){
+  divergeOverlay.innerHTML='';
+  if(!currentSession)return;
+  currentSession.nodes.forEach(node=>{
+    if(node.parentId===null)return; // 根节点不需要发散按钮
+    const btn=document.createElement('button');
+    btn.className='diverge-btn';
+    btn.id='dbtn-'+node.id;
+    btn.onclick=function(e){e.stopPropagation();toggleDivergePanel(node.id);};
+    btn.disabled=!!node.thinking;
+    btn.textContent=node.thinking?'思考中...':'↻ 发散';
+
+    const panel=document.createElement('div');
+    panel.className='diverge-panel';
+    panel.id='dpanel-'+node.id;
+    panel.style.display='none';
+    panel.innerHTML=`
+      <div class="dpanel-row">
+        <span class="dpanel-label">数量</span>
+        <div class="dpanel-stepper">
+          <button onclick="event.stopPropagation();stepCount('${node.id}',-1)">−</button>
+          <span class="dpanel-count" id="dcnt-${node.id}">3</span>
+          <button onclick="event.stopPropagation();stepCount('${node.id}',1)">+</button>
+        </div>
+      </div>
+      <div class="dpanel-row">
+        <span class="dpanel-label">风格</span>
+        <select id="dstyle-${node.id}" onclick="event.stopPropagation()">
+          <option value="balanced">均衡发散</option>
+          <option value="creative">激进创新</option>
+          <option value="practical">实用主义</option>
+          <option value="simple">简洁实用</option>
+        </select>
+      </div>
+      <button class="dpanel-confirm" onclick="event.stopPropagation();startDivergeNode('${node.id}')">开始发散</button>`;
+
+    divergeOverlay.appendChild(btn);
+    divergeOverlay.appendChild(panel);
+    positionDivergeForNode(node,btn,panel);
+  });
+}
+
+function positionDivergeForNode(node,btn,panel){
+  const depth=(node._depth!==undefined)?node._depth:1;
+  const w=node._layoutW||getNodeRawSize(depth).w;
+  const h=node._layoutH||getNodeRawSize(depth).h;
+  const sx=node.x*zoom+panX;
+  const sy=node.y*zoom+panY;
+  const sw=w*zoom;
+  const sh=h*zoom;
+  btn.style.left=sx+'px';
+  btn.style.top=(sy+sh+4)+'px';
+  panel.style.left=sx+'px';
+  panel.style.top=(sy+sh+4)+'px';
 }
 
 function renderEdges(){
@@ -990,8 +1158,8 @@ function renderEdges(){
 function showContextMenu(x,y,node){
   const canDiverge=!node.thinking && currentSession;
   ctxMenu.innerHTML=`
-    <div class="ctx-menu-item${canDiverge?'':' disabled'}" ${canDiverge?`onclick="closeContextMenu();divergeNode('${node.id}')"`:`onclick="closeContextMenu()"`}>
-      <span class="mi-icon">↻</span><span class="mi-label">发散子功能</span><span class="mi-short">${node.thinking?'思考中...':'双击'}</span>
+    <div class="ctx-menu-item${canDiverge?'':' disabled'}" ${canDiverge?`onclick="closeContextMenu();toggleDivergePanel('${node.id}')"`:`onclick="closeContextMenu()"`}>
+      <span class="mi-icon">↻</span><span class="mi-label">发散子功能</span><span class="mi-short">${node.thinking?'思考中...':''}</span>
     </div>
     <div class="ctx-menu-sep"></div>
     <div class="ctx-menu-item delete" onclick="closeContextMenu();deleteNode('${node.id}')">
@@ -1010,6 +1178,10 @@ function showContextMenu(x,y,node){
 function closeContextMenu(){ctxMenu.style.display='none'}
 document.addEventListener('click',(e)=>{
   if(!ctxMenu.contains(e.target)&&!e.target.closest('.node'))closeContextMenu();
+  // 点击节点外部关闭所有发散面板
+  if(!e.target.closest('.diverge-panel') && !e.target.closest('.diverge-btn')){
+    document.querySelectorAll('.diverge-panel').forEach(p => p.style.display = 'none');
+  }
 });
 
 // ============ 节点操作 ============
@@ -1063,15 +1235,49 @@ function addManualNode(){
   }
 }
 
-function divergeNode(nodeId){
+// ============ 节点发散面板 ============
+function toggleDivergePanel(nodeId){
+  const panel = document.getElementById('dpanel-'+nodeId);
+  const btn = document.getElementById('dbtn-'+nodeId);
+  const isOpen = panel.style.display !== 'none';
+  // 关闭所有其他面板
+  document.querySelectorAll('.diverge-panel').forEach(p => p.style.display = 'none');
+  if(isOpen){ panel.style.display = 'none'; return; }
+  panel.style.display = 'flex';
+}
+
+function stepCount(nodeId, delta){
+  const el = document.getElementById('dcnt-'+nodeId);
+  let v = parseInt(el.textContent) + delta;
+  v = Math.max(1, Math.min(10, v));
+  el.textContent = v;
+}
+
+function startDivergeNode(nodeId){
   if(!currentSession)return;
-  const node=currentSession.nodes.find(n=>n.id===nodeId);
-  if(!node)return;
-  // 设置思考中标记
-  node.thinking=true;
+  nodeId = currentSession.nodes.find(n=>String(n.id)===String(nodeId))?.id ?? nodeId;
+  const node = currentSession.nodes.find(n=>n.id===nodeId);
+  if(!node || node.thinking)return;
+  const cntEl = document.getElementById('dcnt-'+nodeId);
+  const styleEl = document.getElementById('dstyle-'+nodeId);
+  const count = parseInt(cntEl.textContent);
+  const style = styleEl.value;
+  // 收起面板，显示思考中
+  document.getElementById('dpanel-'+nodeId).style.display = 'none';
+  node.thinking = true;
   saveCurrentSession();
   renderAll();
-  divergeNodeAPI(nodeId);
+  // 安全兜底：30s 后自动清除 thinking 防止卡死
+  const safetyTimer = setTimeout(() => {
+    const n = currentSession?.nodes?.find(n=>n.id===nodeId);
+    if(n && n.thinking){
+      delete n.thinking;
+      saveCurrentSession();
+      renderAll();
+      showToast('发散超时，请重试');
+    }
+  }, 30000);
+  divergeNodeAPI(nodeId, count, style).finally(() => clearTimeout(safetyTimer));
 }
 
 function deleteNode(nodeId){
@@ -1119,6 +1325,12 @@ window.addEventListener('mousemove',(e)=>{
   const el=document.getElementById(dragNode.id);
   if(el){el.style.left=dragNode.x+'px';el.style.top=dragNode.y+'px'}
   renderEdges();
+  // 拖拽时更新发散按钮位置
+  if(dragNode.parentId!==null){
+    const btn=document.getElementById('dbtn-'+dragNode.id);
+    const panel=document.getElementById('dpanel-'+dragNode.id);
+    if(btn&&panel)positionDivergeForNode(dragNode,btn,panel);
+  }
 });
 window.addEventListener('mouseup',()=>{
   if(dragNode&&wasDragged){
@@ -1155,7 +1367,16 @@ canvasContainer.addEventListener('wheel',(e)=>{
 });
 function applyTransform(){
   canvasLayer.style.transform=`translate(${panX}px,${panY}px) scale(${zoom})`;
+  canvasLayer.style.setProperty('--canvas-zoom',1/zoom);
   zoomInfo.textContent=Math.round(zoom*100)+'%';
+  // 重新定位所有发散按钮（不被画布 scale 影响）
+  if(!currentSession)return;
+  currentSession.nodes.forEach(node=>{
+    if(node.parentId===null)return;
+    const btn=document.getElementById('dbtn-'+node.id);
+    const panel=document.getElementById('dpanel-'+node.id);
+    if(btn&&panel)positionDivergeForNode(node,btn,panel);
+  });
 }
 
 // ============ 视图 ============
@@ -1206,8 +1427,11 @@ function zoomToNode(nodeId) {
   const w = node._layoutW || getNodeRawSize(depth).w;
   const h = node._layoutH || getNodeRawSize(depth).h;
   const rect = canvasContainer.getBoundingClientRect();
-  zoom = Math.min(1.1, rect.width / (w + 200), rect.height / (h + 200));
-  zoom = Math.max(0.3, zoom);
+
+  // 激进缩放：只留少量 padding，让节点占画面 40-60%
+  const padX = 80, padY = 60;
+  zoom = Math.min(1.8, rect.width / (w + padX), rect.height / (h + padY));
+  zoom = Math.max(0.4, zoom);
   panX = rect.width / 2 - (node.x + w / 2) * zoom;
   panY = rect.height / 2 - (node.y + h / 2) * zoom;
   applyTransform();
@@ -1218,12 +1442,9 @@ function selectAndZoom(nodeId) {
   selectedId = nodeId;
   renderAll();
   zoomToNode(nodeId);
-  // 面包屑
   const bc = document.getElementById('focusBreadcrumb');
   bc.innerHTML = buildBreadcrumb(nodeId);
   bc.style.display = '';
-  // 快捷键提示
-  document.getElementById('focusHint').style.display = '';
 }
 
 function navNextSibling() {
@@ -1255,7 +1476,6 @@ function navParent() {
 function navReset() {
   selectedId = null;
   document.getElementById('focusBreadcrumb').style.display = 'none';
-  document.getElementById('focusHint').style.display = 'none';
   fitView();
   renderAll();
 }
@@ -1294,11 +1514,11 @@ window.addEventListener('keydown',(e)=>{
   if(e.key==='0'){resetZoom();return}
   if((e.key==='z'||e.key==='Z')&&(e.metaKey||e.ctrlKey)){e.preventDefault();undo();return}
   if(e.key==='Delete'&&selectedId){deleteNode(selectedId);return}
-  // 方向键导航：← → 兄弟  ↓ 子节点  ↑ 父节点  Esc 显示全部
-  if(e.key==='ArrowLeft'){e.preventDefault();navPrevSibling();return}
-  if(e.key==='ArrowRight'){e.preventDefault();navNextSibling();return}
-  if(e.key==='ArrowDown'){e.preventDefault();navChild();return}
-  if(e.key==='ArrowUp'){e.preventDefault();navParent();return}
+  // 方向键导航：← 父节点  → 子节点  ↑↓ 同级切换  Esc 显示全部
+  if(e.key==='ArrowLeft'){e.preventDefault();navParent();return}
+  if(e.key==='ArrowRight'){e.preventDefault();navChild();return}
+  if(e.key==='ArrowUp'){e.preventDefault();navPrevSibling();return}
+  if(e.key==='ArrowDown'){e.preventDefault();navNextSibling();return}
   if(e.key==='Escape'){navReset();return}
 });
 
