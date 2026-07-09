@@ -5,6 +5,7 @@
  */
 
 const http = require('http');
+const fs = require('fs');
 const path = require('path');
 
 // 设置测试专用存储目录（必须在 require routes 之前）
@@ -16,8 +17,15 @@ const express = require('express');
 const app = express();
 app.use(express.json());
 app.use('/api/sessions', require('../server/routes/sessions'));
+app.use('/api/storm', require('../server/routes/storm'));
+app.use('/api/users', require('../server/routes/users'));
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+app.get('/api/app-version', (req, res) => {
+  const indexPath = path.join(__dirname, '..', 'index.html');
+  const stat = fs.statSync(indexPath);
+  res.json({ code: 200, data: { version: `${Math.round(stat.mtimeMs)}-${stat.size}` } });
 });
 
 let server;
@@ -75,6 +83,60 @@ async function runTests() {
     const { status, data } = await api('GET', '/api/health');
     assert(status === 200, `health 返回 200，实际 ${status}`);
     assert(data && data.status === 'ok', `health 返回 ok，实际 ${JSON.stringify(data)}`);
+  }
+
+  console.log('\n=== 测试 1.1: AI 状态不暴露密钥 ===');
+  {
+    const oldKey = process.env.DEEPSEEK_API_KEY;
+    const oldModel = process.env.DEEPSEEK_MODEL;
+    delete process.env.DEEPSEEK_API_KEY;
+    process.env.DEEPSEEK_MODEL = 'deepseek-test';
+    const { status, data } = await api('GET', '/api/storm/status');
+    assert(status === 200, `AI status 返回 200，实际 ${status}`);
+    assert(data.data.configured === false, '未配置 key 时 configured=false');
+    assert(data.data.model === 'deepseek-test', '返回模型名');
+    assert(!JSON.stringify(data).includes('sk-'), '响应不包含密钥');
+
+    process.env.DEEPSEEK_API_KEY = 'sk-test-only';
+    const { data: configured } = await api('GET', '/api/storm/status');
+    assert(configured.data.configured === true, '配置 key 时 configured=true');
+
+    if (oldKey === undefined) delete process.env.DEEPSEEK_API_KEY;
+    else process.env.DEEPSEEK_API_KEY = oldKey;
+    if (oldModel === undefined) delete process.env.DEEPSEEK_MODEL;
+    else process.env.DEEPSEEK_MODEL = oldModel;
+  }
+
+  console.log('\n=== 测试 1.2: 页面版本接口 ===');
+  {
+    const { status, data } = await api('GET', '/api/app-version');
+    assert(status === 200, `app-version 返回 200，实际 ${status}`);
+    assert(data.code === 200, `app-version code=200，实际 ${data.code}`);
+    assert(typeof data.data.version === 'string' && data.data.version.includes('-'), 'app-version 返回稳定版本号');
+    assert(!JSON.stringify(data).includes('sk-'), 'app-version 不包含密钥');
+  }
+
+  console.log('\n=== 测试 1.3: 用户项目空间 API ===');
+  {
+    const { status, data } = await api('GET', '/api/users/api-user/projects');
+    assert(status === 200, `用户项目空列表返回 200，实际 ${status}`);
+    assert(Array.isArray(data.data.projects), '用户项目 data.projects 是数组');
+    assert(data.data.projects.length === 0, '新用户项目列表为空');
+
+    const projects = [
+      { id: 'project_api_1', title: '线上衣橱', nodes: [{ id: 'root', title: '线上衣橱' }] },
+      { id: 'project_api_2', title: '学习计划助手', nodes: [] },
+    ];
+    const saved = await api('PUT', '/api/users/api-user/projects', { projects });
+    assert(saved.status === 200, `保存用户项目返回 200，实际 ${saved.status}`);
+    assert(saved.data.data.projects.length === 2, '保存后返回 2 个项目');
+
+    const reloaded = await api('GET', '/api/users/api-user/projects');
+    assert(reloaded.data.data.projects[0].title === '线上衣橱', '可重新读取用户项目');
+
+    const invalid = await api('PUT', '/api/users/api-user/projects', { projects: {} });
+    assert(invalid.status === 400, `projects 非数组返回 400，实际 ${invalid.status}`);
+    assert(!JSON.stringify(reloaded.data).includes('sk-'), '用户项目接口不包含密钥');
   }
 
   console.log('\n=== 测试 2: 空列表 ===');

@@ -1,329 +1,402 @@
 /**
- * CanvasStorm 前端数据层单元测试 (v2)
- * 使用 jsdom 模拟浏览器环境，预置所有 DOM 桩元素
- * 运行方式: node tests/frontend-data.test.js
+ * CanvasStorm 功能图前端数据流测试
+ * 覆盖：本地登录、用户项目隔离、图形化功能树、围绕节点继续发散、保留/不做、持久化。
  */
 
 const { JSDOM } = require('jsdom');
 const fs = require('fs');
 const path = require('path');
 
-// 读取 index.html 脚本内容
-const htmlContent = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-const scriptMatch = htmlContent.match(/<script>([\s\S]*?)<\/script>/);
-if (!scriptMatch) { console.error('未找到 <script> 标签'); process.exit(1); }
-const scriptContent = scriptMatch[1];
+const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
-// ============ Mock 内存存储 ============
-const serverStore = new Map();
-
-function mockFetchResponse(body, status = 200) {
-  return { ok: status >= 200 && status < 300, status, json: async () => body };
-}
-
-function createMockFetch() {
-  return async function mockFetch(url, opts = {}) {
-    const method = opts.method || 'GET';
-    const path = url.replace(/^https?:\/\/[^/]+\/api/, '');
-
-    if (method === 'GET' && path === '/health') return mockFetchResponse({ status: 'ok' });
-    if (method === 'GET' && path === '/sessions') {
-      const list = Array.from(serverStore.values()).map(s => ({ id: s.id, name: s.name, createdAt: s.createdAt }));
-      return mockFetchResponse({ code: 200, data: list });
-    }
-    const getMatch = path.match(/^\/sessions\/(.+)$/);
-    if (method === 'GET' && getMatch) {
-      return serverStore.has(getMatch[1])
-        ? mockFetchResponse({ code: 200, data: serverStore.get(getMatch[1]) })
-        : mockFetchResponse({ code: 404, message: '不存在' }, 404);
-    }
-    if (method === 'POST' && path === '/sessions') {
-      const body = JSON.parse(opts.body || '{}');
-      serverStore.set(body.id, body);
-      return mockFetchResponse({ code: 200, data: body });
-    }
-    const putMatch = path.match(/^\/sessions\/(.+)$/);
-    if (method === 'PUT' && putMatch) {
-      const id = putMatch[1];
-      const body = JSON.parse(opts.body || '{}');
-      if (serverStore.has(id)) {
-        const updated = { ...serverStore.get(id), ...body, id };
-        serverStore.set(id, updated);
-        return mockFetchResponse({ code: 200, data: updated });
-      }
-      return mockFetchResponse({ code: 404, message: '不存在' }, 404);
-    }
-    const delMatch = path.match(/^\/sessions\/(.+)$/);
-    if (method === 'DELETE' && delMatch) {
-      if (serverStore.has(delMatch[1])) {
-        serverStore.delete(delMatch[1]);
-        return mockFetchResponse({ code: 200, message: '已删除' });
-      }
-      return mockFetchResponse({ code: 404, message: '不存在' }, 404);
-    }
-    return mockFetchResponse({ code: 500, message: '未知' }, 500);
-  };
-}
-
-// ============ 测试工具 ============
+let stormPostCalls = 0;
+let projectGetCalls = 0;
+let projectPutCalls = 0;
 let passed = 0;
 let failed = 0;
 const failures = [];
 
 function assert(condition, msg) {
-  if (condition) { passed++; return; }
-  failed++;
+  if (condition) {
+    passed += 1;
+    return;
+  }
+  failed += 1;
   failures.push(msg);
   console.error(`  FAIL: ${msg}`);
 }
 
-// 构建包含所有 DOM 桩的测试 HTML
-function buildTestHTML() {
-  return `<!DOCTYPE html>
-<html><body>
-<div id="sessionPanel"></div>
-<div id="sessionList"></div>
-<div id="canvasContainer" style="width:1200px;height:800px"></div>
-<canvas id="canvasLayer" width="1200" height="800"></canvas>
-<svg id="edgesSvg"></svg>
-<span id="zoomInfo"></span>
-<div id="entryOverlay" class="hidden"></div>
-<div id="ctxMenu" class="hidden"></div>
-<div id="thinkingBar" class="hidden"></div>
-<button id="btnUndo">撤回</button>
-<button id="btnLaunch">开始发散</button>
-<input id="projectInput" />
-<input id="apiKeyInput" />
-<select id="styleSelect"><option></option></select>
-<select id="countInput"><option value="3">3</option></select>
-<div id="toast"></div>
-<script>${scriptContent}</script>
-</body></html>`;
+function wait(ms = 0) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// ============ 测试套件 ============
+function mockFetchResponse(body, status = 200) {
+  return { ok: status >= 200 && status < 300, status, json: async () => body };
+}
+
+function createMockFetch(options = {}) {
+  const {
+    aiConfigured = false,
+    stormDelay = 0,
+    stormIdeas = [
+      { title: '天气穿搭推荐', desc: '按实时天气给出今日穿搭。', type: '核心功能', pain: '用户出门前需要快速决定穿什么。', validation: '手工生成 10 套搭配，看用户是否愿意照穿。' },
+      { title: '通勤场景搭配', desc: '按上班、约会、运动等场景推荐组合。', type: '体验功能', pain: '用户知道衣服很多，但不知道不同场景怎么搭。', validation: '让用户选 3 个场景，观察推荐是否减少纠结。' },
+      { title: '晒穿搭卡片', desc: '生成可分享的穿搭图文卡片。', type: '增长功能', pain: '用户愿意分享但不想重新排版。', validation: '发 3 张卡片样稿，看用户是否愿意发布。' },
+    ],
+  } = options;
+  return async function mockFetch(url, opts = {}) {
+    const method = opts.method || 'GET';
+    const apiPath = String(url).replace(/^https?:\/\/[^/]+\/api/, '');
+
+    if (method === 'GET' && apiPath === '/app-version') {
+      return mockFetchResponse({ code: 200, data: { version: 'test-version' } });
+    }
+
+    if (method === 'GET' && apiPath === '/storm/status') {
+      return mockFetchResponse({ code: 200, data: { configured: aiConfigured, model: 'deepseek-chat' } });
+    }
+
+    if (method === 'POST' && apiPath === '/storm') {
+      stormPostCalls += 1;
+      if (stormDelay) await wait(stormDelay);
+      if (!aiConfigured) return mockFetchResponse({ code: 500, error: 'mock AI unavailable' }, 500);
+      return mockFetchResponse({
+        code: 200,
+        data: { choices: [{ message: { content: JSON.stringify(stormIdeas) } }] },
+      });
+    }
+
+    if (apiPath.startsWith('/users/') && apiPath.endsWith('/projects')) {
+      if (method === 'GET') {
+        projectGetCalls += 1;
+        return mockFetchResponse({ code: 200, data: { projects: [] } });
+      }
+      if (method === 'PUT') {
+        projectPutCalls += 1;
+        const payload = JSON.parse(opts.body || '{}');
+        return mockFetchResponse({ code: 200, data: { projects: payload.projects || [] } });
+      }
+    }
+
+    return mockFetchResponse({ code: 200, data: [] });
+  };
+}
+
+async function createDom(options = {}) {
+  stormPostCalls = 0;
+  projectGetCalls = 0;
+  projectPutCalls = 0;
+  const dom = new JSDOM(html, {
+    url: 'http://localhost:3000/',
+    runScripts: 'dangerously',
+    resources: 'usable',
+    pretendToBeVisual: true,
+    beforeParse(window) {
+      window.fetch = createMockFetch(options);
+      Object.defineProperty(window.navigator, 'clipboard', {
+        configurable: true,
+        value: {
+          writeText: async (text) => {
+            window.__copiedMarkdown = text;
+          },
+        },
+      });
+    },
+  });
+  await wait(350);
+  return dom;
+}
+
+function visible(el) {
+  return el && !el.classList.contains('hidden');
+}
+
+function nodeTop(document, title) {
+  const el = [...document.querySelectorAll('.node')].find((node) => node.textContent.includes(title));
+  const top = String(el?.getAttribute('style') || '').match(/top:([0-9.]+)%/);
+  return top ? Number(top[1]) : null;
+}
+
+function clickChildChoice(document, title) {
+  const button = [...document.querySelectorAll('.child-choice')].find((node) => node.textContent.includes(title));
+  assert(Boolean(button), `可找到子功能选择：${title}`);
+  button?.click();
+}
+
+function clickGraphNode(document, title) {
+  const node = [...document.querySelectorAll('.node')].find((item) => item.textContent.includes(title));
+  assert(Boolean(node), `可找到画布节点：${title}`);
+  node?.click();
+}
+
 async function runTests() {
-  // ---- 套件 1: localStorage 基础读写（离线环境） ----
-  console.log('\n=== 套件 1: localStorage 基础读写 ===');
-  {
-    const html = buildTestHTML();
-    const dom = new JSDOM(html, {
-      url: 'http://localhost:5500',
-      runScripts: 'dangerously',
-      beforeParse(window) {
-        window.fetch = async () => { throw new Error('离线'); };
-      },
-    });
-    const ctx = dom.window;
-    await new Promise(r => setTimeout(r, 300));
+  console.log('\n=== 前端功能图数据流测试 ===');
 
-    assert(ctx.apiOnline === false, '离线时 apiOnline=false');
-    assert(Array.isArray(ctx.loadSessions()), 'loadSessions 返回数组');
-    assert(ctx.loadSessions().length === 0, '初始空');
+  const dom = await createDom();
+  const { document, localStorage } = dom.window;
 
-    ctx.saveSessions([{ id: 'off_1', name: '离线' }]);
-    assert(ctx.loadSessions().length === 1, '写入后读取1条');
-    assert(ctx.loadSessions()[0].name === '离线', '数据完整');
+  console.log('--- 测试 1: 登录入口清晰 ---');
+  assert(visible(document.querySelector('#authView')), '默认显示登录页');
+  assert(document.querySelector('.auth-title')?.textContent.includes('功能图'), '登录页说明产品是功能图');
+  assert(document.querySelector('.auth-graph-preview')?.textContent.includes('一键穿搭'), '登录页展示具体功能图预览');
+  assert(document.querySelector('.login-card')?.textContent.includes('进入你的功能图空间'), '登录入口直接说明进入功能图空间');
+  assert(document.querySelector('.login-badge')?.textContent.includes('项目记录'), '登录入口使用用户可理解的项目记录语言');
+  assert(!document.querySelector('.login-card')?.textContent.includes('无需密码'), '登录入口不再使用工程化解释文案');
+  assert(!document.querySelector('.login-card')?.textContent.includes('本地演示登录'), '登录入口不再使用演示登录文案');
+  assert(!document.querySelector('.login-card')?.textContent.includes('演示用户'), '登录入口不再露出演示用户芯片');
+  assert(document.querySelector('.login-card')?.textContent.includes('独立开发者'), '登录入口提供真实角色快捷入口');
+  assert(document.querySelector('#appView')?.classList.contains('hidden'), '未登录不显示工作台');
 
-    ctx.localStorage.setItem('cs_sessions', 'bad json{{');
-    assert(ctx.loadSessions().length === 0, '损坏数据返回[]');
+  const emptyNameDom = await createDom();
+  const emptyNameDocument = emptyNameDom.window.document;
+  emptyNameDocument.querySelector('#loginBtn').click();
+  await wait(160);
+  assert(emptyNameDocument.querySelector('#userName')?.textContent === '我的空间', '空用户名默认进入我的空间而不是演示用户');
 
-    ctx.setActiveId('id_123');
-    assert(ctx.getActiveId() === 'id_123', 'setActiveId/getActiveId 正确');
-  }
+  console.log('--- 测试 1.1: 键盘可进入项目空间 ---');
+  const keyboardDom = await createDom();
+  const keyboardDocument = keyboardDom.window.document;
+  keyboardDocument.querySelector('#loginName').value = '键盘用户';
+  keyboardDocument.querySelector('#loginName').dispatchEvent(new keyboardDom.window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+  await wait(250);
+  assert(!keyboardDocument.querySelector('#appView')?.classList.contains('hidden'), '用户名输入框按 Enter 可进入项目空间');
 
-  // ---- 套件 2: API 在线时 createNewSession 双写 ----
-  console.log('\n=== 套件 2: createNewSession API双写 ===');
-  {
-    serverStore.clear();
-    const html = buildTestHTML();
-    const dom = new JSDOM(html, {
-      url: 'http://localhost:5500',
-      runScripts: 'dangerously',
-      beforeParse(window) {
-        window.fetch = createMockFetch();
-      },
-    });
-    const ctx = dom.window;
-    await new Promise(r => setTimeout(r, 300));
+  console.log('--- 测试 2: 进入用户项目空间 ---');
+  document.querySelector('[data-login="米朵"]').click();
+  await wait(250);
+  assert(visible(document.querySelector('#appView')), '登录后显示工作台');
+  assert(document.querySelector('#userName')?.textContent === '米朵', '显示当前用户');
+  assert(projectGetCalls >= 1, '登录时会尝试从后端读取用户项目');
+  assert(document.querySelectorAll('.project-card').length >= 3, '默认项目记录已创建');
+  assert(document.querySelector('.project-card')?.getAttribute('title')?.includes('线上衣橱'), '项目卡保留完整标题，便于小屏截断时识别');
+  assert(document.querySelector('.project-card')?.getAttribute('aria-label')?.includes('打开项目'), '项目卡有明确打开项目语义');
+  assert(document.querySelector('#projectTitle')?.textContent.includes('线上衣橱'), '默认打开用户更容易理解的线上衣橱示例');
+  assert(document.querySelectorAll('.node').length >= 4, '首屏展示中心节点和第一层方向');
+  assert(document.querySelector('#projectKicker')?.textContent.includes('当前层：功能方向'), '顶部明确当前层是功能方向');
+  assert(document.querySelector('#projectDesc')?.textContent.includes('点击某个方向进入它的下一层'), '页面说明点击节点才进入下一层');
+  assert(document.querySelector('#nodeDetail')?.textContent.includes('推荐方向'), '右侧只提示推荐方向，不自动跳层');
+  assert(document.querySelector('#expandSelected')?.textContent.includes('补充功能方向'), '主动作是补充当前层方向');
+  assert(!document.querySelector('#actionDock')?.classList.contains('show-proof'), '选方向阶段不展开取舍依据，保持界面轻');
+  assert(document.querySelector('#flowProject')?.textContent.includes('线上衣橱'), '顶部流程显示当前项目');
+  assert(document.querySelector('#flowNode')?.textContent.includes('线上衣橱'), '顶部流程显示当前节点');
+  assert(document.querySelector('#flowDirectionStep')?.classList.contains('active'), '默认处在选方向步骤');
+  assert(document.querySelector('#appView')?.dataset.stage === '2', '工作台标记当前阶段，移动端可隐藏次要详情');
+  assert(document.querySelector('#flowExpandStep')?.textContent.includes('生成下一层'), '流程轨道显示下一层拆解步骤');
+  assert(document.querySelectorAll('button.node').length === 0, '功能节点不是 button，避免嵌套按钮');
+  assert(document.querySelectorAll('.node button[data-expand]').length === 0, '节点只负责选择，推进动作统一放在命令条');
+  assert(!document.querySelector('#graphSvg')?.innerHTML.includes('%'), 'SVG 连线使用 viewBox 数值坐标');
+  assert(document.querySelector('.node.root')?.textContent.includes('线上衣橱'), '中心节点是具体项目点');
+  assert(document.querySelector('.node.root')?.classList.contains('in-path'), '默认中心节点在当前路径中');
+  assert(document.querySelectorAll('.node.recommended').length === 1, '默认只突出一个推荐方向');
+  assert(document.querySelector('.node.recommended')?.textContent.includes('一键穿搭'), '推荐方向是最适合先做的功能');
+  assert(document.querySelector('#graphStage')?.textContent.includes('一键发穿搭'), '桌面首屏保留原始需求里的社交发布方向');
+  assert(document.querySelector('#graphStage')?.textContent.includes('旅行打包清单'), '首层保留同层方向，用户可以自己选择');
+  assert(document.querySelector('#nodeDetail')?.textContent.includes('点击画布上的这个节点'), '推荐只解释如何进入，不替用户跳转');
+  assert(document.querySelector('#nodeDetail')?.textContent.includes('第 2 步'), '右侧操作面板显示当前步骤');
+  assert(document.querySelector('#decisionBoard')?.textContent.includes('灵感备选'), '结果摘要强调灵感备选库，而不是强迫只留一个');
+  const firstUserProjects = JSON.parse(localStorage.getItem('cs_graph_projects_米朵') || '[]');
+  const wardrobe = firstUserProjects.find((project) => project.title === '线上衣橱');
+  assert(document.querySelector('#mapNodeCount')?.textContent === String(wardrobe?.nodes.length), '功能图状态条保留完整项目节点数');
+  assert(wardrobe?.layoutVersion === 4, '项目布局版本已迁移到新版');
+  const outfit = wardrobe?.nodes.find((node) => node.title === '一键穿搭');
+  assert(outfit?.x === 17 && outfit?.y === 30, '线上衣橱示例使用不重叠的新版节点位置');
+  assert(document.querySelector('#aiStatus')?.textContent.includes('本地示例'), 'AI 状态显示本地示例模式');
 
-    assert(ctx.apiOnline === true, '在线时 apiOnline=true');
+  console.log('--- 测试 3: 围绕节点继续发散 ---');
+  clickGraphNode(document, '一键穿搭');
+  await wait(80);
+  assert(document.querySelector('#flowNode')?.textContent.includes('一键穿搭'), '点击画布节点后进入该方向');
+  assert(document.querySelector('.node.active')?.textContent.includes('一键穿搭'), '当前方向节点成为画布当前节点');
+  assert(document.querySelector('#flowExpandStep')?.classList.contains('active'), '进入具体方向后准备生成子功能');
+  assert(document.querySelector('#appView')?.dataset.stage === '3', '当前方向没有子节点时进入生成子功能阶段');
+  assert(document.querySelector('#expandSelected')?.textContent.includes('生成子功能'), '右侧主按钮明确为当前节点生成子功能');
+  assert(!document.querySelector('#graphStage')?.textContent.includes('旅行打包清单'), '进入方向后不再混入同层其他方向');
+  const beforeNodes = document.querySelectorAll('.node').length;
+  const beforeTotalNodes = Number(document.querySelector('#mapNodeCount')?.textContent || '0');
+  document.querySelector('#expandSelected').click();
+  await wait(350);
+  assert(stormPostCalls === 0, 'AI 未配置时不调用 /storm POST');
+  assert(Number(document.querySelector('#mapNodeCount')?.textContent || '0') === beforeTotalNodes + 3, '从具体功能点继续生成 3 个下一层功能');
+  assert(document.querySelectorAll('.node').length >= beforeNodes, '生成后画布保留当前路径和当前层子功能');
+  assert(document.querySelectorAll('.node.in-path').length >= 2, '发散后当前节点和上游节点会高亮成路径');
+  assert(document.querySelectorAll('.node.dimmed').length === 0, '深入后隐藏无关分支，减少视觉干扰');
+  assert(document.querySelector('#flowDecisionStep')?.classList.contains('active'), '生成下一层后进入收藏点子步骤');
+  assert(document.querySelector('#appView')?.dataset.stage === '4', '生成下一层后进入点子选择阶段，移动端再显示详情');
+  assert(document.querySelector('.child-choice-list')?.textContent.includes('建议先看'), '生成后右侧直接列出子功能选择');
+  assert(document.querySelector('.node.recommended')?.textContent.includes('天气穿搭推荐'), '生成后推荐落到当前这一层的子功能');
+  assert(nodeTop(document, '天气穿搭推荐') > nodeTop(document, '一键穿搭') + 16, '生成后推荐子功能下移成独立层级，不压住父方向');
+  assert(document.querySelector('#projectTitle')?.textContent.includes('子功能'), '生成后页面明确展示当前节点的子功能层');
+  assert(document.querySelector('#projectDesc')?.textContent.includes('继续发散会给当前节点补充更多子功能'), '生成后说明继续发散只补当前节点这一层');
+  assert(document.querySelector('#nodeDetail')?.textContent.includes('推荐动作'), '右侧显示推荐动作，帮助用户继续找思路');
+  assert(document.querySelector('#nodeDetail')?.textContent.includes('为什么'), '右侧显示当前节点决策详情');
+  assert(document.querySelector('#nodeDetail')?.textContent.includes('验证'), '右侧显示当前节点验证动作');
+  const parsed = dom.window.parseIdeaArray('```json\\n[{"title":"试衣间模拟","desc":"上传自拍后预览穿搭效果。"}]\\n```');
+  assert(parsed.length === 1 && parsed[0].title === '试衣间模拟', 'AI markdown JSON 可解析');
+  const ranked = dom.window.rankRecommendationNodes([
+    { title: '穿搭评分与反馈', desc: '记录用户评分并优化推荐。', type: '核心功能', decision: 'maybe' },
+    { title: '一键社交发布卡片', desc: '把今日穿搭生成可分享图片。', type: '增长功能', decision: 'maybe' },
+    { title: '旅行衣物清单', desc: '按目的地生成要带的衣服组合。', type: '体验功能', decision: 'maybe' },
+    { title: '旅行打包清单', desc: '按目的地生成要带的衣服组合。', type: '延展功能', decision: 'maybe' },
+  ]);
+  assert(ranked[0].title !== '穿搭评分与反馈', '推荐排序不会默认把评分反馈类机制放在直观功能入口前面');
+  assert(ranked.findIndex((node) => node.title === '一键社交发布卡片') < ranked.findIndex((node) => node.title === '旅行打包清单'), '增长方向优先于延展方向，避免首屏偏离主线');
 
-    ctx.prompt = () => '新建测试';
-    ctx.createNewSession();
+  console.log('--- 测试 4: 收藏多个备选和以后再看同步到侧栏 ---');
+  document.querySelector('.child-choice.recommended-choice').click();
+  await wait(80);
+  assert(document.querySelector('#nodeDetail h2')?.textContent.includes('天气穿搭推荐'), '点推荐子功能后进入该功能详情');
+  document.querySelector('#keepNode').click();
+  await wait(80);
+  assert(document.querySelector('#projectTitle')?.textContent.includes('加入备选库'), '收藏后顶部进入已加入备选库状态');
+  assert(document.querySelector('#nodeDetail')?.textContent.includes('已加入备选'), '收藏后右侧显示已加入备选');
+  assert(document.querySelector('#expandSelected')?.textContent.includes('回到上一层'), '保留后主动作变成回到上一层');
+  assert(document.querySelector('.decision-title')?.textContent.includes('灵感备选库'), '右侧显示灵感备选区');
+  assert(document.querySelector('#decisionBoard')?.textContent.includes('灵感备选'), '结果摘要显示灵感备选区');
+  assert(document.querySelector('#decisionBoard')?.textContent.includes(document.querySelector('#nodeDetail h2')?.textContent), '收藏项进入备选库');
+  document.querySelector('#expandSelected').click();
+  await wait(80);
+  assert(Boolean(document.querySelector('.child-choice:not(.recommended-choice)')), '回到上一层后仍可比较其他子功能');
+  clickChildChoice(document, '重复率提醒');
+  await wait(80);
+  document.querySelector('#keepNode').click();
+  await wait(80);
+  assert(document.querySelector('#nodeDetail')?.textContent.includes('已加入备选'), '可以继续把第二个子功能加入备选库，不强迫只留一个');
+  assert((document.querySelector('#decisionBoard')?.textContent.match(/天气穿搭推荐|重复率提醒|社交图片生成/g) || []).length >= 2, '备选库允许收藏多个功能点');
+  document.querySelector('#expandSelected').click();
+  await wait(80);
+  clickChildChoice(document, '社交图片生成');
+  await wait(80);
+  document.querySelector('#dropNode').click();
+  await wait(80);
+  assert(document.querySelector('#projectTitle')?.textContent.includes('以后再看'), '暂缓后顶部进入以后再看状态');
+  assert(document.querySelector('#nodeDetail')?.textContent.includes('已放到以后'), '暂缓后右侧显示已放到以后');
+  assert(document.querySelector('#decisionBoard')?.textContent.includes('以后再看'), '右侧显示以后再看区');
+  assert(document.querySelector('#decisionBoard')?.textContent.includes(document.querySelector('#nodeDetail h2')?.textContent), '暂缓项进入以后再看清单');
 
-    const sessions = ctx.loadSessions();
-    assert(sessions.length === 1, `localStorage 写入: ${sessions.length}条`);
-    assert(sessions[0].name === '新建测试', `名称: ${sessions[0].name}`);
-    assert(sessions[0].nextId === 1, `nextId: ${sessions[0].nextId}`);
-    assert(Array.isArray(sessions[0].nodes), 'nodes 是数组');
-    assert(Array.isArray(sessions[0].edges), 'edges 是数组');
+  console.log('--- 测试 5: 编辑、手动添加、删除和导出 ---');
+  document.querySelector('#expandSelected').click();
+  await wait(80);
+  document.querySelector('#detailAddChild').click();
+  await wait(60);
+  assert(!document.querySelector('#nodeModal')?.classList.contains('hidden'), '手动加点子会打开节点弹窗');
+  document.querySelector('#nodeTitleInput').value = '镜前预览';
+  document.querySelector('#nodeTypeInput').value = '体验功能';
+  document.querySelector('#nodeDescInput').value = '用已有衣服快速生成镜前预览图。';
+  document.querySelector('#nodePainInput').value = '用户不知道一套搭配穿上身是否合适。';
+  document.querySelector('#nodeValidationInput').value = '手工做 5 张预览图，看用户是否愿意保存。';
+  document.querySelector('#saveNodeBtn').click();
+  await wait(100);
+  assert(document.querySelector('#nodeDetail h2')?.textContent.includes('镜前预览'), '保存手动点子后进入新功能详情');
+  assert(document.querySelector('#decisionBoard')?.textContent.includes('待验证'), '手动点子进入待验证池');
+  document.querySelector('#detailEditNode').click();
+  await wait(60);
+  document.querySelector('#nodeTitleInput').value = '镜前预览卡片';
+  document.querySelector('#nodeValidationInput').value = '做 3 张卡片发给用户，让用户选是否想继续编辑。';
+  document.querySelector('#saveNodeBtn').click();
+  await wait(100);
+  assert(document.querySelector('#nodeDetail h2')?.textContent.includes('镜前预览卡片'), '编辑功能点会更新当前详情');
+  document.querySelector('#expandSelected').click();
+  await wait(180);
+  assert([...document.querySelectorAll('.node')].some((node) => node.textContent.includes('镜前预览卡片')), '继续发散后仍保留当前功能主线');
+  document.querySelector('#exportProjectBtn').click();
+  await wait(80);
+  assert(dom.window.__copiedMarkdown?.includes('# 线上衣橱'), '导出会复制当前项目 Markdown');
+  assert(dom.window.__copiedMarkdown?.includes('镜前预览卡片'), '导出内容包含手动编辑后的功能点');
+  document.querySelector('#detailDeleteNode').click();
+  await wait(100);
+  assert(!document.querySelector('#nodeDetail h2')?.textContent.includes('镜前预览卡片'), '删除功能点后回到上一层');
+  assert(!document.querySelector('#decisionBoard')?.textContent.includes('镜前预览卡片'), '删除功能点会从备选摘要中移除');
 
-    await new Promise(r => setTimeout(r, 200));
-    assert(serverStore.has(sessions[0].id), '后端已存储');
+  console.log('--- 测试 6: 创建新项目并持久化 ---');
+  document.querySelector('#topNewProjectBtn').click();
+  await wait(60);
+  assert(!document.querySelector('#projectModal')?.classList.contains('hidden'), '顶部新建功能图会打开创建弹窗');
+  assert(document.body.classList.contains('modal-open'), '创建弹窗打开时锁定背景操作');
+  assert(document.querySelector('#projectModalTitle')?.textContent.includes('新建功能图'), '创建弹窗标题短而明确');
+  assert(!document.querySelector('.modal-head')?.textContent.includes('不要一开始列功能'), '创建弹窗不再堆长说明文案');
+  assert(document.querySelector('.creation-hint')?.textContent.includes('先看一个'), '创建弹窗解释创建后的探索流程');
+  document.querySelector('[data-project-example="wardrobe"]').click();
+  assert(document.querySelector('#newProjectTitle')?.value === '线上衣橱', '创建弹窗可用示例快速填充项目点');
+  document.querySelector('#newProjectTitle').dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+  assert(document.activeElement === document.querySelector('#newProjectSeed'), '项目点按 Enter 会进入真实场景输入');
+  document.querySelector('#newProjectTitle').value = '个人知识库';
+  document.querySelector('#newProjectSeed').value = '把收藏、笔记、灵感统一整理，并能继续发散写作选题。';
+  document.querySelector('#newProjectSeed').dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Enter', metaKey: true, bubbles: true }));
+  await wait(100);
+  assert(document.querySelector('#projectTitle')?.textContent.includes('个人知识库'), '新项目成为当前项目');
+  assert(document.querySelector('#toast')?.textContent.includes('已创建“个人知识库”功能图'), '创建后反馈当前新项目，避免残留上一轮操作提示');
+  assert(document.querySelector('#projectModal')?.classList.contains('hidden'), '创建后自动关闭弹窗');
+  assert(!document.body.classList.contains('modal-open'), '创建后恢复背景操作状态');
+  assert(document.querySelector('.node.root')?.textContent.includes('个人知识库'), '新项目生成中心节点');
+  assert(document.querySelectorAll('.node').length > 1, '新项目创建后立即带出第一层功能分支');
+  assert(document.querySelector('#graphStage')?.textContent.includes('写作选题发散'), '知识库项目生成贴合场景的功能分支');
+  const userProjects = JSON.parse(localStorage.getItem('cs_graph_projects_米朵') || '[]');
+  assert(userProjects.some((project) => project.title === '个人知识库'), '新项目已保存到当前用户空间');
+  await wait(450);
+  assert(projectPutCalls >= 1, '项目变化会同步到后端用户项目空间');
 
-    const serverSess = serverStore.get(sessions[0].id);
-    assert(serverSess.name === '新建测试', '后端名称一致');
-    assert(serverSess.nextId === 1, '后端 nextId 一致');
-  }
+  document.querySelector('#topNewProjectBtn').click();
+  await wait(60);
+  document.querySelector('#newProjectTitle').value = '咖啡店排班';
+  document.querySelector('#newProjectSeed').value = '根据员工可用时间、客流高峰和请假情况，帮店长安排一周班表。';
+  document.querySelector('#createProjectBtn').click();
+  await wait(120);
+  assert(document.querySelector('#projectTitle')?.textContent.includes('咖啡店排班'), '可创建门店排班类真实场景项目');
+  assert(document.querySelector('#graphStage')?.textContent.includes('一键生成周班表'), '排班项目生成贴合门店排班的核心功能');
+  assert(document.querySelector('#graphStage')?.textContent.includes('换班冲突提醒'), '排班项目生成贴合临时换班的真实痛点');
+  assert(!document.querySelector('#graphStage')?.textContent.includes('最小录入流程'), '排班项目不落入泛化兜底功能名');
 
-  // ---- 套件 3: saveCurrentSession 更新与双写 ----
-  console.log('\n=== 套件 3: saveCurrentSession 更新双写 ===');
-  {
-    serverStore.clear();
-    const html = buildTestHTML();
-    const dom = new JSDOM(html, {
-      url: 'http://localhost:5500',
-      runScripts: 'dangerously',
-      beforeParse(window) {
-        window.fetch = createMockFetch();
-      },
-    });
-    const ctx = dom.window;
-    await new Promise(r => setTimeout(r, 300));
+  console.log('--- 测试 6: 不同用户项目隔离 ---');
+  document.querySelector('#logoutBtn').click();
+  await wait(80);
+  assert(document.querySelector('#recentSpaces')?.textContent.includes('米朵'), '退出后登录页显示最近项目空间');
+  assert(document.querySelector('#recentSpaces')?.textContent.includes('咖啡店排班'), '最近项目空间显示当前最新项目');
+  document.querySelector('#recentSpaces [data-login="米朵"]').click();
+  await wait(160);
+  assert(document.querySelector('#userName')?.textContent === '米朵', '可从最近项目空间继续进入用户记录');
+  document.querySelector('#logoutBtn').click();
+  await wait(80);
+  document.querySelector('[data-login="产品同学"]').click();
+  await wait(180);
+  const otherProjects = JSON.parse(localStorage.getItem('cs_graph_projects_产品同学') || '[]');
+  assert(otherProjects.length >= 2, '另一个用户有自己的默认项目');
+  assert(!otherProjects.some((project) => project.title === '个人知识库'), '另一个用户看不到米朵的新项目');
+  assert(document.querySelector('#userName')?.textContent === '产品同学', '已切换到另一个用户');
 
-    // 创建会话
-    ctx.prompt = () => '更新测试';
-    ctx.createNewSession();
-    const sessions = ctx.loadSessions();
-    const sid = sessions[0].id;
+  console.log('--- 测试 7: AI 生成有明确等待反馈 ---');
+  const loadingDom = await createDom({ aiConfigured: true, stormDelay: 180 });
+  const loadingDocument = loadingDom.window.document;
+  loadingDocument.querySelector('[data-login="米朵"]').click();
+  await wait(300);
+  assert(loadingDocument.querySelector('#aiStatus')?.textContent.includes('AI 可用'), 'AI 可用时状态栏明确显示');
+  clickGraphNode(loadingDocument, '一键穿搭');
+  await wait(80);
+  assert(loadingDocument.querySelector('#expandSelected')?.textContent.includes('生成子功能'), '点击方向后准备生成它的子功能');
+  const loadingBeforeTotalNodes = Number(loadingDocument.querySelector('#mapNodeCount')?.textContent || '0');
+  loadingDocument.querySelector('#expandSelected').click();
+  await wait(20);
+  assert(loadingDocument.querySelector('#expandSelected')?.textContent.includes('生成中') || loadingDocument.querySelector('#generateBtn')?.textContent.includes('生成中'), 'AI 慢响应时主按钮显示生成中');
+  assert(loadingDocument.querySelector('#expandSelected')?.disabled || loadingDocument.querySelector('#generateBtn')?.disabled, 'AI 慢响应时主按钮不可重复点击');
+  await wait(260);
+  assert(stormPostCalls === 1, 'AI 已连接时会调用 /storm POST');
+  assert(Number(loadingDocument.querySelector('#mapNodeCount')?.textContent || '0') === loadingBeforeTotalNodes + 3, 'AI 返回后追加下一层功能节点');
 
-    // 模拟运行时修改
-    ctx.currentSession = ctx.loadSessions().find(s => s.id === sid);
-    // 确保 currentSession 是可变对象
-    if (!ctx.currentSession.nodes) ctx.currentSession.nodes = [];
-    ctx.currentSession.nodes = [
-      { id: 'n1', title: '持久化节点', x: 100, y: 200, score: 4, category: '测试' },
-    ];
-    ctx.currentSession.edges = [];
-    ctx.currentSession.nextId = 2;
-    ctx.currentSession.name = '更新测试(已改)';
-
-    ctx.saveCurrentSession();
-
-    const reloaded = ctx.loadSessions();
-    assert(reloaded[0].name === '更新测试(已改)', `名称已更新: ${reloaded[0].name}`);
-    assert(reloaded[0].nodes.length === 1, `节点数=1，实际 ${reloaded[0].nodes.length}`);
-    if (reloaded[0].nodes.length > 0) {
-      assert(reloaded[0].nodes[0].title === '持久化节点', '节点标题正确');
-    }
-    assert(reloaded[0].nextId === 2, `nextId已更新: ${reloaded[0].nextId}`);
-
-    await new Promise(r => setTimeout(r, 200));
-    if (serverStore.has(sid)) {
-      const ss = serverStore.get(sid);
-      assert(ss.name === '更新测试(已改)', '后端名称已同步');
-      assert(ss.nodes.length === 1, '后端节点已同步');
-    }
-  }
-
-  // ---- 套件 4: deleteSession 双删 ----
-  console.log('\n=== 套件 4: deleteSession 双删 ===');
-  {
-    serverStore.clear();
-    const html = buildTestHTML();
-    const dom = new JSDOM(html, {
-      url: 'http://localhost:5500',
-      runScripts: 'dangerously',
-      beforeParse(window) {
-        window.fetch = createMockFetch();
-      },
-    });
-    const ctx = dom.window;
-    await new Promise(r => setTimeout(r, 300));
-
-    ctx.confirm = () => true;
-    ctx.prompt = () => '待删';
-
-    ctx.createNewSession();
-    const sessions = ctx.loadSessions();
-    assert(sessions.length === 1, '创建成功');
-    const sid = sessions[0].id;
-
-    await ctx.deleteSession(sid, { stopPropagation: () => {} });
-
-    assert(ctx.loadSessions().length === 0, 'localStorage 已清空');
-    assert(!serverStore.has(sid), '后端已删除');
-  }
-
-  // ---- 套件 5: API 不可用降级 ----
-  console.log('\n=== 套件 5: API 不可用降级 ===');
-  {
-    serverStore.clear();
-    const html = buildTestHTML();
-    const dom = new JSDOM(html, {
-      url: 'http://localhost:5500',
-      runScripts: 'dangerously',
-      beforeParse(window) {
-        window.fetch = async () => { throw new Error('断网'); };
-      },
-    });
-    const ctx = dom.window;
-    await new Promise(r => setTimeout(r, 300));
-
-    assert(ctx.apiOnline === false, 'apiOnline=false');
-
-    // createNewSession 仍需工作（纯 localStorage）
-    ctx.prompt = () => '降级测试';
-    ctx.createNewSession();
-    const sessions = ctx.loadSessions();
-    assert(sessions.length === 1, '离线创建成功');
-    assert(sessions[0].name === '降级测试', '数据正确');
-    assert(serverStore.size === 0, '后端无数据（未同步）');
-  }
-
-  // ---- 套件 6: 复杂数据完整性 ----
-  console.log('\n=== 套件 6: 复杂数据完整性 ===');
-  {
-    const html = buildTestHTML();
-    const dom = new JSDOM(html, {
-      url: 'http://localhost:5500',
-      runScripts: 'dangerously',
-      beforeParse(window) {
-        window.fetch = async () => { throw new Error('离线'); };
-      },
-    });
-    const ctx = dom.window;
-    await new Promise(r => setTimeout(r, 300));
-
-    ctx.saveSessions([{
-      id: 'cs_full',
-      name: '完整数据',
-      nodes: [
-        { id: 'r1', title: '根', x: 400, y: 300, score: 5, category: '核心', description: '描述文本' },
-        { id: 'c1', title: '子A', x: 600, y: 200, score: 4, category: '分支', description: '' },
-        { id: 'c2', title: '子B', x: 600, y: 400, score: 3, category: '分支' },
-      ],
-      edges: [
-        { id: 'e1', from: 'r1', to: 'c1' },
-        { id: 'e2', from: 'r1', to: 'c2' },
-      ],
-      nextId: 4,
-      createdAt: '2026-06-29T10:00:00.000Z',
-    }]);
-
-    const s = ctx.loadSessions()[0];
-    assert(s.nodes.length === 3, `3节点: ${s.nodes.length}`);
-    assert(s.edges.length === 2, `2边: ${s.edges.length}`);
-    assert(s.nodes[0].description === '描述文本', '自定义字段保留');
-    assert(s.nodes[1].description === '', '空字符串字段保留');
-    assert(s.edges[0].from === 'r1', '边from正确');
-    assert(s.nextId === 4, 'nextId保留');
-    assert(s.createdAt === '2026-06-29T10:00:00.000Z', 'createdAt保留');
-  }
-
-  // ---- 结果 ----
   console.log(`\n========================================`);
-  console.log(`  前端数据层: ${passed} passed, ${failed} failed`);
-  if (failures.length > 0) {
-    console.log(`\n  失败:`);
-    failures.forEach(f => console.log(`    - ${f}`));
+  console.log(`  前端功能图: ${passed} passed, ${failed} failed`);
+  if (failures.length) {
+    console.log('\n  失败:');
+    failures.forEach((failure) => console.log(`    - ${failure}`));
   }
   console.log(`========================================\n`);
 }
 
 (async () => {
-  try { await runTests(); }
-  catch (e) { console.error('异常:', e.message); failed++; }
-  finally { process.exit(failed > 0 ? 1 : 0); }
+  try {
+    await runTests();
+  } catch (error) {
+    failed += 1;
+    console.error('测试异常:', error);
+  } finally {
+    process.exit(failed > 0 ? 1 : 0);
+  }
 })();

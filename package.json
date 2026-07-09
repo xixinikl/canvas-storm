@@ -1,11 +1,16 @@
 {
   "name": "canvas-storm",
   "version": "1.0.0",
-  "description": "DeepSeek 头脑风暴画布 — 多人在线协作版",
+  "description": "CanvasStorm 图形化功能发散工具",
   "main": "server/app.js",
   "scripts": {
     "start": "node server/app.js",
-    "dev": "node --watch server/app.js"
+    "dev": "node --watch server/app.js",
+    "test": "npm run check:html && npm run test:api && npm run test:ws && npm run test:frontend",
+    "test:api": "node tests/api-backend.test.js",
+    "test:ws": "node tests/ws.test.js",
+    "test:frontend": "node tests/frontend-data.test.js",
+    "check:html": "node tests/html-syntax.test.js"
   },
   "dependencies": {
     "dotenv": "^16.4.0",
@@ -20,6 +25,6 @@
   ],
   "license": "MIT",
   "devDependencies": {
-    "jsdom": "^29.1.1"
+    "jsdom": "^22.1.0"
   }
 }

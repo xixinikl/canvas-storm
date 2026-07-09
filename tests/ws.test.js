@@ -6,6 +6,7 @@ const path = require('path');
 const fs = require('fs');
 
 let server, wss, port;
+const sockets = new Set();
 
 function startServer() {
   return new Promise((resolve, reject) => {
@@ -35,9 +36,69 @@ function startServer() {
 
 function stopServer() {
   return new Promise((resolve) => {
-    if (wss) wss.close();
-    if (server) server.close(resolve);
-    else resolve();
+    for (const ws of sockets) {
+      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+        ws.terminate();
+      }
+    }
+    sockets.clear();
+    const closeHttp = () => {
+      if (server) server.close(resolve);
+      else resolve();
+    };
+    if (wss) wss.close(closeHttp);
+    else closeHttp();
+  });
+}
+
+function createSocket(url) {
+  const ws = new WebSocket(url);
+  sockets.add(ws);
+  ws.on('close', () => sockets.delete(ws));
+  ws.on('error', () => sockets.delete(ws));
+  return ws;
+}
+
+function waitOpen(ws) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error('连接超时'));
+    }, 3000);
+    const cleanup = () => {
+      clearTimeout(timer);
+      ws.off('open', handleOpen);
+      ws.off('error', handleError);
+      ws.off('close', handleClose);
+    };
+    const handleOpen = () => {
+      cleanup();
+      resolve();
+    };
+    const handleError = (error) => {
+      cleanup();
+      reject(error);
+    };
+    const handleClose = () => {
+      cleanup();
+      reject(new Error('连接打开前已关闭'));
+    };
+    ws.on('open', handleOpen);
+    ws.on('error', handleError);
+    ws.on('close', handleClose);
+  });
+}
+
+function closeSocket(ws) {
+  return new Promise((resolve) => {
+    if (ws.readyState === WebSocket.CLOSED) return resolve();
+    ws.once('close', resolve);
+    ws.close();
+    const timer = setTimeout(() => {
+      if (ws.readyState !== WebSocket.CLOSED) ws.terminate();
+      resolve();
+    }, 500);
+    ws.once('close', () => clearTimeout(timer));
   });
 }
 
@@ -53,7 +114,7 @@ function assert(condition, label) {
   console.log('\n=== WebSocket 通道测试 ===\n');
 
   await startServer();
-  const url = `ws://localhost:${port}`;
+  const url = `ws://127.0.0.1:${port}`;
 
   // ---- 测试 1: 服务端启动 ----
   console.log('--- 测试 1: 服务端启动 ---');
@@ -66,35 +127,31 @@ function assert(condition, label) {
   // ---- 测试 2: 单客户端连接 ----
   console.log('--- 测试 2: 单客户端连接 ---');
   {
-    const ws = new WebSocket(url);
-    await new Promise((resolve, reject) => {
-      ws.on('open', resolve);
-      ws.on('error', reject);
-      setTimeout(() => reject(new Error('连接超时')), 3000);
-    });
+    const ws = createSocket(url);
+    await waitOpen(ws);
     assert(ws.readyState === WebSocket.OPEN, '客户端连接成功');
-    ws.close();
+    await closeSocket(ws);
   }
 
   // ---- 测试 3: 加入房间 ----
   console.log('--- 测试 3: 加入房间 ---');
   {
-    const ws = new WebSocket(url);
-    await new Promise((r) => ws.on('open', r));
+    const ws = createSocket(url);
+    await waitOpen(ws);
     ws.send(JSON.stringify({ type: 'join', sessionId: 'room_a' }));
     // join 不响应，只要不报错就通过
     await new Promise((r) => setTimeout(r, 200));
     assert(true, '加入房间无异常');
-    ws.close();
+    await closeSocket(ws);
   }
 
   // ---- 测试 4: 同房间广播 session_update ----
   console.log('--- 测试 4: 同房间广播 ---');
   {
-    const ws1 = new WebSocket(url);
-    const ws2 = new WebSocket(url);
-    await new Promise((r) => ws1.on('open', r));
-    await new Promise((r) => ws2.on('open', r));
+    const ws1 = createSocket(url);
+    const ws2 = createSocket(url);
+    await waitOpen(ws1);
+    await waitOpen(ws2);
 
     ws1.send(JSON.stringify({ type: 'join', sessionId: 'room_x' }));
     ws2.send(JSON.stringify({ type: 'join', sessionId: 'room_x' }));
@@ -111,15 +168,15 @@ function assert(condition, label) {
     ws1.send(JSON.stringify({ type: 'session_update', sessionId: '123' }));
     await new Promise((r) => setTimeout(r, 200));
     assert(received, '同房间客户端收到广播');
-    ws1.close();
-    ws2.close();
+    await closeSocket(ws1);
+    await closeSocket(ws2);
   }
 
   // ---- 测试 5: 自身不收到自己的广播 ----
   console.log('--- 测试 5: 自身不收到自己的广播 ---');
   {
-    const ws = new WebSocket(url);
-    await new Promise((r) => ws.on('open', r));
+    const ws = createSocket(url);
+    await waitOpen(ws);
     ws.send(JSON.stringify({ type: 'join', sessionId: 'room_self' }));
     await new Promise((r) => setTimeout(r, 100));
 
@@ -128,16 +185,16 @@ function assert(condition, label) {
     ws.send(JSON.stringify({ type: 'session_update', sessionId: '456' }));
     await new Promise((r) => setTimeout(r, 200));
     assert(!selfReceived, '发送者不收到自己的广播');
-    ws.close();
+    await closeSocket(ws);
   }
 
   // ---- 测试 6: 不同房间不互串 ----
   console.log('--- 测试 6: 不同房间隔离 ---');
   {
-    const wsA = new WebSocket(url);
-    const wsB = new WebSocket(url);
-    await new Promise((r) => wsA.on('open', r));
-    await new Promise((r) => wsB.on('open', r));
+    const wsA = createSocket(url);
+    const wsB = createSocket(url);
+    await waitOpen(wsA);
+    await waitOpen(wsB);
 
     wsA.send(JSON.stringify({ type: 'join', sessionId: 'room_a' }));
     wsB.send(JSON.stringify({ type: 'join', sessionId: 'room_b' }));
@@ -152,23 +209,23 @@ function assert(condition, label) {
     wsA.send(JSON.stringify({ type: 'session_update', sessionId: 'from_a' }));
     await new Promise((r) => setTimeout(r, 200));
     assert(!leaked, '不同房间消息隔离');
-    wsA.close();
-    wsB.close();
+    await closeSocket(wsA);
+    await closeSocket(wsB);
   }
 
   // ---- 测试 7: 断连清理 ----
   console.log('--- 测试 7: 断连后清理 ---');
   {
-    const ws = new WebSocket(url);
-    await new Promise((r) => ws.on('open', r));
+    const ws = createSocket(url);
+    await waitOpen(ws);
     ws.send(JSON.stringify({ type: 'join', sessionId: 'room_cleanup' }));
     await new Promise((r) => setTimeout(r, 100));
-    ws.close();
+    await closeSocket(ws);
     await new Promise((r) => setTimeout(r, 200));
 
     // 断连后房间为空，新客户端加入同一房间，之前的客户端不应收到
-    const wsNew = new WebSocket(url);
-    await new Promise((r) => wsNew.on('open', r));
+    const wsNew = createSocket(url);
+    await waitOpen(wsNew);
 
     let ghostReceived = false;
     wsNew.on('message', () => { ghostReceived = true; });
@@ -179,30 +236,30 @@ function assert(condition, label) {
     wsNew.send(JSON.stringify({ type: 'session_update', sessionId: 'solo' }));
     await new Promise((r) => setTimeout(r, 200));
     assert(!ghostReceived, '断连后端已清理，无幽灵消息');
-    wsNew.close();
+    await closeSocket(wsNew);
   }
 
   // ---- 测试 8: 无效消息不崩溃 ----
   console.log('--- 测试 8: 无效消息容错 ---');
   {
-    const ws = new WebSocket(url);
-    await new Promise((r) => ws.on('open', r));
+    const ws = createSocket(url);
+    await waitOpen(ws);
 
     ws.send('not json');
     ws.send(JSON.stringify({ type: 'unknown' }));
     ws.send('');
     await new Promise((r) => setTimeout(r, 200));
     assert(ws.readyState === WebSocket.OPEN, '无效消息不导致断连');
-    ws.close();
+    await closeSocket(ws);
   }
 
   // ---- 测试 9: cursor_move 广播 ----
   console.log('--- 测试 9: 光标位置广播 ---');
   {
-    const ws1 = new WebSocket(url);
-    const ws2 = new WebSocket(url);
-    await new Promise((r) => ws1.on('open', r));
-    await new Promise((r) => ws2.on('open', r));
+    const ws1 = createSocket(url);
+    const ws2 = createSocket(url);
+    await waitOpen(ws1);
+    await waitOpen(ws2);
 
     ws1.send(JSON.stringify({ type: 'join', sessionId: 'room_cursor' }));
     ws2.send(JSON.stringify({ type: 'join', sessionId: 'room_cursor' }));
@@ -220,8 +277,8 @@ function assert(condition, label) {
     assert(cursorMsg.userId === 'user1', 'userId 正确');
     assert(cursorMsg.x === 100, 'x 坐标正确');
     assert(cursorMsg.y === 200, 'y 坐标正确');
-    ws1.close();
-    ws2.close();
+    await closeSocket(ws1);
+    await closeSocket(ws2);
   }
 
   // ---- 清理 ----

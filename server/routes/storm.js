@@ -2,11 +2,30 @@
 const express = require('express');
 const router = express.Router();
 
+function getModel() {
+  return process.env.DEEPSEEK_MODEL || 'deepseek-chat';
+}
+
+function hasApiKey() {
+  const key = process.env.DEEPSEEK_API_KEY;
+  return !!key && key !== 'your_api_key_here';
+}
+
+router.get('/status', (req, res) => {
+  res.json({
+    code: 200,
+    data: {
+      configured: hasApiKey(),
+      model: getModel(),
+    },
+  });
+});
+
 router.post('/', async (req, res) => {
   const API_KEY = process.env.DEEPSEEK_API_KEY;
-  const MODEL = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
+  const MODEL = getModel();
 
-  if (!API_KEY) {
+  if (!hasApiKey()) {
     return res.status(500).json({ code: 500, error: '服务端未配置 API Key' });
   }
 

@@ -1,155 +1,88 @@
-# CanvasStorm — AI 头脑风暴画布
+# CanvasStorm — 图形化功能发散工具
 
-一个基于浏览器的视觉化头脑风暴工具。输入项目想法，AI（DeepSeek）自动发散生成创新功能点，以思维导图形式呈现，支持拖拽、缩放、聚焦钻取、进一步发散等交互。
+CanvasStorm 面向有项目想法的产品/开发者。用户登录到自己的本地项目空间后，可以从一个具体项目点开始生成“功能图”：中心节点是项目想法，周围是可落地功能分支；点击任意功能点可以继续往下发散，并把功能标记为“保留”或“不做”。
 
-## 项目结构
+## 当前产品形态
 
-```
-canvas-storm/
-├── index.html              # 前端全部代码（单文件 SPA）
-├── server/
-│   ├── app.js              # Express 入口，启动 HTTP + WebSocket
-│   ├── storage.js          # JSON 文件读写（会话持久化到 data/ 目录）
-│   ├── ws.js               # WebSocket 协作通道（房间广播）
-│   └── routes/
-│       ├── sessions.js     # 会话 CRUD API
-│       ├── storm.js        # AI 发散 API（调用 DeepSeek）
-│       └── layout.js       # 自动布局 API（mindmap-layouts）
-├── data/                   # 会话数据（JSON 文件，gitignore）
-├── scripts/seed.js         # 种子数据注入脚本
-├── tests/                  # 测试文件
-├── package.json
-├── .env                    # 环境变量（API Key、端口，gitignore）
-├── launch.command          # macOS 双击启动脚本
-├── CURRENT_STATUS.md       # （旧）状态文档
-├── TASKS.md                # （旧）任务看板
-└── README.md               # 本文档
-```
+- **本地登录 / 用户空间**：输入不同用户名会看到不同项目记录；登录页会显示最近项目空间，可一键继续上次用户记录。当前为本地演示登录，不上传密码。
+- **登录页产品预览**：未登录状态下直接展示“线上衣橱 → 一键穿搭 / 拍照入库 / 一键发穿搭”的小型功能图，让用户在进入前就理解工具用途。
+- **项目记录**：每个用户有自己的项目列表，默认内置“线上衣橱”“AI 旅行打包助手”和“AI 简历优化助手”；项目会同步到后端 JSON 文件存储，前端仍保留 localStorage 兜底。
+- **新建功能图主路径**：顶部和横向项目条提供“新建功能图”，弹窗只要求项目点和真实场景，并把示例集中在弹窗里，避免工作台重复信息。
+- **图形化发散**：主界面是功能节点图，不再是一屏抽象方向和看板。
+- **清晰工作流**：工作台顶部用紧凑 4 步状态轨道显示“项目点 → 功能方向 → 下一层 → MVP 取舍”，项目记录改成横向切换条，主画布占据主要空间，右侧只展示当前功能点的下一步行动、痛点、验证动作和取舍按钮。
+- **从节点继续发散**：可以选中任意功能点，例如“线上衣橱 → 一键穿搭”，继续生成下一层功能。
+- **视觉化画布**：画布只展示功能节点名称和类型，长说明集中到右侧，避免用户被一堆说明卡片淹没。
+- **当前路径高亮**：选中某个功能后，画布会高亮它和上游节点，弱化无关分支，用户能看懂自己正在沿哪条功能线继续发散。
+- **取舍建议**：右侧会根据功能类型给出“优先保留做 MVP / 先手工验证 / 第二批做 / 暂时不做”等推荐动作，并在根节点状态下主动建议先聚焦一个候选方向，减少“每个都想要”的选择负担。
+- **唯一推荐焦点**：选方向阶段会在画布上直接标出“建议先做”的功能点；进入拆解或取舍阶段后标记自动收起，避免用户同时看到多个焦点。
+- **本轮收敛**：右侧只突出一个“建议先做”的 MVP 候选，其它功能只以数量和代表项轻量展示，避免把用户重新拉回复杂列表。
+- **落地判断**：每个节点包含真实痛点和最小验证动作，支持保留 / 不做。
+- **AI + 本地降级**：配置 DeepSeek 时调用真实 AI；未配置或失败时使用本地示例，保证流程可演示。已有分支继续发散时默认只补充少量节点，减少画布拥挤。
 
 ## 快速启动
 
-### 前置条件
+```bash
+npm install
+cp .env.example .env
+# 编辑 .env，填入 DEEPSEEK_API_KEY
+npm start
+```
 
-- Node.js 18+
-- DeepSeek API Key（用于 AI 发散功能）
+打开：
 
-### 步骤
+```text
+http://127.0.0.1:3000
+```
+
+不要直接打开 `file://.../index.html`。页面内已做兜底提示和跳转，但完整功能必须通过本地服务访问。
+
+## 验收路径
+
+1. 进入页面，输入用户名或点“米朵”进入工作台。
+2. 点击顶部或项目条的“新建功能图”，输入项目点和真实场景，创建自己的功能图。
+3. 确认默认或新建项目进入 4 步轨道：项目点、功能方向、下一层、MVP 取舍。
+4. 点击右侧推荐动作聚焦一个功能方向，再生成下一层功能。
+5. 点击“保留”或“不做”，右侧列表应同步变化。
+6. 退出后登录页应显示最近项目空间，点击“继续”可回到该用户项目记录。
+7. 换另一个用户名进入，项目记录应互相隔离。
+
+## 测试
 
 ```bash
-cd canvas-storm
-
-# 1. 安装依赖
-npm install
-
-# 2. 配置 API Key
-cp .env.example .env
-# 编辑 .env，填入你的 DEEPSEEK_API_KEY
-
-# 3. 启动服务
-npm start
-# 或者在 macOS 上双击 launch.command
-
-# 4. 打开浏览器
-# http://localhost:3000
+npm test
 ```
 
-## 核心功能
+覆盖：
 
-| 功能 | 说明 |
-|------|------|
-| AI 发散 | 输入项目描述 → DeepSeek 生成创新功能点（支持 4 种发散风格：均衡/激进/实用/简洁） |
-| 思维导图 | 节点以树形布局展示，根节点→子节点的层级关系 |
-| 拖拽画布 | 空白处拖拽平移，Ctrl+滚轮缩放（12%~300%） |
-| 拖拽节点 | 拖拽节点改变位置，自动保存 |
-| 节点发散 | 点击非根节点的「↻ 发散」按钮，对该节点继续发散子节点 |
-| Focus Drill | 按 → 键聚焦到子节点，按 ← 返回父级，上下箭头同级切换，Esc 全览 |
-| 撤回 | 最多 50 步撤消历史 |
-| 自动布局 | 点击「整理布局」调用 mindmap-layouts 算法重排所有节点 |
-| 导出 MD | 将会话导出为 Markdown 格式 |
-| WebSocket | 多窗口协同编辑同一会话（服务器已实现，前端待接入） |
+- HTML 内联脚本语法
+- REST API 和 AI 状态接口
+- 用户项目空间 API：按用户名读取/保存项目图，不暴露密钥
+- WebSocket 房间广播与断连清理
+- 前端功能图主流程：登录、用户隔离、项目记录、节点发散、保留/不做、持久化
+- 前端项目同步：登录时读取后端项目，项目变化后同步保存，接口不可用时保留本地兜底
+- 登录页最近项目空间：退出后显示用户项目记录，并可一键继续
+- 新建功能图弹窗：顶部入口、示例填充、创建后关闭并进入新项目
+- 右侧决策清单：保留和暂不做会自动进入对应区域
+- 当前路径高亮：发散后当前节点和上游节点高亮，路径外节点弱化
 
-## 技术架构
+本地测试命令会检查 HTML 脚本语法、API、WebSocket 和前端数据流。GitHub Actions workflow 暂未提交；如需 CI，需要使用带 `workflow` scope 的 GitHub token 添加。
 
-- **前端**：原生 JavaScript（无框架），Canvas 风格画布（CSS transform 缩放+平移），单文件 SPA（index.html ~1500 行）
-- **后端**：Express.js，REST API + WebSocket
-- **AI**：DeepSeek Chat API（通过 storm API 路由调用）
-- **存储**：JSON 文件（data/ 目录），前端 localStorage 降级
+## 技术结构
 
-### 前端关键函数速查
-
-| 函数 | 作用 |
-|------|------|
-| `renderNodes()` | 渲染全部节点到 canvasLayer |
-| `renderDivergeOverlays()` | 渲染发散按钮到独立覆盖层（避免画布缩放影响） |
-| `renderEdges()` | 渲染 SVG 连线 |
-| `renderAll()` | 渲染全部（nodes + edges + overlays） |
-| `applyTransform()` | 应用缩放/平移变换 |
-| `toggleDivergePanel(nodeId)` | 打开/关闭发散设置面板 |
-| `startDivergeNode(nodeId)` | 调用后端 API 进行发散 |
-| `launchSession()` | 从输入框触发根节点生成 |
-| `focusNode(id)` | Focus Drill 聚焦某个节点 |
-| `tidyLayout()` | 调用后端自动布局 |
-| `undo()` | 撤消操作 |
-
-### 最新架构变更（2026-07-04）
-
-**发散按钮已从画布层移出**：之前按钮在 `canvasLayer` 内，受 `transform: scale()` 影响导致 hover 失效、尺寸异常。现在按钮在独立的 `#divergeOverlay` 覆盖层中，通过 `positionDivergeForNode()` 手动计算屏幕坐标定位，不受画布缩放影响。
-
-### 数据流
-
-```
-用户操作 → 前端状态更新 → saveCurrentSession()
-  ↓
-PUT /api/sessions/:id → storage.js 写 data/*.json
-  ↓
-WebSocket 广播给同房间的其他客户端（未完成）
+```text
+index.html                  单文件前端 SPA
+server/app.js               Express 入口，静态服务、API、WebSocket
+server/routes/storm.js      DeepSeek AI 代理和配置状态接口
+server/routes/sessions.js   旧会话 CRUD API
+server/routes/users.js      用户项目空间 API，按用户名保存功能图项目
+server/ws.js                WebSocket 房间广播
+tests/                      API / WS / 前端数据流测试
 ```
 
-## 当前项目状态
+## 当前边界
 
-### 已完成
-
-- 完整的前端画布交互（渲染/拖拽/缩放/Focus Drill/撤回）
-- 后端 REST API（会话 CRUD / AI 发散 / 自动布局）
-- JSON 文件持久化
-- 发散按钮 UI 重构（独立覆盖层，彻底解决缩放 bug）
-- WebSocket 服务端通道（房间/广播）
-
-### 待完成 / 已知问题
-
-| 优先级 | 任务 | 说明 |
-|--------|------|------|
-| 高 | 前端接入 WebSocket | 多窗口实时协同编辑 |
-| 高 | 发散按钮 hover 反馈增强 | 目前 hover 颜色变化偏弱（可加强阴影/缩放效果） |
-| 中 | 节点删除/编辑功能完善 | 上下文菜单中部分功能待实现 |
-| 中 | 种子数据管理 | 预设的多套种子数据（营销/产品/网站） |
-| 低 | 加载状态/错误提示优化 | 网络请求时的 loading 状态不够明显 |
-| 低 | 部署到线上 | Railway/Render 等平台部署 |
-
-### API Endpoints
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/health` | 健康检查 |
-| GET | `/api/sessions` | 列出所有会话 |
-| POST | `/api/sessions` | 创建新会话 |
-| GET | `/api/sessions/:id` | 获取单个会话 |
-| PUT | `/api/sessions/:id` | 更新会话（保存节点/边） |
-| DELETE | `/api/sessions/:id` | 删除会话 |
-| POST | `/api/storm/diverge` | AI 发散节点 |
-| POST | `/api/layout/tidy` | 自动布局 |
-
-### 环境变量
-
-```
-DEEPSEEK_API_KEY=sk-xxx    # DeepSeek API Key（必填，AI 发散功能依赖）
-PORT=3000                   # 服务端口（默认 3000）
-DATA_DIR=./data             # 数据存储目录
-```
-
-## 开发建议
-
-1. 修改 `index.html` 后刷新浏览器即可看到效果（服务端用 `express.static` 静态托管）
-2. 如果安装了新 npm 包：`npm install` 后重启 `npm start`
-3. `.env` 和 `data/` 目录已加入 `.gitignore`，不会提交到仓库
-4. 会话数据是纯 JSON，可以直接打开 `data/` 目录下的文件查看和手动编辑
+- 登录是本地演示登录，按用户名隔离项目记录；还不是生产认证。
+- 项目和功能图已支持后端 JSON 文件存储，并保留浏览器 localStorage 兜底；后续可迁移到数据库和正式账号体系。
+- 真实 AI 输出链路已验证，但输出质量仍需要继续按真实项目打磨 prompt。
+- 视觉验收已使用 Playwright 完成；截图保存在本地 `output/playwright/`，该目录不作为交付源码。
+- 二级分支已改为按所选方向展开，靠近画布边缘时会自动改成竖向错位分支；渲染层还会根据当前路径做聚焦布局和轻量避让，弱化非当前路径节点。后续仍可继续优化更大规模功能树的折叠和导航。

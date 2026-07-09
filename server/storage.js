@@ -58,4 +58,40 @@ function deleteSession(id) {
   return false;
 }
 
-module.exports = { listSessions, getSession, saveSession, deleteSession };
+function userProjectFile(user) {
+  ensureDir();
+  const safe = encodeURIComponent(String(user || 'default'));
+  const dir = path.join(DATA_DIR, 'users');
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  return path.join(dir, `${safe}.projects.json`);
+}
+
+function getUserProjects(user) {
+  const file = userProjectFile(user);
+  if (!fs.existsSync(file)) return [];
+  const raw = fs.readFileSync(file, 'utf-8');
+  const parsed = JSON.parse(raw);
+  return Array.isArray(parsed.projects) ? parsed.projects : [];
+}
+
+function saveUserProjects(user, projects) {
+  const file = userProjectFile(user);
+  const payload = {
+    user: String(user || 'default'),
+    projects: Array.isArray(projects) ? projects : [],
+    updatedAt: new Date().toISOString(),
+  };
+  fs.writeFileSync(file, JSON.stringify(payload, null, 2), 'utf-8');
+  return payload.projects;
+}
+
+module.exports = {
+  listSessions,
+  getSession,
+  saveSession,
+  deleteSession,
+  getUserProjects,
+  saveUserProjects,
+};
