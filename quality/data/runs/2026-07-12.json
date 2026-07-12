@@ -4,11 +4,11 @@
   "projectName": "Canvas Storm",
   "date": "2026-07-12",
   "timezone": "Asia/Shanghai",
-  "generatedAt": "2026-07-12T05:03:01.154Z",
+  "generatedAt": "2026-07-12T05:04:30.959Z",
   "source": {
-    "branch": "codex/quality-report",
-    "testedSha": "9fbfc3eaaf5c659b4422a43bbe00e2827ca50a7b",
-    "runUrl": null
+    "branch": "main",
+    "testedSha": "e5ba2f1816fccf93407d292f48200c59f5d33b31",
+    "runUrl": "https://github.com/xixinikl/canvas-storm/actions/runs/29180626950"
   },
   "verdict": {
     "status": "fail",
@@ -23,7 +23,7 @@
       {
         "name": "package-manifest",
         "exitCode": 0,
-        "durationSeconds": 0.02,
+        "durationSeconds": 0.04,
         "outputTail": ""
       },
       {
