@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "project": "canvas-storm",
+  "projectName": "Canvas Storm",
+  "date": "2026-07-12",
+  "timezone": "Asia/Shanghai",
+  "generatedAt": "2026-07-12T05:03:01.154Z",
+  "source": {
+    "branch": "codex/quality-report",
+    "testedSha": "9fbfc3eaaf5c659b4422a43bbe00e2827ca50a7b",
+    "runUrl": null
+  },
+  "verdict": {
+    "status": "fail",
+    "reason": "真实检查未通过：server-entry。",
+    "recommendedLevel": "L1"
+  },
+  "checks": {
+    "total": 4,
+    "passed": 3,
+    "failed": 1,
+    "results": [
+      {
+        "name": "package-manifest",
+        "exitCode": 0,
+        "durationSeconds": 0.02,
+        "outputTail": ""
+      },
+      {
+        "name": "server-entry",
+        "exitCode": 1,
+        "durationSeconds": 0,
+        "outputTail": ""
+      },
+      {
+        "name": "static-page",
+        "exitCode": 0,
+        "durationSeconds": 0,
+        "outputTail": ""
+      },
+      {
+        "name": "diff-check",
+        "exitCode": 0,
+        "durationSeconds": 0.01,
+        "outputTail": ""
+      }
+    ]
+  },
+  "risk": {
+    "highRiskFiles": [],
+    "failedChecks": [
+      "server-entry"
+    ]
+  },
+  "nextAction": "先补齐 package.json 声明的 server/app.js，再增加后端启动与持久化测试。"
+}
