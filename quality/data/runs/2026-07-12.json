@@ -4,11 +4,11 @@
   "projectName": "Canvas Storm",
   "date": "2026-07-12",
   "timezone": "Asia/Shanghai",
-  "generatedAt": "2026-07-12T05:04:30.959Z",
+  "generatedAt": "2026-07-12T05:12:16.855Z",
   "source": {
     "branch": "main",
-    "testedSha": "e5ba2f1816fccf93407d292f48200c59f5d33b31",
-    "runUrl": "https://github.com/xixinikl/canvas-storm/actions/runs/29180626950"
+    "testedSha": "eb5ff403f0780ee1a619a211675f211063cbb1f8",
+    "runUrl": "https://github.com/xixinikl/canvas-storm/actions/runs/29180824274"
   },
   "verdict": {
     "status": "fail",
