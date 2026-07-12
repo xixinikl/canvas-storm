@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "projectName": "canvas-storm",
+  "repository": "https://github.com/xixinikl/canvas-storm.git",
+  "defaultBranch": "main",
+  "runtime": {
+    "manager": "uv",
+    "python": "3.11",
+    "startCommand": "{python} -m http.server $PORT --bind 127.0.0.1",
+    "doctorCommand": "git diff --check",
+    "portEnvironment": "PORT",
+    "dataNamespaceEnvironment": "XDS_DATA_NAMESPACE",
+    "workingDirectory": ".",
+    "requirements": []
+  },
+  "collaboration": {
+    "focusAuthors": [],
+    "riskPathPatterns": [
+      "auth",
+      "payment",
+      "migration",
+      "deploy",
+      "secret"
+    ]
+  },
+  "quality": {
+    "acceptanceCommand": "git diff --check",
+    "autofixCommand": "",
+    "autofixPaths": []
+  },
+  "learning": {
+    "projectRetrospectiveDirectory": "doc/retrospectives",
+    "sharedProfileRepository": "https://github.com/xixinikl/xixi-agent-profile"
+  }
+}
