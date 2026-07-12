@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "project": "canvas-storm",
+  "generatedAt": "2026-07-12T05:03:01.154Z",
+  "latestDate": "2026-07-12",
+  "totals": {
+    "runs": 1,
+    "pass": 0,
+    "conditional": 0,
+    "fail": 1
+  },
+  "runs": [
+    {
+      "date": "2026-07-12",
+      "status": "fail",
+      "reason": "真实检查未通过：server-entry。",
+      "testedSha": "9fbfc3eaaf5c",
+      "checkTotal": 4,
+      "checkPassed": 3,
+      "checkFailed": 1,
+      "path": "quality/data/runs/2026-07-12.json"
+    }
+  ]
+}

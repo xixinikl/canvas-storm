@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "project": "canvas-storm",
+  "projectName": "Canvas Storm",
+  "defaultBranch": "main",
+  "failureNextAction": "先补齐 package.json 声明的 server/app.js，再增加后端启动与持久化测试。",
+  "checks": [
+    { "name": "package-manifest", "command": "node -e \"JSON.parse(require('fs').readFileSync('package.json'))\"" },
+    { "name": "server-entry", "command": "test -f server/app.js" },
+    { "name": "static-page", "command": "test -s index.html" },
+    { "name": "diff-check", "command": "git diff --check" }
+  ]
+}
