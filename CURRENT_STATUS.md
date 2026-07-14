@@ -12,6 +12,7 @@
 当前 Goal 入口：[`GOAL_MVP_FIRST_REFACTOR.md`](./GOAL_MVP_FIRST_REFACTOR.md)
 机器可读进度：`.xds/goals/canvasstorm-mvp-first-refactor.json`
 当前进度：12%（1/8，PR0 已验证）
+跟踪 PR：[#5 feat: CanvasStorm workbench baseline and MVP-first refactor plan](https://github.com/xixinikl/canvas-storm/pull/5)（Draft）
 
 查看当前进度：
 

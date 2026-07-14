@@ -12,6 +12,7 @@
 | 当前提交基线 | `209c972 feat: rebuild canvas storm workbench` |
 | PR 类型 | 产品模型重构 + 前端交互重构 + 测试补强 |
 | 当前状态 | 未开始实现；已完成事实梳理和任务拆分 |
+| 跟踪 PR | [#5 feat: CanvasStorm workbench baseline and MVP-first refactor plan](https://github.com/xixinikl/canvas-storm/pull/5)（Draft） |
 
 Goal 入口：[`GOAL_MVP_FIRST_REFACTOR.md`](./GOAL_MVP_FIRST_REFACTOR.md)
 
