@@ -597,6 +597,111 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{
 }
 .project-header h1{font-size:34px;line-height:1;margin:0 0 6px;font-weight:950;letter-spacing:0}
 .project-header p{margin:0;color:#555b66;line-height:1.45;max-width:820px;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mvp-overview{
+  margin-top:12px;
+  display:grid;
+  grid-template-columns:minmax(260px,.86fr) minmax(0,1.14fr);
+  gap:12px;
+  align-items:stretch;
+}
+.mvp-panel,.direction-panel{
+  border:1px solid #111;
+  background:#fff9ed;
+  min-width:0;
+}
+.mvp-panel{
+  padding:12px 14px;
+  display:grid;
+  gap:8px;
+}
+.mvp-panel small,.direction-panel small{
+  display:block;
+  color:#5c6658;
+  font-size:11px;
+  font-weight:950;
+}
+.mvp-panel b{
+  display:block;
+  color:#111;
+  font-size:16px;
+  line-height:1.22;
+}
+.mvp-panel span{
+  display:block;
+  color:#5e625d;
+  font-size:12px;
+  line-height:1.42;
+}
+.mvp-list{
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+}
+.mvp-list span{
+  border:1px solid rgba(17,17,17,.18);
+  background:#eff2e7;
+  color:#111;
+  padding:5px 7px;
+  font-size:11px;
+  font-weight:900;
+}
+.direction-panel{
+  padding:10px;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  gap:9px;
+  align-items:center;
+}
+.direction-panel>small{
+  grid-row:1 / span 2;
+  align-self:start;
+  padding:5px 7px;
+  background:#111;
+  color:#fff8e8;
+  width:max-content;
+}
+.direction-rail{
+  display:flex;
+  gap:8px;
+  overflow:auto;
+  min-width:0;
+  scrollbar-width:none;
+}
+.direction-rail::-webkit-scrollbar{display:none}
+.direction-pill{
+  flex:0 0 auto;
+  max-width:188px;
+  min-height:48px;
+  border:1px solid rgba(17,17,17,.28);
+  background:#fffefa;
+  color:#111;
+  border-radius:0;
+  padding:8px 10px;
+  text-align:left;
+}
+.direction-pill.active{
+  background:#111;
+  color:#fff8e8;
+}
+.direction-pill b{
+  display:block;
+  font-size:13px;
+  line-height:1.15;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.direction-pill span{
+  display:block;
+  margin-top:3px;
+  color:inherit;
+  opacity:.72;
+  font-size:11px;
+  line-height:1.25;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
 .flow-strip{
   display:flex;
   gap:4px;
@@ -1545,6 +1650,9 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{
   }
   .seed-box{width:360px}
   .project-intro{grid-template-columns:1fr}
+  .mvp-overview{grid-template-columns:1fr}
+  .direction-panel{grid-template-columns:1fr}
+  .direction-panel>small{grid-row:auto}
   .flow-strip{justify-content:flex-start;overflow:auto;padding-bottom:1px}
 }
 @media (prefers-reduced-motion:reduce){
@@ -1661,6 +1769,17 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{
   .project-kicker{font-size:11px;padding:3px 7px;margin-bottom:6px}
   .project-header h1{font-size:25px;line-height:1.04;margin-bottom:6px}
   .project-header p{font-size:13px;line-height:1.35;white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:1}
+  .mvp-overview{margin-top:10px;gap:8px}
+  .mvp-panel{padding:10px}
+  .mvp-panel b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mvp-panel span{display:none}
+  .mvp-list{flex-wrap:nowrap;overflow:hidden}
+  .mvp-list span{white-space:nowrap}
+  .direction-panel{padding:8px}
+  .direction-panel>small{padding:4px 6px;font-size:10px}
+  .direction-pill{max-width:146px;min-height:42px;padding:7px 8px}
+  .direction-pill b{font-size:12px}
+  .direction-pill span{display:none}
   .flow-strip{margin-top:10px}
   .sidebar{margin:0 10px 10px;height:96px}
   .sidebar{grid-column:1;grid-row:3}
@@ -1774,7 +1893,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{
     transform:translateY(8px);
     animation:none!important;
   }
-  .action-copy small{height:22px;margin-bottom:4px}
+  .action-copy small{display:none}
   .action-copy b{font-size:15px;white-space:normal}
   .action-copy > span{display:none}
   .action-proof{display:none}
@@ -1782,7 +1901,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{
   .action-buttons{display:flex;width:auto}
   .action-buttons .primary{min-width:116px;height:40px}
   .action-buttons .secondary{height:40px}
-  .action-buttons .tool{min-height:32px;padding:0 8px;font-size:11px}
+  .action-buttons .tool{display:none}
 }
 </style>
 </head>
@@ -1879,6 +1998,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{
           </div>
         </div>
       </div>
+      <div class="mvp-overview" id="mvpOverview" aria-label="核心 MVP 和功能方向"></div>
     <div class="seed-box">
       <label for="seedInput">现在从这个点继续</label>
       <div class="seed-row">
@@ -2365,11 +2485,52 @@ function render(){
   setStepState('flowExpandStep',stage.step>=3,stage.step===3);
   setStepState('flowDecisionStep',stage.step>=4,stage.step===4);
   renderProjects();
+  renderMvpOverview(project,active);
   renderGraph();
   renderInspector();
   renderActionDock(project,active,stage);
   saveProjects();
   updateDockVisibility();
+}
+function renderMvpOverview(project,active){
+  const holder=document.getElementById('mvpOverview');
+  if(!holder||!project)return;
+  const mvp=project.mvp||{};
+  const root=project.nodes.find(n=>!n.parentId)||project.nodes[0];
+  const directions=project.directions?.length
+    ? project.directions
+    : project.nodes.filter(n=>n.parentId===root?.id).map(n=>({nodeId:n.id,title:n.title,desc:n.desc,reason:n.pain,validation:n.validation}));
+  const mustHave=(mvp.mustHaveFeatures||[]).slice(0,3);
+  holder.innerHTML=`
+    <section class="mvp-panel">
+      <small>核心 MVP</small>
+      <b>${esc(mvp.goal||root?.desc||project.seed||project.title)}</b>
+      <div class="mvp-list">
+        ${(mustHave.length?mustHave:directions.slice(0,2)).map(item=>`<span>${esc(item.title||'必做项')}</span>`).join('')}
+      </div>
+      <span>${esc(mvp.validation||root?.validation||'找 3 个目标用户做一次手工验证。')}</span>
+    </section>
+    <section class="direction-panel">
+      <small>发散方向</small>
+      <div class="direction-rail">
+        ${directions.slice(0,5).map(direction=>{
+          const nodeId=direction.nodeId||direction.id;
+          const isActive=nodeId===active?.id;
+          return `<button class="direction-pill ${isActive?'active':''}" data-focus-direction="${esc(nodeId)}">
+            <b>${esc(direction.title)}</b>
+            <span>${esc(direction.reason||direction.desc||direction.validation||'继续展开这个方向')}</span>
+          </button>`;
+        }).join('')}
+      </div>
+    </section>
+  `;
+  holder.querySelectorAll('[data-focus-direction]').forEach(btn=>btn.onclick=()=>{
+    const id=btn.dataset.focusDirection;
+    if(!id)return;
+    activeNodeId=id;
+    project.activeNodeId=id;
+    render();
+  });
 }
 function workStage(project,active){
   const primary=pickPrimaryRecommendation(project,active);

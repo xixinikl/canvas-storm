@@ -45,7 +45,7 @@ Goal 入口：[`GOAL_MVP_FIRST_REFACTOR.md`](./GOAL_MVP_FIRST_REFACTOR.md)
 | T0 | PR 事实梳理与范围收敛 | 已完成 | 文档、Git 状态 | `git status`、`git log -1`、阅读 README/TASKS/CURRENT_STATUS/HANDOFF | 当前分支为 `cx/direction-workbench-ci`，基线提交为 `209c972`，远端为 `xixinikl/canvas-storm` |
 | T1 | 定义 MVP-first 数据模型 | 已完成 | `index.html` 状态结构、用户项目 JSON、fallback 数据 | 新增/更新前端数据测试，验证旧项目可读、新项目有 MVP 与方向 | `npm test` 通过；前端 143 passed |
 | T2 | 重写 AI 输出契约 | 已完成 | 前端 AI 调用解析、fallback 生成 | 前端测试，验证返回结构包含 `mvp`、`directions`、`children` | `npm test` 通过；前端 150 passed |
-| T3 | 重构首屏信息架构 | 未开始 | `index.html` UI/CSS | Playwright 桌面/移动截图验收，首屏可见 MVP 和方向选择 | 待实现 |
+| T3 | 重构首屏信息架构 | 已完成 | `index.html` UI/CSS | Playwright 桌面/移动截图验收，首屏可见 MVP 和方向选择 | `npm test` 通过；桌面/手机截图通过 |
 | T4 | 重构方向探索画布 | 未开始 | 画布渲染、节点布局、SVG 连线 | 前端测试 + 浏览器视觉验收，验证不重叠、不跳版、不隐藏中心想法 | 待实现 |
 | T5 | 明确交互语义 | 未开始 | 节点点击、主按钮、命令条文案 | 测试“补充这一层只加同级”“点击子节点才进入下一层” | 待实现 |
 | T6 | 保留灵感库与以后再看 | 未开始 | 决策状态、项目持久化、导出 | 前端测试，验证多个节点可连续加入备选库并持久化 | 待实现 |

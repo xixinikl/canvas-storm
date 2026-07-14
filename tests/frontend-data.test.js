@@ -198,6 +198,10 @@ async function runTests() {
   assert(document.querySelector('#nodeDetail')?.textContent.includes('点击画布上的这个节点'), '推荐只解释如何进入，不替用户跳转');
   assert(document.querySelector('#nodeDetail')?.textContent.includes('第 2 步'), '右侧操作面板显示当前步骤');
   assert(document.querySelector('#decisionBoard')?.textContent.includes('灵感备选'), '结果摘要强调灵感备选库，而不是强迫只留一个');
+  assert(document.querySelector('#mvpOverview')?.textContent.includes('核心 MVP'), '首屏明确展示核心 MVP 区块');
+  assert(document.querySelector('#mvpOverview')?.textContent.includes('发散方向'), '首屏明确展示发散方向区块');
+  assert(document.querySelector('#mvpOverview')?.textContent.includes('一键穿搭'), '首屏方向区展示可选择的一层方向');
+  assert(document.querySelectorAll('#mvpOverview [data-focus-direction]').length >= 3, '首屏方向区提供多个方向入口');
   const firstUserProjects = JSON.parse(localStorage.getItem('cs_graph_projects_米朵') || '[]');
   const wardrobe = firstUserProjects.find((project) => project.title === '线上衣橱');
   assert(document.querySelector('#mapNodeCount')?.textContent === String(wardrobe?.nodes.length), '功能图状态条保留完整项目节点数');
@@ -211,6 +215,11 @@ async function runTests() {
   assert(outfit?.role === 'direction', '一级节点标记为 direction 角色');
   assert(outfit?.x === 17 && outfit?.y === 30, '线上衣橱示例使用不重叠的新版节点位置');
   assert(document.querySelector('#aiStatus')?.textContent.includes('本地示例'), 'AI 状态显示本地示例模式');
+  [...document.querySelectorAll('#mvpOverview [data-focus-direction]')].find((button) => button.textContent.includes('拍照入库'))?.click();
+  await wait(80);
+  assert(document.querySelector('#flowNode')?.textContent.includes('拍照入库'), '点击首屏方向区可直接进入对应方向');
+  clickGraphNode(document, '线上衣橱');
+  await wait(80);
 
   console.log('--- 测试 3: 围绕节点继续发散 ---');
   clickGraphNode(document, '一键穿搭');

@@ -5,7 +5,7 @@
   "objective": "把 CanvasStorm 从混合功能图原型推进为可验证的 MVP-first 功能发散工具，并按 PR 阶段记录百分比和证据。",
   "status": "active",
   "createdAt": "2026-07-14T15:19:25+00:00",
-  "updatedAt": "2026-07-14T15:40:13+00:00",
+  "updatedAt": "2026-07-14T15:59:07+00:00",
   "tasks": [
     {
       "id": "PR0",
@@ -88,8 +88,17 @@
       "dependsOn": [
         "PR3"
       ],
-      "status": "pending",
-      "evidence": []
+      "status": "verified",
+      "evidence": [
+        {
+          "id": "evidence-5",
+          "type": "screenshot",
+          "value": "PR4 evidence: first screen now renders MVP overview plus direction rail; frontend assertions verify core MVP/directions and direction click; npm test passed (HTML ok, API 52 passed, WebSocket 12 passed, frontend 156 passed); browser screenshots verified desktop and mobile with no horizontal overflow: output/playwright/desktop-mvp-first-pr4.png, output/playwright/mobile-mvp-first-pr4-fixed.png.",
+          "recordedAt": "2026-07-14T15:59:07+00:00"
+        }
+      ],
+      "startedAt": "2026-07-14T15:50:43+00:00",
+      "completedAt": "2026-07-14T15:59:07+00:00"
     },
     {
       "id": "PR5",
@@ -162,14 +171,24 @@
       "evidenceIds": [
         "evidence-4"
       ]
+    },
+    {
+      "id": "run-5",
+      "taskId": "PR4",
+      "status": "verified",
+      "startedAt": "2026-07-14T15:50:43+00:00",
+      "completedAt": "2026-07-14T15:59:07+00:00",
+      "evidenceIds": [
+        "evidence-5"
+      ]
     }
   ],
   "blockers": [],
   "progress": {
-    "verified": 4,
+    "verified": 5,
     "total": 8,
-    "percent": 50
+    "percent": 62
   },
   "currentTaskId": null,
-  "nextTaskId": "PR4"
+  "nextTaskId": "PR5"
 }
