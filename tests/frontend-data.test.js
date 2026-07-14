@@ -219,6 +219,13 @@ async function runTests() {
   [...document.querySelectorAll('#mvpOverview [data-focus-direction]')].find((button) => button.textContent.includes('拍照入库'))?.click();
   await wait(80);
   assert(document.querySelector('#flowNode')?.textContent.includes('拍照入库'), '点击首屏方向区可直接进入对应方向');
+  document.querySelector('#keepNode')?.click();
+  await wait(80);
+  assert(document.querySelector('#projectTitle')?.textContent.includes('加入备选库'), '一级方向加入备选后也进入明确完成态');
+  assert(document.querySelector('#nodeDetail')?.textContent.includes('已加入备选'), '一级方向加入备选后右侧有已加入反馈');
+  assert(document.querySelector('#expandSelected')?.textContent.includes('回到上一层'), '一级方向加入备选后主动作变成回到上一层');
+  document.querySelector('#expandSelected')?.click();
+  await wait(80);
   clickGraphNode(document, '线上衣橱');
   await wait(80);
 

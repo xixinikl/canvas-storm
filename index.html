@@ -1547,6 +1547,13 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{
   color:#fffdf7;
   border-color:#171510;
 }
+.node.root.kept,
+.node.root.dropped{
+  background:#171510;
+  color:#fffdf7;
+  border-color:#171510;
+  opacity:1;
+}
 .node.root small{background:rgba(255,255,255,.12);color:#f7f2e7}
 .node.root span{color:rgba(255,253,247,.7)}
 .node.choice-primary{
@@ -2556,7 +2563,7 @@ function renderMvpOverview(project,active){
 }
 function workStage(project,active){
   const primary=pickPrimaryRecommendation(project,active);
-  if(active?.parentId&&nodeDepth(project,active)>1&&active.decision==='keep'){
+  if(active?.parentId&&(nodeDepth(project,active)>1||active.decisionChangedAt)&&active.decision==='keep'){
     return {
       step:4,
       title:`已把“${active.title}”加入备选库`,
@@ -2567,7 +2574,7 @@ function workStage(project,active){
       decisionDone:'keep'
     };
   }
-  if(active?.parentId&&nodeDepth(project,active)>1&&active.decision==='drop'){
+  if(active?.parentId&&(nodeDepth(project,active)>1||active.decisionChangedAt)&&active.decision==='drop'){
     return {
       step:4,
       title:`已把“${active.title}”放到以后再看`,
@@ -2745,8 +2752,12 @@ function graphRenderPositions(project,pathIds){
       const xs=count===1?[50]:count===2?[28,72]:[28,72,28,72,50,28,72,50];
       return xs.map((x,idx)=>({x,y:idx<2?58:idx<4?74:86}));
     }
-    const first=count<=1?[50]:count===2?[34,66]:[22,50,78];
-    const second=count<=4?[50]:count<=5?[34,66]:[22,50,78];
+    if(count<=1)return [{x:50,y:68}];
+    if(count===2)return [{x:34,y:68},{x:66,y:68}];
+    if(count===3)return [{x:22,y:68},{x:50,y:68},{x:78,y:68}];
+    if(count===4)return [{x:28,y:64},{x:72,y:64},{x:28,y:84},{x:72,y:84}];
+    const first=count===5?[22,50,78]:[18,50,82];
+    const second=count===5?[34,66]:[18,50,82];
     return [
       ...first.map(x=>({x,y:66})),
       ...second.map(x=>({x,y:82}))
@@ -2843,7 +2854,7 @@ function renderInspector(){
     : (childCount?'补充这一层':'生成第一层方向');
   const childChoiceHtml=selectingChild?renderChildChoices(project,n,stagePick):'';
   const rowMode=n.parentId?'secondary-mode':'choice-mode';
-  const decisionDone=n.parentId&&nodeDepth(project,n)>1&&(n.decision==='keep'||n.decision==='drop');
+  const decisionDone=n.parentId&&(nodeDepth(project,n)>1||n.decisionChangedAt)&&(n.decision==='keep'||n.decision==='drop');
   if(decisionDone){
     detail.innerHTML=`
       <span class="detail-eyebrow">${n.decision==='keep'?'已加入备选':'已放到以后'} · 可以继续找思路</span>
@@ -3152,6 +3163,7 @@ function setDecision(id,decision){
   const n=currentProject().nodes.find(item=>item.id===id);
   if(!n)return;
   n.decision=decision;
+  n.decisionChangedAt=new Date().toISOString();
   currentProject().updatedAt=new Date().toISOString();
   showToast(decision==='keep'?`已把“${n.title}”加入备选库`:`已把“${n.title}”放到以后再看`);
   render();
