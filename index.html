@@ -2966,7 +2966,7 @@ function createManualChild(parentId,data){
   const parent=project?.nodes.find(n=>n.id===parentId)||project?.nodes[0];
   if(!project||!parent)return;
   const id=`manual-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`;
-  const position=childPositions(parent,1)[0]||{x:Math.min(86,parent.x+18),y:Math.min(86,parent.y+16)};
+  const position=childPositions(parent,1,project)[0]||{x:Math.min(86,parent.x+18),y:Math.min(86,parent.y+16)};
   const child=node(
     id,
     data.title,
@@ -3127,9 +3127,9 @@ async function exportProject(){
   URL.revokeObjectURL(url);
   showToast('已导出 Markdown 文件');
 }
-function childPositions(parent,count){
+function childPositions(parent,count,project=currentProject()){
   if(!parent.parentId){
-    const existing=currentProject().nodes.filter(n=>n.parentId===parent.id).length;
+    const existing=(project?.nodes||[]).filter(n=>n.parentId===parent.id).length;
     if(existing===0){
       const base=count===4
         ? [{x:22,y:24},{x:78,y:24},{x:22,y:76},{x:78,y:76}]
@@ -3169,11 +3169,11 @@ async function generateFromNode(nodeId){
     legacyGenerate.textContent='生成中...';
   }
   try{
-    const ideas=aiStatus.configured?await aiGenerate(project,parent,targetCount):fallbackIdeas(project,parent,targetCount);
+    const ideas=aiStatus.configured?await aiGenerate(project,parent,targetCount):fallbackGenerate(project,parent,targetCount);
     addChildren(project,parent,ideas);
     showToast(`已围绕“${parent.title}”继续发散`);
   }catch(e){
-    addChildren(project,parent,fallbackIdeas(project,parent,targetCount));
+    addChildren(project,parent,fallbackGenerate(project,parent,targetCount));
     showToast('AI 暂不可用，已生成本地示例');
   }finally{
     if(legacyGenerate){
@@ -3184,26 +3184,67 @@ async function generateFromNode(nodeId){
   }
 }
 async function aiGenerate(project,parent,count){
+  const isRoot=!parent.parentId;
   const prompt={
-    systemPrompt:'你是面向独立开发者的产品功能发散顾问。你的任务不是做抽象战略分析，而是把一个功能点继续拆成用户一眼能理解、能点击使用的下一层功能入口。',
-    userPrompt:`项目：${project.title}\n项目描述：${project.seed}\n当前功能点：${parent.title} - ${parent.desc}\n\n生成 ${count} 个下一层功能点。要求：\n1. 每个标题必须像真实产品里的功能入口，例如“一键生成穿搭”“社交发布卡片”“旅行衣物清单”，不要写成“评分与反馈”“优化建议”“数据分析”“策略体系”。\n2. 必须沿着当前功能继续发散，不要跳到商业、运营、后台、技术实现或泛泛的用户研究。\n3. 至少 1 个是最小可做的核心功能，至少 1 个是明显可以暂缓或只手工验证的扩展功能。\n4. 对衣橱/穿搭类项目，优先生成搭配、发布、整理、清单、场景适配这类直观功能；除非当前点明确要求，否则不要把评分、反馈、偏好学习作为首推。\n5. 每个功能点要包含真实痛点和最小验证动作，验证动作必须能在 1 周内手工完成。\n6. 只输出 JSON 数组，每项格式：{"title":"功能名","desc":"一句话说明","type":"核心功能|体验功能|增长功能|验证功能|暂缓功能","pain":"真实痛点","validation":"最小验证动作"}`,
+    systemPrompt:'你是面向独立开发者的产品功能发散顾问。先判断最小可做 MVP，再给功能方向；深入某个方向时，只生成这个方向下面的一层子功能。',
+    userPrompt:isRoot
+      ? `项目：${project.title}\n项目描述：${project.seed}\n中心想法：${parent.title} - ${parent.desc}\n\n请生成 MVP-first 结构。要求：\n1. 先给出这个项目最小能成立的 MVP 主线，不要把所有功能都当成必做。\n2. 再给出 ${count} 个功能发散方向，方向必须像用户能理解的产品入口，例如“一键生成穿搭”“社交发布卡片”“旅行衣物清单”。\n3. 每个方向要包含真实痛点和 1 周内能手工完成的最小验证动作。\n4. 避免泛泛的评分、反馈、优化、数据分析、策略体系。\n5. 只输出 JSON 对象，格式：{"mvp":{"goal":"最小 MVP 目标","mustHaveFeatures":[{"title":"必做项","reason":"为什么必做","validation":"验证动作"}],"validation":"整体验证动作"},"directions":[{"title":"方向名","desc":"一句话说明","type":"核心功能|体验功能|增长功能|验证功能|暂缓功能","pain":"真实痛点","validation":"最小验证动作"}]}`
+      : `项目：${project.title}\n项目描述：${project.seed}\n当前功能点：${parent.title} - ${parent.desc}\n\n生成 ${count} 个当前功能点的下一层子功能。要求：\n1. 只沿当前功能继续发散，不要跳到同级方向、商业、运营、后台、技术实现或泛泛用户研究。\n2. 每个标题必须像真实产品里的功能入口，例如“一键生成穿搭”“社交发布卡片”“旅行衣物清单”。\n3. 至少 1 个是最小可做的核心功能，至少 1 个是明显可以暂缓或只手工验证的扩展功能。\n4. 每个功能点要包含真实痛点和 1 周内能手工完成的最小验证动作。\n5. 只输出 JSON 对象，格式：{"children":[{"title":"功能名","desc":"一句话说明","type":"核心功能|体验功能|增长功能|验证功能|暂缓功能","pain":"真实痛点","validation":"最小验证动作"}]}`,
     temperature:.72,
     max_tokens:2048
   };
   const resp=await apiFetch('POST','/storm',prompt);
   const content=resp.data?.choices?.[0]?.message?.content||'';
-  const parsed=parseIdeaArray(content);
-  if(!Array.isArray(parsed))throw new Error('AI 返回格式错误');
-  return parsed.slice(0,count);
+  const parsed=parseGenerationPayload(content);
+  return normalizeGenerationPayload(parsed,project,parent,count);
 }
 function parseIdeaArray(content){
+  const parsed=parseGenerationPayload(content);
+  if(Array.isArray(parsed))return parsed;
+  if(Array.isArray(parsed.children))return parsed.children;
+  if(Array.isArray(parsed.directions))return parsed.directions;
+  throw new Error('AI 返回不是数组');
+}
+function parseGenerationPayload(content){
   let json=String(content||'').trim();
   const block=json.match(/```(?:json)?\s*([\s\S]*?)```/);
   if(block)json=block[1].trim();
-  json=json.match(/\[[\s\S]*\]/)?.[0]||json;
+  json=json.match(/(\{[\s\S]*\}|\[[\s\S]*\])/)?.[0]||json;
   const parsed=JSON.parse(json);
-  if(!Array.isArray(parsed))throw new Error('AI 返回不是数组');
   return parsed;
+}
+function normalizeIdea(idea,index=0){
+  return {
+    title:String(idea?.title||`新功能 ${index+1}`).slice(0,24),
+    desc:String(idea?.desc||idea?.reason||'围绕当前节点生成的功能点。').slice(0,120),
+    type:idea?.type||'功能点',
+    pain:idea?.pain||idea?.reason||'需要进一步确认真实痛点。',
+    validation:idea?.validation||'找 3 个目标用户做一次手工验证。'
+  };
+}
+function normalizeGenerationPayload(payload,project,parent,count=4){
+  const isRoot=!parent.parentId;
+  const source=Array.isArray(payload)
+    ? payload
+    : (isRoot
+      ? (Array.isArray(payload?.directions)?payload.directions:payload?.children)
+      : (Array.isArray(payload?.children)?payload.children:payload?.directions));
+  const items=Array.isArray(source)?source:[];
+  if(isRoot&&payload?.mvp)project.pendingGeneratedMvp=payload.mvp;
+  return items.slice(0,count).map(normalizeIdea);
+}
+function fallbackGenerate(project,parent,count=4){
+  const children=fallbackIdeas(project,parent,count);
+  if(parent.parentId)return normalizeGenerationPayload({children},project,parent,count);
+  const mvp={
+    goal:parent.desc||project.seed||project.title,
+    mustHaveFeatures:children
+      .filter(item=>item.type!=='暂缓功能')
+      .slice(0,3)
+      .map(item=>({title:item.title,reason:item.pain||item.desc,validation:item.validation})),
+    validation:parent.validation||children[0]?.validation||'找 3 个目标用户做一次手工验证。'
+  };
+  return normalizeGenerationPayload({mvp,directions:children},project,parent,count);
 }
 function fallbackIdeas(project,parent,count=4){
   const text=(project.title+' '+project.seed+' '+parent.title).toLowerCase();
@@ -3272,7 +3313,7 @@ function fallbackIdeas(project,parent,count=4){
 }
 function addChildren(project,parent,ideas){
   const existing=project.nodes.filter(n=>n.parentId===parent.id).length;
-  const positions=childPositions(parent,ideas.length);
+  const positions=childPositions(parent,ideas.length,project);
   ideas.forEach((idea,idx)=>{
     const pos=positions[idx];
     const nudgeX=parent.parentId&&existing?Math.min(8,existing*2):0;
@@ -3294,15 +3335,38 @@ function addChildren(project,parent,ideas){
   parent.childrenGenerated=true;
   project.updatedAt=new Date().toISOString();
   syncProjectModel(project);
+  if(!parent.parentId&&project.pendingGeneratedMvp){
+    applyGeneratedMvp(project,parent,project.pendingGeneratedMvp);
+    delete project.pendingGeneratedMvp;
+  }
   activeNodeId=parent.id;
   project.activeNodeId=parent.id;
+}
+function applyGeneratedMvp(project,root,mvp){
+  const mustHave=Array.isArray(mvp.mustHaveFeatures)?mvp.mustHaveFeatures:[];
+  const byTitle=new Map(project.nodes.map(n=>[n.title,n]));
+  project.mvp={
+    goal:mvp.goal||root.desc||project.seed||project.title,
+    rootNodeId:root.id,
+    mustHaveFeatures:mustHave.slice(0,3).map((item,idx)=>{
+      const node=byTitle.get(item.title)||project.nodes.find(n=>n.parentId===root.id&&idx===0);
+      return {
+        nodeId:node?.id||'',
+        title:item.title||node?.title||`必做项 ${idx+1}`,
+        reason:item.reason||node?.pain||node?.desc||'直接影响用户第一次有效使用。',
+        validation:item.validation||node?.validation||'找 3 个目标用户做一次手工验证。'
+      };
+    }),
+    validation:mvp.validation||root.validation||'找 3 个目标用户做一次手工验证。',
+    updatedAt:project.updatedAt||new Date().toISOString()
+  };
 }
 function createFromForm(){
   const title=document.getElementById('newProjectTitle').value.trim()||'新的项目';
   const seed=document.getElementById('newProjectSeed').value.trim()||'描述这个项目想解决的问题。';
   const p=createProject(null,title,seed);
   const root=p.nodes.find(n=>!n.parentId)||p.nodes[0];
-  if(root)addChildren(p,root,fallbackIdeas(p,root,4));
+  if(root)addChildren(p,root,fallbackGenerate(p,root,4));
   projects.unshift(p);
   activeProjectId=p.id;
   activeNodeId=p.activeNodeId;

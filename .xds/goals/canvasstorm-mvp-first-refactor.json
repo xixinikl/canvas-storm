@@ -5,7 +5,7 @@
   "objective": "把 CanvasStorm 从混合功能图原型推进为可验证的 MVP-first 功能发散工具，并按 PR 阶段记录百分比和证据。",
   "status": "active",
   "createdAt": "2026-07-14T15:19:25+00:00",
-  "updatedAt": "2026-07-14T15:31:02+00:00",
+  "updatedAt": "2026-07-14T15:40:13+00:00",
   "tasks": [
     {
       "id": "PR0",
@@ -69,8 +69,17 @@
       "dependsOn": [
         "PR2"
       ],
-      "status": "pending",
-      "evidence": []
+      "status": "verified",
+      "evidence": [
+        {
+          "id": "evidence-4",
+          "type": "test",
+          "value": "PR3 evidence: AI root generation now requests/accepts {mvp,directions}; child generation requests/accepts {children}; legacy array responses remain compatible; fallbackGenerate emits the same structured contract; npm test passed (HTML ok, API 52 passed, WebSocket 12 passed, frontend 150 passed).",
+          "recordedAt": "2026-07-14T15:40:13+00:00"
+        }
+      ],
+      "startedAt": "2026-07-14T15:37:41+00:00",
+      "completedAt": "2026-07-14T15:40:13+00:00"
     },
     {
       "id": "PR4",
@@ -143,14 +152,24 @@
       "evidenceIds": [
         "evidence-3"
       ]
+    },
+    {
+      "id": "run-4",
+      "taskId": "PR3",
+      "status": "verified",
+      "startedAt": "2026-07-14T15:37:41+00:00",
+      "completedAt": "2026-07-14T15:40:13+00:00",
+      "evidenceIds": [
+        "evidence-4"
+      ]
     }
   ],
   "blockers": [],
   "progress": {
-    "verified": 3,
+    "verified": 4,
     "total": 8,
-    "percent": 38
+    "percent": 50
   },
   "currentTaskId": null,
-  "nextTaskId": "PR3"
+  "nextTaskId": "PR4"
 }

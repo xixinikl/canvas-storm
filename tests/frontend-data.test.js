@@ -10,6 +10,7 @@ const path = require('path');
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
 let stormPostCalls = 0;
+let stormPostBodies = [];
 let projectGetCalls = 0;
 let projectPutCalls = 0;
 let passed = 0;
@@ -38,6 +39,7 @@ function createMockFetch(options = {}) {
   const {
     aiConfigured = false,
     stormDelay = 0,
+    stormPayload = null,
     stormIdeas = [
       { title: '天气穿搭推荐', desc: '按实时天气给出今日穿搭。', type: '核心功能', pain: '用户出门前需要快速决定穿什么。', validation: '手工生成 10 套搭配，看用户是否愿意照穿。' },
       { title: '通勤场景搭配', desc: '按上班、约会、运动等场景推荐组合。', type: '体验功能', pain: '用户知道衣服很多，但不知道不同场景怎么搭。', validation: '让用户选 3 个场景，观察推荐是否减少纠结。' },
@@ -58,11 +60,12 @@ function createMockFetch(options = {}) {
 
     if (method === 'POST' && apiPath === '/storm') {
       stormPostCalls += 1;
+      stormPostBodies.push(JSON.parse(opts.body || '{}'));
       if (stormDelay) await wait(stormDelay);
       if (!aiConfigured) return mockFetchResponse({ code: 500, error: 'mock AI unavailable' }, 500);
       return mockFetchResponse({
         code: 200,
-        data: { choices: [{ message: { content: JSON.stringify(stormIdeas) } }] },
+        data: { choices: [{ message: { content: JSON.stringify(stormPayload || { children: stormIdeas }) } }] },
       });
     }
 
@@ -84,6 +87,7 @@ function createMockFetch(options = {}) {
 
 async function createDom(options = {}) {
   stormPostCalls = 0;
+  stormPostBodies = [];
   projectGetCalls = 0;
   projectPutCalls = 0;
   const dom = new JSDOM(html, {
@@ -241,6 +245,10 @@ async function runTests() {
   assert(document.querySelector('#nodeDetail')?.textContent.includes('验证'), '右侧显示当前节点验证动作');
   const parsed = dom.window.parseIdeaArray('```json\\n[{"title":"试衣间模拟","desc":"上传自拍后预览穿搭效果。"}]\\n```');
   assert(parsed.length === 1 && parsed[0].title === '试衣间模拟', 'AI markdown JSON 可解析');
+  const parsedContract = dom.window.parseGenerationPayload('```json\\n{"mvp":{"goal":"先验证一键穿搭"},"directions":[{"title":"方向A","desc":"说明"}]}\\n```');
+  assert(parsedContract.mvp?.goal === '先验证一键穿搭', 'AI MVP-first JSON 对象可解析');
+  const parsedDirections = dom.window.parseIdeaArray(JSON.stringify({ directions: [{ title: '方向B', desc: '说明' }] }));
+  assert(parsedDirections[0]?.title === '方向B', '旧数组解析入口兼容 MVP-first directions 对象');
   const ranked = dom.window.rankRecommendationNodes([
     { title: '穿搭评分与反馈', desc: '记录用户评分并优化推荐。', type: '核心功能', decision: 'maybe' },
     { title: '一键社交发布卡片', desc: '把今日穿搭生成可分享图片。', type: '增长功能', decision: 'maybe' },
@@ -415,7 +423,32 @@ async function runTests() {
   assert(loadingDocument.querySelector('#expandSelected')?.disabled || loadingDocument.querySelector('#generateBtn')?.disabled, 'AI 慢响应时主按钮不可重复点击');
   await wait(260);
   assert(stormPostCalls === 1, 'AI 已连接时会调用 /storm POST');
+  assert(stormPostBodies[0]?.userPrompt?.includes('"children"'), '方向下发散时 AI 契约要求返回 children 对象');
   assert(Number(loadingDocument.querySelector('#mapNodeCount')?.textContent || '0') === loadingBeforeTotalNodes + 3, 'AI 返回后追加下一层功能节点');
+
+  const rootAiDom = await createDom({
+    aiConfigured: true,
+    stormPayload: {
+      mvp: {
+        goal: '先验证最小录入',
+        mustHaveFeatures: [{ title: '极简录入', reason: '用户必须先完成第一次输入。', validation: '5 个用户 3 分钟完成录入。' }],
+        validation: '手工观察 5 个用户完成第一次输入。',
+      },
+      directions: [
+        { title: '极简录入', desc: '把首次输入压到 3 分钟内。', type: '核心功能', pain: '录入太慢会流失。', validation: '5 个用户 3 分钟完成录入。' },
+        { title: '结果解释', desc: '解释为什么给出这个建议。', type: '体验功能', pain: '用户不知道该不该信。', validation: '让用户标记解释是否有帮助。' },
+      ],
+    },
+  });
+  const rootWindow = rootAiDom.window;
+  const rootProject = rootWindow.createProject(null, 'AI 根契约项目', '测试根节点 AI 契约。');
+  const rootNode = rootProject.nodes.find((node) => !node.parentId);
+  const rootIdeas = await rootWindow.aiGenerate(rootProject, rootNode, 2);
+  rootWindow.addChildren(rootProject, rootNode, rootIdeas);
+  assert(rootProject.mvp?.goal === '先验证最小录入', '根节点 AI 契约会写入项目 MVP 目标');
+  assert(rootProject.mvp?.mustHaveFeatures?.[0]?.title === '极简录入', '根节点 AI 契约会写入 MVP 必做项');
+  assert(rootProject.directions?.length === 2, '根节点 AI 契约会生成方向列表');
+  assert(stormPostBodies[0]?.userPrompt?.includes('"mvp"') && stormPostBodies[0]?.userPrompt?.includes('"directions"'), '根节点发散时 AI 契约要求返回 mvp + directions 对象');
 
   console.log(`\n========================================`);
   console.log(`  前端功能图: ${passed} passed, ${failed} failed`);

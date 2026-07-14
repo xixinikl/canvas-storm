@@ -4,14 +4,14 @@
 |------|------|
 | 当前分支 | cx/direction-workbench-ci |
 | 当前主流程 | 本地登录 + 用户项目空间 + 图形化功能发散 |
-| 进行中 | PR2：MVP-first 数据模型已验证 |
-| 下一步 | 从 PR3“AI 和 fallback 输出契约”继续 |
+| 进行中 | PR3：AI 和 fallback 输出契约已验证 |
+| 下一步 | 从 PR4“首屏信息架构”继续 |
 | 质量门禁 | `npm test` 已通过；GitHub Actions 因 token 缺少 `workflow` scope 暂未上传 |
 
 下一轮 PR 规划入口：[`PR_PLAN.md`](./PR_PLAN.md)
 当前 Goal 入口：[`GOAL_MVP_FIRST_REFACTOR.md`](./GOAL_MVP_FIRST_REFACTOR.md)
 机器可读进度：`.xds/goals/canvasstorm-mvp-first-refactor.json`
-当前进度：38%（3/8，PR0/PR1/PR2 已验证）
+当前进度：50%（4/8，PR0/PR1/PR2/PR3 已验证）
 跟踪 PR：[#5 feat: CanvasStorm workbench baseline and MVP-first refactor plan](https://github.com/xixinikl/canvas-storm/pull/5)（Draft）
 
 查看当前进度：
@@ -28,6 +28,7 @@ ${CODEX_HOME:-$HOME/.codex}/bin/xixi-dev-system goal show --project . --goal can
 - [x] 2026-07-14：接入 xixi-dev-system adapter，并建立 MVP-first 重构 Goal；PR 阶段进度按 8 个可验证任务自动计算百分比
 - [x] 2026-07-14：PR1 预览和分支卫生收口 — 推送 `cx/realtime-preview-v1` 本地超前提交，修复 PR #4 adapter 冲突，Realtime preview CI 通过并合并 PR #4
 - [x] 2026-07-14：PR2 MVP-first 数据模型 — 项目自动补齐 `schemaVersion: 2`、`mvp`、`directions`、`decisions` 和节点角色；旧 node-only 项目登录后自动迁移；`npm test` 通过
+- [x] 2026-07-14：PR3 AI 和 fallback 输出契约 — 根节点生成契约改为 `mvp + directions`，方向/功能节点生成契约改为 `children`，旧数组格式保持兼容；`npm test` 通过
 - [x] 2026-07-04：补充 AI 状态体验 — `/api/storm/status` 只返回配置状态和模型名
 - [x] 2026-07-05：验证真实 DeepSeek 技术链路 — 本地 `.env` 配置真实 Key 后可返回真实 AI 候选
 - [x] 2026-07-05：安装设计和验证相关 skill — `figma-generate-design`、`figma-create-design-system-rules`、`screenshot`、`playwright`

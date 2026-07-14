@@ -170,7 +170,7 @@ origin -> https://github.com/xixinikl/canvas-storm.git
 
 ## 当前待办建议
 
-1. 继续 PR3：重写 AI 和 fallback 输出契约。
+1. 继续 PR4：重构首屏信息架构。
 2. 按 `PR_PLAN.md` 推进下一轮产品重构。
 3. 优先重构产品模型：
    - 先生成 MVP 主线。
