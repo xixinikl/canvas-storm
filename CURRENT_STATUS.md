@@ -4,15 +4,27 @@
 |------|------|
 | 当前分支 | cx/direction-workbench-ci |
 | 当前主流程 | 本地登录 + 用户项目空间 + 图形化功能发散 |
-| 进行中 | 已完成“四步收敛工作台”改版和真实浏览器验收，等待用户验收 |
-| 下一步 | 继续打磨大规模功能树折叠、AI 输出质量或生产级账户/项目记录 |
+| 进行中 | PR0：状态和规划收口已验证，等待提交/推送 |
+| 下一步 | 提交并推送 PR0 后，从 PR1“预览和分支卫生收口”继续 |
 | 质量门禁 | `npm test` 已通过；GitHub Actions 因 token 缺少 `workflow` scope 暂未上传 |
+
+下一轮 PR 规划入口：[`PR_PLAN.md`](./PR_PLAN.md)
+当前 Goal 入口：[`GOAL_MVP_FIRST_REFACTOR.md`](./GOAL_MVP_FIRST_REFACTOR.md)
+机器可读进度：`.xds/goals/canvasstorm-mvp-first-refactor.json`
+当前进度：12%（1/8，PR0 已验证）
+
+查看当前进度：
+
+```bash
+${CODEX_HOME:-$HOME/.codex}/bin/xixi-dev-system goal show --project . --goal canvasstorm-mvp-first-refactor
+```
 
 ---
 
 ## 进度日志
 
 - [x] 任务 1-9：项目骨架、会话 API、WebSocket 通道完成
+- [x] 2026-07-14：接入 xixi-dev-system adapter，并建立 MVP-first 重构 Goal；PR 阶段进度按 8 个可验证任务自动计算百分比
 - [x] 2026-07-04：补充 AI 状态体验 — `/api/storm/status` 只返回配置状态和模型名
 - [x] 2026-07-05：验证真实 DeepSeek 技术链路 — 本地 `.env` 配置真实 Key 后可返回真实 AI 候选
 - [x] 2026-07-05：安装设计和验证相关 skill — `figma-generate-design`、`figma-create-design-system-rules`、`screenshot`、`playwright`
@@ -94,3 +106,4 @@
 
 - 当前 8 个节点规模下主路径已清楚；如果用户连续扩展到十几个以上节点，仍需要更完整的折叠、缩放或局部导航。
 - 当前视觉已从后台感转向极简展陈式工作台，主路径从“选方向 → 生成下一层 → 只保留一个 → 回到上一层”已经闭环；后续仍可继续细化登录页、微动效和大规模功能树导航。
+- 最新产品判断：下一轮不应继续只修 UI，而应重构为“先生成核心必做 MVP → 再选发散方向 → 沿方向生成节点”的清晰模型，避免 MVP 判断、功能发散和树状浏览继续混在一起。

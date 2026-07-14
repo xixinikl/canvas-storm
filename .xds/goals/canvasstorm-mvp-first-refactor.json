@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "id": "canvasstorm-mvp-first-refactor",
+  "title": "CanvasStorm MVP-first 重构",
+  "objective": "把 CanvasStorm 从混合功能图原型推进为可验证的 MVP-first 功能发散工具，并按 PR 阶段记录百分比和证据。",
+  "status": "active",
+  "createdAt": "2026-07-14T15:19:25+00:00",
+  "updatedAt": "2026-07-14T15:20:44+00:00",
+  "tasks": [
+    {
+      "id": "PR0",
+      "title": "状态和规划收口",
+      "acceptance": "Goal 文档、PR 计划、交接状态和项目 adapter 已落地；xixi goal 可显示百分比；工作区可提交。",
+      "dependsOn": [],
+      "status": "verified",
+      "evidence": [
+        {
+          "id": "evidence-1",
+          "type": "test",
+          "value": "PR0 evidence: goal lint pass; xixi-dev-system doctor pass; npm test pass (HTML ok, API 52 passed, WebSocket 12 passed, frontend 129 passed); files created/updated: GOAL_MVP_FIRST_REFACTOR.md, PR_PLAN.md, CURRENT_STATUS.md, HANDOFF.md, .xixi-dev-system.json, .xds/goals/canvasstorm-mvp-first-refactor.json.",
+          "recordedAt": "2026-07-14T15:20:44+00:00"
+        }
+      ],
+      "startedAt": "2026-07-14T15:19:37+00:00",
+      "completedAt": "2026-07-14T15:20:44+00:00"
+    },
+    {
+      "id": "PR1",
+      "title": "预览和分支卫生收口",
+      "acceptance": "现有预览 PR 和本地超前提交状态明确；需要上传或关闭的分支处理完毕；主开发分支状态清楚。",
+      "dependsOn": [
+        "PR0"
+      ],
+      "status": "pending",
+      "evidence": []
+    },
+    {
+      "id": "PR2",
+      "title": "MVP-first 数据模型",
+      "acceptance": "项目结构支持 MVP 主线、发散方向、方向节点和决策记录；旧项目可兼容打开；测试覆盖新旧结构。",
+      "dependsOn": [
+        "PR1"
+      ],
+      "status": "pending",
+      "evidence": []
+    },
+    {
+      "id": "PR3",
+      "title": "AI 和 fallback 输出契约",
+      "acceptance": "AI prompt、接口解析和本地降级均产出 MVP-first 结构；异常输出有容错；相关 API/前端测试通过。",
+      "dependsOn": [
+        "PR2"
+      ],
+      "status": "pending",
+      "evidence": []
+    },
+    {
+      "id": "PR4",
+      "title": "首屏信息架构",
+      "acceptance": "首屏清楚展示项目想法、核心 MVP 和方向选择；主操作唯一；桌面和移动端无明显信息拥挤。",
+      "dependsOn": [
+        "PR3"
+      ],
+      "status": "pending",
+      "evidence": []
+    },
+    {
+      "id": "PR5",
+      "title": "方向画布和交互语义",
+      "acceptance": "选择方向、补充当前层、进入下一层三个行为语义清楚；画布中心想法可见，子节点不重叠。",
+      "dependsOn": [
+        "PR4"
+      ],
+      "status": "pending",
+      "evidence": []
+    },
+    {
+      "id": "PR6",
+      "title": "持久化、导出和测试补强",
+      "acceptance": "用户项目保存/恢复、灵感备选库、以后再看和导出均适配新结构；npm test 通过。",
+      "dependsOn": [
+        "PR5"
+      ],
+      "status": "pending",
+      "evidence": []
+    },
+    {
+      "id": "PR7",
+      "title": "浏览器验收和合并准备",
+      "acceptance": "桌面/移动端真实路径走通；PR 描述、测试证据、已知边界和合并建议齐全。",
+      "dependsOn": [
+        "PR6"
+      ],
+      "status": "pending",
+      "evidence": []
+    }
+  ],
+  "runs": [
+    {
+      "id": "run-1",
+      "taskId": "PR0",
+      "status": "verified",
+      "startedAt": "2026-07-14T15:19:37+00:00",
+      "completedAt": "2026-07-14T15:20:44+00:00",
+      "evidenceIds": [
+        "evidence-1"
+      ]
+    }
+  ],
+  "blockers": [],
+  "progress": {
+    "verified": 1,
+    "total": 8,
+    "percent": 12
+  },
+  "currentTaskId": null,
+  "nextTaskId": "PR1"
+}
