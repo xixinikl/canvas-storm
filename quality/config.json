@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "project": "canvas-storm",
+  "projectName": "Canvas Storm",
+  "defaultBranch": "main",
+  "failureNextAction": "先运行 npm test 定位失败项，再按 API、WebSocket、前端数据流或 HTML 语法分类修复。",
+  "checks": [
+    { "name": "package-manifest", "command": "node -e \"JSON.parse(require('fs').readFileSync('package.json'))\"" },
+    { "name": "server-entry", "command": "test -f server/app.js" },
+    { "name": "static-page", "command": "test -s index.html" },
+    { "name": "npm-test", "command": "npm test" },
+    { "name": "diff-check", "command": "git diff --check" }
+  ]
+}

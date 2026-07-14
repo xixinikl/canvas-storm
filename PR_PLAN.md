@@ -11,7 +11,7 @@
 | 目标仓库 | `https://github.com/xixinikl/canvas-storm.git` |
 | 当前提交基线 | `209c972 feat: rebuild canvas storm workbench` |
 | PR 类型 | 产品模型重构 + 前端交互重构 + 测试补强 |
-| 当前状态 | PR0-PR6 已验证；当前进度 88%，下一步 PR7 浏览器验收和合并准备 |
+| 当前状态 | PR0-PR7 已验证；当前进度 100%，等待用户验收或合并 |
 | 跟踪 PR | [#5 feat: CanvasStorm workbench baseline and MVP-first refactor plan](https://github.com/xixinikl/canvas-storm/pull/5)（Draft） |
 
 Goal 入口：[`GOAL_MVP_FIRST_REFACTOR.md`](./GOAL_MVP_FIRST_REFACTOR.md)
@@ -51,8 +51,8 @@ Goal 入口：[`GOAL_MVP_FIRST_REFACTOR.md`](./GOAL_MVP_FIRST_REFACTOR.md)
 | T6 | 保留灵感库与以后再看 | 已完成 | 决策状态、项目持久化、导出 | 前端测试，验证多个节点可连续加入备选库并持久化 | `decisions.ideaPool/later` 随节点状态保存；Playwright 刷新后备选库仍保留 |
 | T7 | 历史项目兼容/迁移 | 已完成 | 用户项目读取、默认项目、localStorage 兜底 | 测试旧 node-only 项目可打开，新结构项目可保存 | 前端旧项目迁移测试继续通过；MVP 结构保存时不覆盖 AI/用户目标 |
 | T8 | 自动化测试补强 | 已完成 | `tests/frontend-data.test.js`、API/WS 受影响测试 | `npm test` | `npm test` 通过：API 56、WS 12、前端 167 |
-| T9 | 真实浏览器验收 | 进行中 | 桌面和移动端主路径 | 启动本地服务，Playwright 验证登录、创建、选方向、生成、收藏 | PR5 已完成桌面/手机方向语义和生成态截图；PR7 做最终全路径审计 |
-| T10 | PR 文档与交付说明 | 进行中 | `PR_PLAN.md`、`CURRENT_STATUS.md`、`HANDOFF.md` | 文档审计，确认没有过期远端/CI/密钥描述 | 当前进度同步到 88%，下一步 PR7 |
+| T9 | 真实浏览器验收 | 已完成 | 桌面和移动端主路径 | 启动本地服务，Playwright 验证登录、创建、选方向、生成、收藏 | PR7 最终桌面/手机主路径通过；截图 `pr7-final-initial-*`、`pr7-final-decision-*` |
+| T10 | PR 文档与交付说明 | 已完成 | `PR_PLAN.md`、`CURRENT_STATUS.md`、`HANDOFF.md` | 文档审计，确认没有过期远端/CI/密钥描述 | 当前进度同步到 100%，PR #5 描述准备更新 |
 
 ## 推荐实现顺序
 

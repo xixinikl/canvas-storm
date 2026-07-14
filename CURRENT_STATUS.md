@@ -4,14 +4,14 @@
 |------|------|
 | 当前分支 | cx/direction-workbench-ci |
 | 当前主流程 | 本地登录 + 用户项目空间 + 图形化功能发散 |
-| 进行中 | PR6：持久化、导出和测试补强已验证 |
-| 下一步 | 从 PR7“浏览器验收和合并准备”继续 |
-| 质量门禁 | `npm test` 已通过；GitHub Actions 因 token 缺少 `workflow` scope 暂未上传 |
+| 进行中 | MVP-first 重构 Goal 已验证完成 |
+| 下一步 | 等待用户验收；若要合并，PR #5 已完成最终准备 |
+| 质量门禁 | `npm test` 已通过；quality report 5/5 通过；GitHub workflow 已包含 `npm ci` + `npm test` |
 
 下一轮 PR 规划入口：[`PR_PLAN.md`](./PR_PLAN.md)
 当前 Goal 入口：[`GOAL_MVP_FIRST_REFACTOR.md`](./GOAL_MVP_FIRST_REFACTOR.md)
 机器可读进度：`.xds/goals/canvasstorm-mvp-first-refactor.json`
-当前进度：88%（7/8，PR0-PR6 已验证）
+当前进度：100%（8/8，PR0-PR7 已验证）
 跟踪 PR：[#5 feat: CanvasStorm workbench baseline and MVP-first refactor plan](https://github.com/xixinikl/canvas-storm/pull/5)（Draft）
 
 协作约定：后续 Codex 任务必须持续挂在完整 MVP-first 重构 Goal 上，不再用单个 PR 的短 Goal 代替总目标；每个 PR 完成时同步更新 xixi Goal 百分比。
@@ -34,6 +34,7 @@ ${CODEX_HOME:-$HOME/.codex}/bin/xixi-dev-system goal show --project . --goal can
 - [x] 2026-07-14：PR4 首屏信息架构 — 工作台首屏新增核心 MVP 和发散方向区，方向入口可直接进入对应方向；桌面/手机 Playwright 验证无横向溢出；`npm test` 通过
 - [x] 2026-07-15：PR5 方向画布和交互语义 — 统一“补充这一层 / 进入下一层 / 生成子功能”的文案和行为；手机画布第 4 步只预览推荐子功能，避免命令条遮挡；`npm test` 通过，Playwright 桌面/手机截图验证通过
 - [x] 2026-07-15：PR6 持久化、导出和测试补强 — 保留 AI/用户生成的 MVP 主线，Markdown 导出新增核心 MVP 和发散方向；API 覆盖 `mvp/directions/decisions` 保存读取；`npm test` 通过，Playwright 验证刷新后 MVP、方向和备选库保留
+- [x] 2026-07-15：PR7 浏览器验收和合并准备 — 合并 `origin/main` 并解决 `.xixi-dev-system.json`、`README.md` 冲突；补齐 quality workflow 的 `npm ci` + `npm test`；`npm test`、quality report、桌面/手机 Playwright 最终主路径均通过
 - [x] 2026-07-04：补充 AI 状态体验 — `/api/storm/status` 只返回配置状态和模型名
 - [x] 2026-07-05：验证真实 DeepSeek 技术链路 — 本地 `.env` 配置真实 Key 后可返回真实 AI 候选
 - [x] 2026-07-05：安装设计和验证相关 skill — `figma-generate-design`、`figma-create-design-system-rules`、`screenshot`、`playwright`

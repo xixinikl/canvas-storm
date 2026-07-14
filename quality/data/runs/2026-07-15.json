@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "project": "canvas-storm",
+  "projectName": "Canvas Storm",
+  "date": "2026-07-15",
+  "timezone": "Asia/Shanghai",
+  "generatedAt": "2026-07-14T16:22:57.238Z",
+  "source": {
+    "branch": "cx/direction-workbench-ci",
+    "testedSha": "61c932be357f8f1f530db9c636f519e676e7b899",
+    "runUrl": null
+  },
+  "verdict": {
+    "status": "pass",
+    "reason": "全部 5 项真实检查通过。",
+    "recommendedLevel": "L0"
+  },
+  "checks": {
+    "total": 5,
+    "passed": 5,
+    "failed": 0,
+    "results": [
+      {
+        "name": "package-manifest",
+        "exitCode": 0,
+        "durationSeconds": 0.03,
+        "outputTail": ""
+      },
+      {
+        "name": "server-entry",
+        "exitCode": 0,
+        "durationSeconds": 0,
+        "outputTail": ""
+      },
+      {
+        "name": "static-page",
+        "exitCode": 0,
+        "durationSeconds": 0,
+        "outputTail": ""
+      },
+      {
+        "name": "npm-test",
+        "exitCode": 0,
+        "durationSeconds": 13.63,
+        "outputTail": "> canvas-storm@1.0.0 test\n> npm run check:html && npm run test:api && npm run test:ws && npm run test:frontend\n\n\n> canvas-storm@1.0.0 check:html\n> node tests/html-syntax.test.js\n\nindex.html script syntax: ok\n\n> canvas-storm@1.0.0 test:api\n> node tests/api-backend.test.js\n\n后端已启动: http://localhost:52498\n\n=== 测试 1: Health Check ===\n\n=== 测试 1.1: AI 状态不暴露密钥 ===\n\n=== 测试 1.2: 页面版本接口 ===\n\n=== 测试 1.3: 用户项目空间 API ===\n\n=== 测试 2: 空列表 ===\n\n=== 测试 3: 创建会话 (POST) ===\n\n=== 测试 4: 创建第二个会话 ===\n\n=== 测试 5: 获取列表 (含2条) ===\n\n=== 测试 6: 获取单个会话 (GET /:id) ===\n\n=== 测试 7: 获取不存在的会话 (404) ===\n\n=== 测试 8: 更新会话 (PUT) ===\n\n=== 测试 9: 保存含大量节点/边的会话 ===\n\n=== 测试 10: 删除会话 (DELETE) ===\n\n=== 测试 11: 删除不存在会话 ===\n\n=== 测试 12: 创建缺字段请求 (400) ===\n\n=== 测试 13: 前后端数据完整性（模拟真实工作流） ===\n\n--- 清理测试会话 ---\n\n========================================\n  结果: 56 passed, 0 failed\n========================================\n\n\n> canvas-storm@1.0.0 test:ws\n> node tests/ws.test.js\n\n\n=== WebSocket 通道测试 ===\n\n[WS] WebSocket 通道已就绪\n--- 测试 1: 服务端启动 ---\n--- 测试 2: 单客户端连接 ---\n--- 测试 3: 加入房间 ---\n--- 测试 4: 同房间广播 ---\n--- 测试 5: 自身不收到自己的广播 ---\n--- 测试 6: 不同房间隔离 ---\n--- 测试 7: 断连后清理 ---\n--- 测试 8: 无效消息容错 ---\n--- 测试 9: 光标位置广播 ---\n\n========================================\n  WebSocket: 12 passed, 0 failed\n========================================\n\n\n> canvas-storm@1.0.0 test:frontend\n> node tests/frontend-data.test.js\n\n\n=== 前端功能图数据流测试 ===\n--- 测试 1: 登录入口清晰 ---\n--- 测试 1.1: 键盘可进入项目空间 ---\n--- 测试 2: 进入用户项目空间 ---\n--- 测试 3: 围绕节点继续发散 ---\n--- 测试 4: 收藏多个备选和以后再看同步到侧栏 ---\n--- 测试 5: 编辑、手动添加、删除和导出 ---\n--- 测试 6: 创建新项目并持久化 ---\n--- 测试 6: 不同用户项目隔离 ---\n--- 测试 6.1: 旧项目自动迁移到 MVP-first 结构 ---\n--- 测试 7: AI 生成有明确等待反馈 ---\n\n========================================\n  前端功能图: 167 passed, 0 failed\n========================================"
+      },
+      {
+        "name": "diff-check",
+        "exitCode": 0,
+        "durationSeconds": 0.02,
+        "outputTail": ""
+      }
+    ]
+  },
+  "risk": {
+    "highRiskFiles": [],
+    "failedChecks": []
+  },
+  "nextAction": null
+}

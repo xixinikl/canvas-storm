@@ -3,9 +3,9 @@
   "id": "canvasstorm-mvp-first-refactor",
   "title": "CanvasStorm MVP-first 重构",
   "objective": "把 CanvasStorm 从混合功能图原型推进为可验证的 MVP-first 功能发散工具，并按 PR 阶段记录百分比和证据。",
-  "status": "active",
+  "status": "verified",
   "createdAt": "2026-07-14T15:19:25+00:00",
-  "updatedAt": "2026-07-14T16:17:33+00:00",
+  "updatedAt": "2026-07-14T16:23:19+00:00",
   "tasks": [
     {
       "id": "PR0",
@@ -145,8 +145,17 @@
       "dependsOn": [
         "PR6"
       ],
-      "status": "pending",
-      "evidence": []
+      "status": "verified",
+      "evidence": [
+        {
+          "id": "evidence-8",
+          "type": "test",
+          "value": "PR7 浏览器验收和合并准备完成：已合并 origin/main 并解决 .xixi-dev-system.json/README.md 冲突；npm test 通过（API 56、WS 12、前端 167）；Playwright 最终桌面/手机主路径通过并生成 pr7-final-* 截图；quality report 本地通过 5/5 且包含 npm test；PR 描述准备更新为 100%。",
+          "recordedAt": "2026-07-14T16:23:19+00:00"
+        }
+      ],
+      "startedAt": "2026-07-14T16:18:57+00:00",
+      "completedAt": "2026-07-14T16:23:19+00:00"
     }
   ],
   "runs": [
@@ -219,14 +228,24 @@
       "evidenceIds": [
         "evidence-7"
       ]
+    },
+    {
+      "id": "run-8",
+      "taskId": "PR7",
+      "status": "verified",
+      "startedAt": "2026-07-14T16:18:57+00:00",
+      "completedAt": "2026-07-14T16:23:19+00:00",
+      "evidenceIds": [
+        "evidence-8"
+      ]
     }
   ],
   "blockers": [],
   "progress": {
-    "verified": 7,
+    "verified": 8,
     "total": 8,
-    "percent": 88
+    "percent": 100
   },
   "currentTaskId": null,
-  "nextTaskId": "PR7"
+  "nextTaskId": null
 }

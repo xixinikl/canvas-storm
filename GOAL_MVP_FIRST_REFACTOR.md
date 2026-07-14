@@ -57,7 +57,7 @@
 | PR4 | 首屏信息架构 | 已验证 | 62% | 首屏清楚展示 MVP 主线和方向选择，只有一个主动作 |
 | PR5 | 方向画布与交互语义 | 已验证 | 75% | 选择方向、补充当前层、进入下一层三种行为稳定且不混淆 |
 | PR6 | 持久化、导出和测试补强 | 已验证 | 88% | 用户项目保存/恢复、备选库和导出适配新结构，`npm test` 通过 |
-| PR7 | 浏览器验收和合并准备 | 待开始 | 100% | 桌面/移动端主路径走通，PR 描述、测试证据、风险边界齐全 |
+| PR7 | 浏览器验收和合并准备 | 已验证 | 100% | 桌面/移动端主路径走通，PR 描述、测试证据、风险边界齐全 |
 
 ## 证据槽
 
@@ -87,11 +87,11 @@
 
 ## 完成审计
 
-最终完成前必须确认：
+完成审计结果：
 
-- xixi goal 进度为 100%。
-- 所有任务均有证据。
-- `npm test` 通过。
-- 工作区没有未解释改动。
-- PR 描述包含 Summary、Why、Test Plan、Known Limits。
-- 没有提交 `.env`、API key、`data/`、`output/`、`node_modules/`。
+- [x] xixi goal 进度为 100%。
+- [x] 所有任务均有证据。
+- [x] `npm test` 通过。
+- [x] quality report 5/5 通过，且包含 `npm test`。
+- [x] PR 描述包含 Summary、Current Status、Evidence、Verified PR Stages、Known Limits。
+- [x] 未提交 `.env`、API key、`data/`、`output/`、`node_modules/`。
