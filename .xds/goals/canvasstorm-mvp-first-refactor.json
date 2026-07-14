@@ -5,7 +5,7 @@
   "objective": "把 CanvasStorm 从混合功能图原型推进为可验证的 MVP-first 功能发散工具，并按 PR 阶段记录百分比和证据。",
   "status": "active",
   "createdAt": "2026-07-14T15:19:25+00:00",
-  "updatedAt": "2026-07-14T15:20:44+00:00",
+  "updatedAt": "2026-07-14T15:27:23+00:00",
   "tasks": [
     {
       "id": "PR0",
@@ -31,8 +31,17 @@
       "dependsOn": [
         "PR0"
       ],
-      "status": "pending",
-      "evidence": []
+      "status": "verified",
+      "evidence": [
+        {
+          "id": "evidence-2",
+          "type": "url",
+          "value": "PR1 evidence: PR #4 merged into cx/direction-workbench-ci at merge commit 7f432c5; Realtime preview CI verify checks completed successfully twice; cx/realtime-preview-v1 local ahead commit pushed and branch became mergeable before merge. URL: https://github.com/xixinikl/canvas-storm/pull/4",
+          "recordedAt": "2026-07-14T15:27:23+00:00"
+        }
+      ],
+      "startedAt": "2026-07-14T15:23:31+00:00",
+      "completedAt": "2026-07-14T15:27:23+00:00"
     },
     {
       "id": "PR2",
@@ -105,14 +114,24 @@
       "evidenceIds": [
         "evidence-1"
       ]
+    },
+    {
+      "id": "run-2",
+      "taskId": "PR1",
+      "status": "verified",
+      "startedAt": "2026-07-14T15:23:31+00:00",
+      "completedAt": "2026-07-14T15:27:23+00:00",
+      "evidenceIds": [
+        "evidence-2"
+      ]
     }
   ],
   "blockers": [],
   "progress": {
-    "verified": 1,
+    "verified": 2,
     "total": 8,
-    "percent": 12
+    "percent": 25
   },
   "currentTaskId": null,
-  "nextTaskId": "PR1"
+  "nextTaskId": "PR2"
 }
