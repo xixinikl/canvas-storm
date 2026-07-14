@@ -5,7 +5,7 @@
   "objective": "把 CanvasStorm 从混合功能图原型推进为可验证的 MVP-first 功能发散工具，并按 PR 阶段记录百分比和证据。",
   "status": "active",
   "createdAt": "2026-07-14T15:19:25+00:00",
-  "updatedAt": "2026-07-14T15:27:23+00:00",
+  "updatedAt": "2026-07-14T15:31:02+00:00",
   "tasks": [
     {
       "id": "PR0",
@@ -50,8 +50,17 @@
       "dependsOn": [
         "PR1"
       ],
-      "status": "pending",
-      "evidence": []
+      "status": "verified",
+      "evidence": [
+        {
+          "id": "evidence-3",
+          "type": "test",
+          "value": "PR2 evidence: implemented schemaVersion 2 with mvp, directions, decisions, and node roles; legacy node-only projects migrate on login; npm test passed (HTML ok, API 52 passed, WebSocket 12 passed, frontend 143 passed).",
+          "recordedAt": "2026-07-14T15:31:02+00:00"
+        }
+      ],
+      "startedAt": "2026-07-14T15:28:31+00:00",
+      "completedAt": "2026-07-14T15:31:02+00:00"
     },
     {
       "id": "PR3",
@@ -124,14 +133,24 @@
       "evidenceIds": [
         "evidence-2"
       ]
+    },
+    {
+      "id": "run-3",
+      "taskId": "PR2",
+      "status": "verified",
+      "startedAt": "2026-07-14T15:28:31+00:00",
+      "completedAt": "2026-07-14T15:31:02+00:00",
+      "evidenceIds": [
+        "evidence-3"
+      ]
     }
   ],
   "blockers": [],
   "progress": {
-    "verified": 2,
+    "verified": 3,
     "total": 8,
-    "percent": 25
+    "percent": 38
   },
   "currentTaskId": null,
-  "nextTaskId": "PR2"
+  "nextTaskId": "PR3"
 }

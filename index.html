@@ -2043,6 +2043,7 @@ const API_BASE=(()=>{
 const USER_KEY='cs_graph_user';
 const USERS_KEY='cs_graph_users';
 const PROJECT_PREFIX='cs_graph_projects_';
+const PROJECT_SCHEMA_VERSION=2;
 let activeUser='';
 let projects=[];
 let activeProjectId='';
@@ -2088,8 +2089,9 @@ const templates={
   }
 };
 
-function node(id,title,desc,parentId,x,y,type,pain,validation,decision='maybe'){
-  return {id,title,desc,parentId,x,y,type,pain,validation,decision,childrenGenerated:false};
+function node(id,title,desc,parentId,x,y,type,pain,validation,decision='maybe',role){
+  const nodeRole=role||(!parentId?'project':(parentId==='root'?'direction':'feature'));
+  return {id,title,desc,parentId,x,y,type,pain,validation,decision,role:nodeRole,childrenGenerated:false};
 }
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function formatTime(value){
@@ -2149,7 +2151,7 @@ async function loadProjects(){
   }catch(e){}
   if(!projects.length)projects=[createProject('wardrobe'),createProject('travel'),createProject('resume')];
   ensureStarterProject('wardrobe');
-  projects.forEach(normalizeProjectLayout);
+  projects.forEach(normalizeProject);
   activeProjectId=localStorage.getItem(storageKey()+':active')||projects[0]?.id||'';
   if(!projects.some(p=>p.id===activeProjectId))activeProjectId=projects[0]?.id||'';
   activeNodeId=rootNodeId(currentProject());
@@ -2163,6 +2165,7 @@ function ensureStarterProject(templateId){
   if(!exists)projects.unshift(createProject(templateId));
 }
 function saveProjects(){
+  projects.forEach(normalizeProject);
   localStorage.setItem(storageKey(),JSON.stringify(projects));
   localStorage.setItem(storageKey()+':active',activeProjectId);
   scheduleProjectSync();
@@ -2197,9 +2200,13 @@ function createProject(templateId,title,seed){
   }else{
     project.nodes=[node(uid('node_'),title||'新的项目',seed||'描述你的项目想法',null,50,50,'中心想法','需要先明确真实用户和使用场景。','找 3 个目标用户描述这个想法，看他们是否能说出愿意使用的场景。','keep')];
   }
-  project.activeNodeId=project.nodes[0]?.id||'';
   project.layoutVersion=4;
-  return project;
+  project.activeNodeId=project.nodes[0]?.id||'';
+  return normalizeProject(project);
+}
+function normalizeProject(project){
+  normalizeProjectLayout(project);
+  return syncProjectModel(project);
 }
 function normalizeProjectLayout(project){
   if(project.layoutVersion>=4)return project;
@@ -2225,6 +2232,53 @@ function normalizeProjectLayout(project){
     Object.entries(positions).forEach(([title,[x,y]])=>{const n=byTitle(title);if(n){n.x=x;n.y=y}});
   }
   project.layoutVersion=4;
+  return project;
+}
+function syncProjectModel(project){
+  if(!project||!Array.isArray(project.nodes))return project;
+  const root=project.nodes.find(n=>!n.parentId)||project.nodes[0];
+  if(root){
+    root.role='project';
+    root.parentId=root.parentId||null;
+  }
+  const rootId=root?.id||'';
+  project.nodes.forEach(n=>{
+    if(n.id===rootId)n.role='project';
+    else if(n.parentId===rootId)n.role='direction';
+    else n.role='feature';
+    if(!n.decision)n.decision='maybe';
+  });
+  const directChildren=project.nodes.filter(n=>n.parentId===rootId);
+  const mustHave=rankRecommendationNodes(directChildren)
+    .filter(n=>n.decision!=='drop')
+    .slice(0,3)
+    .map(n=>({
+      nodeId:n.id,
+      title:n.title,
+      reason:n.pain||n.desc||'直接影响用户第一次有效使用。',
+      validation:n.validation||'找 3 个目标用户做一次手工验证。'
+    }));
+  project.schemaVersion=PROJECT_SCHEMA_VERSION;
+  project.mvp={
+    goal:root?.desc||project.seed||project.title,
+    rootNodeId:rootId,
+    mustHaveFeatures:mustHave,
+    validation:root?.validation||mustHave[0]?.validation||'找 3 个目标用户做一次手工验证。',
+    updatedAt:project.updatedAt||new Date().toISOString()
+  };
+  project.directions=directChildren.map(n=>({
+    id:n.id,
+    nodeId:n.id,
+    title:n.title,
+    desc:n.desc,
+    reason:n.pain||n.desc,
+    validation:n.validation,
+    decision:n.decision||'maybe'
+  }));
+  project.decisions={
+    ideaPool:project.nodes.filter(n=>n.parentId&&n.decision==='keep').map(n=>n.id),
+    later:project.nodes.filter(n=>n.parentId&&n.decision==='drop').map(n=>n.id)
+  };
   return project;
 }
 async function login(name){
@@ -2923,7 +2977,8 @@ function createManualChild(parentId,data){
     data.type||'手动补充',
     data.pain||'需要继续补充真实痛点。',
     data.validation||'找 3 个目标用户快速验证是否有用。',
-    'maybe'
+    'maybe',
+    parent.parentId?'feature':'direction'
   );
   project.nodes.push(child);
   parent.childrenGenerated=true;
@@ -3231,12 +3286,14 @@ function addChildren(project,parent,ideas){
       pain:idea.pain||'需要进一步确认真实痛点。',
       validation:idea.validation||'找 3 个目标用户做一次手工验证。',
       decision:'maybe',
+      role:parent.parentId?'feature':'direction',
       x:Math.min(88,Math.max(12,pos.x+nudgeX)),
       y:Math.min(86,Math.max(12,pos.y+nudgeY))
     });
   });
   parent.childrenGenerated=true;
   project.updatedAt=new Date().toISOString();
+  syncProjectModel(project);
   activeNodeId=parent.id;
   project.activeNodeId=parent.id;
 }

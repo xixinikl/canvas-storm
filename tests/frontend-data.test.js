@@ -198,7 +198,13 @@ async function runTests() {
   const wardrobe = firstUserProjects.find((project) => project.title === '线上衣橱');
   assert(document.querySelector('#mapNodeCount')?.textContent === String(wardrobe?.nodes.length), '功能图状态条保留完整项目节点数');
   assert(wardrobe?.layoutVersion === 4, '项目布局版本已迁移到新版');
+  assert(wardrobe?.schemaVersion === 2, '项目数据模型已迁移到 MVP-first schema v2');
+  assert(wardrobe?.mvp?.rootNodeId, '项目包含 MVP 主线根节点引用');
+  assert(wardrobe?.mvp?.mustHaveFeatures?.length >= 1, '项目 MVP 主线包含至少一个必做功能');
+  assert(wardrobe?.directions?.some((direction) => direction.title === '一键穿搭'), '项目方向列表包含一级功能方向');
+  assert(wardrobe?.nodes.find((node) => node.title === '线上衣橱')?.role === 'project', '中心节点标记为 project 角色');
   const outfit = wardrobe?.nodes.find((node) => node.title === '一键穿搭');
+  assert(outfit?.role === 'direction', '一级节点标记为 direction 角色');
   assert(outfit?.x === 17 && outfit?.y === 30, '线上衣橱示例使用不重叠的新版节点位置');
   assert(document.querySelector('#aiStatus')?.textContent.includes('本地示例'), 'AI 状态显示本地示例模式');
 
@@ -217,6 +223,9 @@ async function runTests() {
   await wait(350);
   assert(stormPostCalls === 0, 'AI 未配置时不调用 /storm POST');
   assert(Number(document.querySelector('#mapNodeCount')?.textContent || '0') === beforeTotalNodes + 3, '从具体功能点继续生成 3 个下一层功能');
+  const generatedProjects = JSON.parse(localStorage.getItem('cs_graph_projects_米朵') || '[]');
+  const generatedWardrobe = generatedProjects.find((project) => project.title === '线上衣橱');
+  assert(generatedWardrobe?.nodes.some((node) => node.title === '天气穿搭推荐' && node.role === 'feature'), '方向下生成的下一层节点标记为 feature 角色');
   assert(document.querySelectorAll('.node').length >= beforeNodes, '生成后画布保留当前路径和当前层子功能');
   assert(document.querySelectorAll('.node.in-path').length >= 2, '发散后当前节点和上游节点会高亮成路径');
   assert(document.querySelectorAll('.node.dimmed').length === 0, '深入后隐藏无关分支，减少视觉干扰');
@@ -331,7 +340,11 @@ async function runTests() {
   assert(document.querySelectorAll('.node').length > 1, '新项目创建后立即带出第一层功能分支');
   assert(document.querySelector('#graphStage')?.textContent.includes('写作选题发散'), '知识库项目生成贴合场景的功能分支');
   const userProjects = JSON.parse(localStorage.getItem('cs_graph_projects_米朵') || '[]');
-  assert(userProjects.some((project) => project.title === '个人知识库'), '新项目已保存到当前用户空间');
+  const knowledgeProject = userProjects.find((project) => project.title === '个人知识库');
+  assert(Boolean(knowledgeProject), '新项目已保存到当前用户空间');
+  assert(knowledgeProject?.schemaVersion === 2, '新建项目使用 MVP-first schema v2');
+  assert(knowledgeProject?.mvp?.mustHaveFeatures?.length >= 1, '新建项目自动生成 MVP 主线');
+  assert(knowledgeProject?.directions?.length >= 1, '新建项目自动生成发散方向列表');
   await wait(450);
   assert(projectPutCalls >= 1, '项目变化会同步到后端用户项目空间');
 
@@ -362,6 +375,29 @@ async function runTests() {
   assert(otherProjects.length >= 2, '另一个用户有自己的默认项目');
   assert(!otherProjects.some((project) => project.title === '个人知识库'), '另一个用户看不到米朵的新项目');
   assert(document.querySelector('#userName')?.textContent === '产品同学', '已切换到另一个用户');
+
+  console.log('--- 测试 6.1: 旧项目自动迁移到 MVP-first 结构 ---');
+  const legacyDom = await createDom();
+  const legacyStorage = legacyDom.window.localStorage;
+  legacyStorage.setItem('cs_graph_projects_旧用户', JSON.stringify([{
+    id: 'legacy-project',
+    title: '旧项目',
+    seed: '旧结构只有 nodes，没有 mvp 和 directions。',
+    nodes: [
+      { id: 'legacy-root', title: '旧项目', desc: '旧中心想法', parentId: null, x: 50, y: 50, type: '中心想法', pain: '旧痛点', validation: '旧验证', decision: 'keep' },
+      { id: 'legacy-child', title: '旧方向', desc: '旧一级方向', parentId: 'legacy-root', x: 30, y: 30, type: '核心功能', pain: '旧方向痛点', validation: '旧方向验证', decision: 'maybe' },
+    ],
+    layoutVersion: 1,
+    activeNodeId: 'legacy-root',
+  }]));
+  legacyDom.window.document.querySelector('#loginName').value = '旧用户';
+  legacyDom.window.document.querySelector('#loginBtn').click();
+  await wait(220);
+  const migrated = JSON.parse(legacyStorage.getItem('cs_graph_projects_旧用户') || '[]').find((project) => project.id === 'legacy-project');
+  assert(migrated?.schemaVersion === 2, '旧项目登录后自动补齐 schema v2');
+  assert(migrated?.mvp?.rootNodeId === 'legacy-root', '旧项目迁移后保留中心节点为 MVP 根');
+  assert(migrated?.directions?.[0]?.title === '旧方向', '旧项目迁移后从一级节点生成 directions');
+  assert(migrated?.nodes?.find((node) => node.id === 'legacy-child')?.role === 'direction', '旧项目一级节点迁移为 direction 角色');
 
   console.log('--- 测试 7: AI 生成有明确等待反馈 ---');
   const loadingDom = await createDom({ aiConfigured: true, stormDelay: 180 });
