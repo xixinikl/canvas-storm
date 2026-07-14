@@ -702,6 +702,15 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{
   overflow:hidden;
   text-overflow:ellipsis;
 }
+.direction-pill em{
+  display:block;
+  margin-top:5px;
+  color:inherit;
+  opacity:.9;
+  font-style:normal;
+  font-size:10px;
+  font-weight:950;
+}
 .flow-strip{
   display:flex;
   gap:4px;
@@ -2519,6 +2528,7 @@ function renderMvpOverview(project,active){
           return `<button class="direction-pill ${isActive?'active':''}" data-focus-direction="${esc(nodeId)}">
             <b>${esc(direction.title)}</b>
             <span>${esc(direction.reason||direction.desc||direction.validation||'继续展开这个方向')}</span>
+            <em>${isActive?'当前方向':'进入下一层'}</em>
           </button>`;
         }).join('')}
       </div>
@@ -2560,32 +2570,32 @@ function workStage(project,active){
     const childCount=project.nodes.filter(n=>n.parentId===active?.id).length;
     return {
       step:2,
-      title:`“${project.title}”：功能方向`,
-      hint:childCount?'这是项目的第一层方向。点击某个方向进入它的下一层；如果方向还不够，就继续补充方向。':'先从项目想法生成第一层功能方向。',
+      title:`“${project.title}”：选择发散方向`,
+      hint:childCount?'这是项目的第一层方向。点击方向卡片会进入它的下一层；底部按钮只补充这一层，不会跳层。':'先从项目想法生成第一层功能方向。',
       shortHint:'当前层是功能方向。',
       actionTitle:'当前层：功能方向',
-      canvas:childCount?'点击方向进入下一层；继续发散会给项目补充更多同层方向。':'生成第一层方向，再选择一个继续往下拆。'
+      canvas:childCount?'点方向卡片进入下一层；底部按钮只补充这一层方向。':'生成第一层方向，再选择一个继续往下拆。'
     };
   }
   const children=project.nodes.filter(n=>n.parentId===active.id);
   if(!children.length&&nodeDepth(project,active)<2){
     return {
       step:3,
-      title:`“${active.title}”：下一层子功能`,
-      hint:'当前节点还没有子功能。生成后会固定展示在它下面，不会自动替你跳到别的层。',
+      title:`“${active.title}”：生成子功能`,
+      hint:'当前方向还没有子功能。生成后会固定展示在它下面，你再点击子功能进入更下一层。',
       shortHint:'给当前节点生成子功能。',
       actionTitle:'当前节点：生成子功能',
-      canvas:'发散只作用于当前节点：为它生成下一层子功能。'
+      canvas:'底部按钮只作用于当前方向：为它生成下一层子功能。'
     };
   }
   if(children.length){
     return {
       step:4,
-      title:`“${active.title}”：子功能`,
-      hint:'这些都是当前节点的下一层。点击某个子功能进入它自己的下一层；继续发散会给当前节点补充更多子功能。',
+      title:`“${active.title}”：这一层子功能`,
+      hint:'这些都是当前节点的下一层。点击子功能卡片进入它自己的下一层；底部按钮只补充这一层子功能。',
       shortHint:'当前层是它的子功能。',
       actionTitle:'当前层：子功能',
-      canvas:'点击子功能进入下一层；继续发散只会补充当前节点下面的同层子功能。'
+      canvas:'点子功能卡片进入下一层；底部按钮只补充当前这一层。'
     };
   }
   return {
@@ -2666,9 +2676,15 @@ function renderGraph(){
     const currentFocusClass=graphStageInfo.step===3&&isActive&&n.parentId?'choice-primary current-focus':'';
     const choiceAlternateClass=((rootChoiceStage&&n.parentId===active.id)||childChoiceStage)&&recommended?.id!==n.id?'choice-alternate':'';
     const rootHubClass=rootChoiceStage&&!n.parentId?'root-hub':'';
+    const entryLabel=!n.parentId?'中心想法'
+      : n.id===activeNodeId
+        ? (n.parentId===rootNodeId(project)?'当前方向':'当前节点')
+        : ((rootChoiceStage&&n.parentId===active.id)||childChoiceStage)
+          ? (recommended?.id===n.id?'建议进入':'进入下一层')
+          : (n.parentId===rootNodeId(project)?'方向':'子功能');
     return `
     <article class="node ${!n.parentId?'root':''} ${rootHubClass} ${nodeTypeClass(n)} ${pathClass} ${recommendClass} ${choicePrimaryClass} ${currentFocusClass} ${choiceAlternateClass} ${isActive?'active':''} ${n.decision==='keep'?'kept':''} ${n.decision==='drop'?'dropped':''}" style="left:${pos.x}%;top:${pos.y}%;--node-order:${idx};" data-node="${n.id}" data-badge="${esc(recommendBadge)}" role="button" tabindex="0" aria-label="${esc(n.title)}">
-      <small>${esc(n.type||'功能点')}</small>
+      <small>${esc(entryLabel)}</small>
       <b>${esc(n.title)}</b>
       <span>${esc(n.desc)}</span>
     </article>
@@ -2689,20 +2705,31 @@ function renderGraph(){
 function graphVisibleNodes(project,active){
   const root=project.nodes.find(n=>!n.parentId)||project.nodes[0];
   const ids=new Set();
-  const activeChildren=active?project.nodes.filter(n=>n.parentId===active.id):[];
+  const activeChildren=graphChildNodesForView(project,active);
   currentPathNodes(project,active?.id).forEach(n=>ids.add(n.id));
   if(root)ids.add(root.id);
   activeChildren.forEach(n=>ids.add(n.id));
   return project.nodes.filter(n=>ids.has(n.id));
+}
+function graphChildNodesForView(project,active){
+  if(!active)return [];
+  const children=project.nodes.filter(n=>n.parentId===active.id);
+  if(window.innerWidth<=760&&active.parentId&&children.length){
+    const pick=pickStageRecommendation(project,active,workStage(project,active))||children[0];
+    return children.filter(n=>n.id===pick.id).slice(0,1);
+  }
+  return children;
 }
 function graphRenderPositions(project,pathIds){
   const positions={};
   const pathNodes=currentPathNodes(project,activeNodeId);
   const compactMap=window.innerWidth<=760;
   const active=pathNodes[pathNodes.length-1]||project.nodes[0];
-  const children=project.nodes.filter(n=>n.parentId===active?.id);
+  const children=graphChildNodesForView(project,active);
+  const compactChildPreview=compactMap&&active?.parentId&&children.length;
   const childSlots=(count)=>{
     if(compactMap){
+      if(compactChildPreview)return [{x:74,y:36}];
       const xs=count===1?[50]:count===2?[28,72]:[28,72,28,72,50,28,72,50];
       return xs.map((x,idx)=>({x,y:idx<2?58:idx<4?74:86}));
     }
@@ -2723,7 +2750,7 @@ function graphRenderPositions(project,pathIds){
     ancestors.slice(-ancestorSlots.length).forEach((n,idx)=>{
       positions[n.id]=ancestorSlots[idx];
     });
-    positions[active.id]=compactMap?{x:50,y:36}:{x:50,y:38};
+    positions[active.id]=compactChildPreview?{x:32,y:36}:(compactMap?{x:50,y:36}:{x:50,y:38});
   }
   childSlots(children.length).forEach((slot,idx)=>{
     const n=children[idx];
@@ -2735,7 +2762,11 @@ function graphRenderPositions(project,pathIds){
     if(pathIds.has(n.id))return 2;
     return 3;
   };
-  const ordered=[...project.nodes].sort((a,b)=>rank(a)-rank(b));
+  const placementIds=new Set([
+    ...pathNodes.map(n=>n.id),
+    ...children.map(n=>n.id)
+  ]);
+  const ordered=project.nodes.filter(n=>placementIds.has(n.id)).sort((a,b)=>rank(a)-rank(b));
   const placed=[];
   ordered.forEach(n=>{
     let x=positions[n.id]?.x??n.x;
@@ -2796,8 +2827,8 @@ function renderInspector(){
   const stagePick=pickStageRecommendation(project,n,step);
   const keepLabel='加入备选库';
   const expandLabel=n.parentId
-    ? (childCount?'补充子功能':'生成子功能')
-    : (childCount?'补充功能方向':'生成第一层方向');
+    ? (childCount?'补充这一层':'生成子功能')
+    : (childCount?'补充这一层':'生成第一层方向');
   const childChoiceHtml=selectingChild?renderChildChoices(project,n,stagePick):'';
   const rowMode=n.parentId?'secondary-mode':'choice-mode';
   const decisionDone=n.parentId&&nodeDepth(project,n)>1&&(n.decision==='keep'||n.decision==='drop');
@@ -2908,15 +2939,15 @@ function renderActionDock(project,active,stage){
     primaryTarget=active.parentId||rootNodeId(project);
     proofNode=active;
   }else if(!active.parentId){
-    title=childCount?'补充这一层功能方向':'生成第一层功能方向';
-    hint=childCount?'继续发散会给项目补充更多同层方向；点某个方向才进入它的下一层。':'先生成项目的第一层方向。';
-    primaryLabel=childCount?'补充方向':'生成方向';
+    title=childCount?'补充这一层：功能方向':'生成第一层功能方向';
+    hint=childCount?'底部按钮只补充当前这一层方向；点方向卡片才进入它的下一层。':'先生成项目的第一层方向。';
+    primaryLabel=childCount?'补充这一层':'生成方向';
     primaryAction='generate';
     proofNode=active;
   }else{
-    title=childCount?'补充当前节点的子功能':'生成当前节点的子功能';
-    hint=childCount?'继续发散只会补充当前节点下面这一层；点子功能才进入更下一层。':'发散只作用于当前节点，会生成它的下一层子功能。';
-    primaryLabel=childCount?'补充子功能':'生成子功能';
+    title=childCount?'补充这一层：子功能':'生成当前节点的子功能';
+    hint=childCount?'底部按钮只补充当前节点下面这一层；点子功能卡片才进入更下一层。':'底部按钮只作用于当前节点，会生成它的下一层子功能。';
+    primaryLabel=childCount?'补充这一层':'生成子功能';
     primaryAction='generate';
     proofNode=active;
     secondaryLabel=active.decision==='keep'?'以后再看':'加入备选';
@@ -2991,7 +3022,7 @@ function renderChildChoices(project,parent,recommended){
   const listLabel=parent.parentId?'子功能选择':'方向选择';
   return `<div class="child-choice-list" aria-label="${esc(listLabel)}">
     ${children.map(child=>`<button class="child-choice ${child.id===recommended?.id?'recommended-choice':''}" data-focus-child="${child.id}">
-      <small>${child.id===recommended?.id?'建议先看':esc(child.type||(parent.parentId?'子功能':'方向'))}</small>
+      <small>${child.id===recommended?.id?'建议进入':'进入下一层'}</small>
       <b>${esc(child.title)}</b>
       <span>${esc(child.validation||child.desc)}</span>
     </button>`).join('')}

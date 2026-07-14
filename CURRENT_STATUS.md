@@ -4,14 +4,14 @@
 |------|------|
 | 当前分支 | cx/direction-workbench-ci |
 | 当前主流程 | 本地登录 + 用户项目空间 + 图形化功能发散 |
-| 进行中 | PR4：首屏信息架构已验证 |
-| 下一步 | 从 PR5“方向画布和交互语义”继续 |
+| 进行中 | PR5：方向画布和交互语义已验证 |
+| 下一步 | 从 PR6“持久化、导出和测试补强”继续 |
 | 质量门禁 | `npm test` 已通过；GitHub Actions 因 token 缺少 `workflow` scope 暂未上传 |
 
 下一轮 PR 规划入口：[`PR_PLAN.md`](./PR_PLAN.md)
 当前 Goal 入口：[`GOAL_MVP_FIRST_REFACTOR.md`](./GOAL_MVP_FIRST_REFACTOR.md)
 机器可读进度：`.xds/goals/canvasstorm-mvp-first-refactor.json`
-当前进度：62%（5/8，PR0-PR4 已验证）
+当前进度：75%（6/8，PR0-PR5 已验证）
 跟踪 PR：[#5 feat: CanvasStorm workbench baseline and MVP-first refactor plan](https://github.com/xixinikl/canvas-storm/pull/5)（Draft）
 
 协作约定：后续 Codex 任务必须持续挂在完整 MVP-first 重构 Goal 上，不再用单个 PR 的短 Goal 代替总目标；每个 PR 完成时同步更新 xixi Goal 百分比。
@@ -32,6 +32,7 @@ ${CODEX_HOME:-$HOME/.codex}/bin/xixi-dev-system goal show --project . --goal can
 - [x] 2026-07-14：PR2 MVP-first 数据模型 — 项目自动补齐 `schemaVersion: 2`、`mvp`、`directions`、`decisions` 和节点角色；旧 node-only 项目登录后自动迁移；`npm test` 通过
 - [x] 2026-07-14：PR3 AI 和 fallback 输出契约 — 根节点生成契约改为 `mvp + directions`，方向/功能节点生成契约改为 `children`，旧数组格式保持兼容；`npm test` 通过
 - [x] 2026-07-14：PR4 首屏信息架构 — 工作台首屏新增核心 MVP 和发散方向区，方向入口可直接进入对应方向；桌面/手机 Playwright 验证无横向溢出；`npm test` 通过
+- [x] 2026-07-15：PR5 方向画布和交互语义 — 统一“补充这一层 / 进入下一层 / 生成子功能”的文案和行为；手机画布第 4 步只预览推荐子功能，避免命令条遮挡；`npm test` 通过，Playwright 桌面/手机截图验证通过
 - [x] 2026-07-04：补充 AI 状态体验 — `/api/storm/status` 只返回配置状态和模型名
 - [x] 2026-07-05：验证真实 DeepSeek 技术链路 — 本地 `.env` 配置真实 Key 后可返回真实 AI 候选
 - [x] 2026-07-05：安装设计和验证相关 skill — `figma-generate-design`、`figma-create-design-system-rules`、`screenshot`、`playwright`

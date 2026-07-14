@@ -5,7 +5,7 @@
   "objective": "把 CanvasStorm 从混合功能图原型推进为可验证的 MVP-first 功能发散工具，并按 PR 阶段记录百分比和证据。",
   "status": "active",
   "createdAt": "2026-07-14T15:19:25+00:00",
-  "updatedAt": "2026-07-14T15:59:07+00:00",
+  "updatedAt": "2026-07-14T16:13:27+00:00",
   "tasks": [
     {
       "id": "PR0",
@@ -107,8 +107,17 @@
       "dependsOn": [
         "PR4"
       ],
-      "status": "pending",
-      "evidence": []
+      "status": "verified",
+      "evidence": [
+        {
+          "id": "evidence-6",
+          "type": "test",
+          "value": "PR5 方向画布和交互语义完成：npm test 通过（API 52、WS 12、前端 162）；Playwright 桌面/手机验证 direction/child 语义、无横向溢出、手机推荐节点不被命令条遮挡；截图 output/playwright/pr5-direction-semantics-desktop.png、pr5-child-layer-semantics-desktop.png、pr5-direction-semantics-mobile.png、pr5-child-layer-semantics-mobile.png",
+          "recordedAt": "2026-07-14T16:13:27+00:00"
+        }
+      ],
+      "startedAt": "2026-07-14T16:00:55+00:00",
+      "completedAt": "2026-07-14T16:13:27+00:00"
     },
     {
       "id": "PR6",
@@ -181,14 +190,24 @@
       "evidenceIds": [
         "evidence-5"
       ]
+    },
+    {
+      "id": "run-6",
+      "taskId": "PR5",
+      "status": "verified",
+      "startedAt": "2026-07-14T16:00:55+00:00",
+      "completedAt": "2026-07-14T16:13:27+00:00",
+      "evidenceIds": [
+        "evidence-6"
+      ]
     }
   ],
   "blockers": [],
   "progress": {
-    "verified": 5,
+    "verified": 6,
     "total": 8,
-    "percent": 62
+    "percent": 75
   },
   "currentTaskId": null,
-  "nextTaskId": "PR5"
+  "nextTaskId": "PR6"
 }

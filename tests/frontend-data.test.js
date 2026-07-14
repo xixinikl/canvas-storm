@@ -177,9 +177,9 @@ async function runTests() {
   assert(document.querySelector('#projectTitle')?.textContent.includes('线上衣橱'), '默认打开用户更容易理解的线上衣橱示例');
   assert(document.querySelectorAll('.node').length >= 4, '首屏展示中心节点和第一层方向');
   assert(document.querySelector('#projectKicker')?.textContent.includes('当前层：功能方向'), '顶部明确当前层是功能方向');
-  assert(document.querySelector('#projectDesc')?.textContent.includes('点击某个方向进入它的下一层'), '页面说明点击节点才进入下一层');
+  assert(document.querySelector('#projectDesc')?.textContent.includes('点击方向卡片会进入它的下一层'), '页面说明点击方向卡片才进入下一层');
   assert(document.querySelector('#nodeDetail')?.textContent.includes('推荐方向'), '右侧只提示推荐方向，不自动跳层');
-  assert(document.querySelector('#expandSelected')?.textContent.includes('补充功能方向'), '主动作是补充当前层方向');
+  assert(document.querySelector('#expandSelected')?.textContent.includes('补充这一层'), '主动作是补充当前层方向');
   assert(!document.querySelector('#actionDock')?.classList.contains('show-proof'), '选方向阶段不展开取舍依据，保持界面轻');
   assert(document.querySelector('#flowProject')?.textContent.includes('线上衣橱'), '顶部流程显示当前项目');
   assert(document.querySelector('#flowNode')?.textContent.includes('线上衣橱'), '顶部流程显示当前节点');
@@ -201,6 +201,7 @@ async function runTests() {
   assert(document.querySelector('#mvpOverview')?.textContent.includes('核心 MVP'), '首屏明确展示核心 MVP 区块');
   assert(document.querySelector('#mvpOverview')?.textContent.includes('发散方向'), '首屏明确展示发散方向区块');
   assert(document.querySelector('#mvpOverview')?.textContent.includes('一键穿搭'), '首屏方向区展示可选择的一层方向');
+  assert(document.querySelector('#mvpOverview')?.textContent.includes('进入下一层'), '方向区明确点击方向才进入下一层');
   assert(document.querySelectorAll('#mvpOverview [data-focus-direction]').length >= 3, '首屏方向区提供多个方向入口');
   const firstUserProjects = JSON.parse(localStorage.getItem('cs_graph_projects_米朵') || '[]');
   const wardrobe = firstUserProjects.find((project) => project.title === '线上衣橱');
@@ -229,6 +230,7 @@ async function runTests() {
   assert(document.querySelector('#flowExpandStep')?.classList.contains('active'), '进入具体方向后准备生成子功能');
   assert(document.querySelector('#appView')?.dataset.stage === '3', '当前方向没有子节点时进入生成子功能阶段');
   assert(document.querySelector('#expandSelected')?.textContent.includes('生成子功能'), '右侧主按钮明确为当前节点生成子功能');
+  assert(document.querySelector('#canvasActionHint')?.textContent.includes('只作用于当前方向'), '生成子功能阶段说明底部按钮不会补充别的方向');
   assert(!document.querySelector('#graphStage')?.textContent.includes('旅行打包清单'), '进入方向后不再混入同层其他方向');
   const beforeNodes = document.querySelectorAll('.node').length;
   const beforeTotalNodes = Number(document.querySelector('#mapNodeCount')?.textContent || '0');
@@ -244,11 +246,15 @@ async function runTests() {
   assert(document.querySelectorAll('.node.dimmed').length === 0, '深入后隐藏无关分支，减少视觉干扰');
   assert(document.querySelector('#flowDecisionStep')?.classList.contains('active'), '生成下一层后进入收藏点子步骤');
   assert(document.querySelector('#appView')?.dataset.stage === '4', '生成下一层后进入点子选择阶段，移动端再显示详情');
-  assert(document.querySelector('.child-choice-list')?.textContent.includes('建议先看'), '生成后右侧直接列出子功能选择');
+  assert(document.querySelector('.child-choice-list')?.textContent.includes('建议进入'), '生成后右侧直接列出建议进入的子功能选择');
+  assert(document.querySelector('.child-choice-list')?.textContent.includes('进入下一层'), '子功能列表说明点击卡片才进入下一层');
   assert(document.querySelector('.node.recommended')?.textContent.includes('天气穿搭推荐'), '生成后推荐落到当前这一层的子功能');
+  assert(document.querySelector('.node.recommended')?.textContent.includes('建议进入'), '画布推荐节点标明这是进入下一层的选择');
   assert(nodeTop(document, '天气穿搭推荐') > nodeTop(document, '一键穿搭') + 16, '生成后推荐子功能下移成独立层级，不压住父方向');
   assert(document.querySelector('#projectTitle')?.textContent.includes('子功能'), '生成后页面明确展示当前节点的子功能层');
-  assert(document.querySelector('#projectDesc')?.textContent.includes('继续发散会给当前节点补充更多子功能'), '生成后说明继续发散只补当前节点这一层');
+  assert(document.querySelector('#projectDesc')?.textContent.includes('底部按钮只补充这一层子功能'), '生成后说明底部按钮只补当前节点这一层');
+  assert(document.querySelector('#expandSelected')?.textContent.includes('补充这一层'), '生成后右侧主按钮不再伪装成进入下一层');
+  assert(document.querySelector('#actionDock')?.textContent.includes('补充这一层'), '生成后底部主动作保持补充当前层语义');
   assert(document.querySelector('#nodeDetail')?.textContent.includes('推荐动作'), '右侧显示推荐动作，帮助用户继续找思路');
   assert(document.querySelector('#nodeDetail')?.textContent.includes('为什么'), '右侧显示当前节点决策详情');
   assert(document.querySelector('#nodeDetail')?.textContent.includes('验证'), '右侧显示当前节点验证动作');
