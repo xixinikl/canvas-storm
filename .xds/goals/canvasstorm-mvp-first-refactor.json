@@ -5,7 +5,7 @@
   "objective": "把 CanvasStorm 从混合功能图原型推进为可验证的 MVP-first 功能发散工具，并按 PR 阶段记录百分比和证据。",
   "status": "active",
   "createdAt": "2026-07-14T15:19:25+00:00",
-  "updatedAt": "2026-07-14T16:13:27+00:00",
+  "updatedAt": "2026-07-14T16:17:33+00:00",
   "tasks": [
     {
       "id": "PR0",
@@ -126,8 +126,17 @@
       "dependsOn": [
         "PR5"
       ],
-      "status": "pending",
-      "evidence": []
+      "status": "verified",
+      "evidence": [
+        {
+          "id": "evidence-7",
+          "type": "test",
+          "value": "PR6 持久化、导出和测试补强完成：npm test 通过（API 56、WS 12、前端 167）；前端测试覆盖 MVP 保存不覆盖 AI 目标、Markdown 导出核心 MVP/发散方向；API 测试覆盖 mvp/directions/decisions 保存读取；Playwright 浏览器验证刷新后 MVP、directions、ideaPool 保留，Markdown 包含核心 MVP、发散方向、灵感备选库。",
+          "recordedAt": "2026-07-14T16:17:33+00:00"
+        }
+      ],
+      "startedAt": "2026-07-14T16:15:23+00:00",
+      "completedAt": "2026-07-14T16:17:33+00:00"
     },
     {
       "id": "PR7",
@@ -200,14 +209,24 @@
       "evidenceIds": [
         "evidence-6"
       ]
+    },
+    {
+      "id": "run-7",
+      "taskId": "PR6",
+      "status": "verified",
+      "startedAt": "2026-07-14T16:15:23+00:00",
+      "completedAt": "2026-07-14T16:17:33+00:00",
+      "evidenceIds": [
+        "evidence-7"
+      ]
     }
   ],
   "blockers": [],
   "progress": {
-    "verified": 6,
+    "verified": 7,
     "total": 8,
-    "percent": 75
+    "percent": 88
   },
   "currentTaskId": null,
-  "nextTaskId": "PR6"
+  "nextTaskId": "PR7"
 }

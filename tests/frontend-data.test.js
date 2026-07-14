@@ -333,6 +333,9 @@ async function runTests() {
   document.querySelector('#exportProjectBtn').click();
   await wait(80);
   assert(dom.window.__copiedMarkdown?.includes('# 线上衣橱'), '导出会复制当前项目 Markdown');
+  assert(dom.window.__copiedMarkdown?.includes('## 核心 MVP'), '导出内容包含核心 MVP 区块');
+  assert(dom.window.__copiedMarkdown?.includes('## 发散方向'), '导出内容包含发散方向区块');
+  assert(dom.window.__copiedMarkdown?.includes('一键穿搭'), '导出内容包含发散方向内容');
   assert(dom.window.__copiedMarkdown?.includes('镜前预览卡片'), '导出内容包含手动编辑后的功能点');
   document.querySelector('#detailDeleteNode').click();
   await wait(100);
@@ -463,6 +466,9 @@ async function runTests() {
   assert(rootProject.mvp?.goal === '先验证最小录入', '根节点 AI 契约会写入项目 MVP 目标');
   assert(rootProject.mvp?.mustHaveFeatures?.[0]?.title === '极简录入', '根节点 AI 契约会写入 MVP 必做项');
   assert(rootProject.directions?.length === 2, '根节点 AI 契约会生成方向列表');
+  rootWindow.normalizeProject(rootProject);
+  assert(rootProject.mvp?.goal === '先验证最小录入', '项目再次归一化保存时不会覆盖 AI MVP 目标');
+  assert(rootProject.mvp?.mustHaveFeatures?.[0]?.title === '极简录入', '项目再次归一化保存时不会覆盖 AI MVP 必做项');
   assert(stormPostBodies[0]?.userPrompt?.includes('"mvp"') && stormPostBodies[0]?.userPrompt?.includes('"directions"'), '根节点发散时 AI 契约要求返回 mvp + directions 对象');
 
   console.log(`\n========================================`);

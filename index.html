@@ -2387,13 +2387,25 @@ function syncProjectModel(project){
       reason:n.pain||n.desc||'直接影响用户第一次有效使用。',
       validation:n.validation||'找 3 个目标用户做一次手工验证。'
     }));
+  const existingMvp=project.mvp&&typeof project.mvp==='object'?project.mvp:{};
+  const existingMustHave=Array.isArray(existingMvp.mustHaveFeatures)?existingMvp.mustHaveFeatures:[];
+  const stableMustHave=(existingMustHave.length?existingMustHave:mustHave).slice(0,3).map((item,idx)=>{
+    const node=item.nodeId?project.nodes.find(n=>n.id===item.nodeId):project.nodes.find(n=>n.title===item.title);
+    const fallback=mustHave[idx]||{};
+    return {
+      nodeId:item.nodeId||node?.id||fallback.nodeId||'',
+      title:item.title||node?.title||fallback.title||`必做项 ${idx+1}`,
+      reason:item.reason||node?.pain||node?.desc||fallback.reason||'直接影响用户第一次有效使用。',
+      validation:item.validation||node?.validation||fallback.validation||'找 3 个目标用户做一次手工验证。'
+    };
+  });
   project.schemaVersion=PROJECT_SCHEMA_VERSION;
   project.mvp={
-    goal:root?.desc||project.seed||project.title,
-    rootNodeId:rootId,
-    mustHaveFeatures:mustHave,
-    validation:root?.validation||mustHave[0]?.validation||'找 3 个目标用户做一次手工验证。',
-    updatedAt:project.updatedAt||new Date().toISOString()
+    goal:existingMvp.goal||root?.desc||project.seed||project.title,
+    rootNodeId:existingMvp.rootNodeId||rootId,
+    mustHaveFeatures:stableMustHave,
+    validation:existingMvp.validation||root?.validation||stableMustHave[0]?.validation||'找 3 个目标用户做一次手工验证。',
+    updatedAt:existingMvp.updatedAt||project.updatedAt||new Date().toISOString()
   };
   project.directions=directChildren.map(n=>({
     id:n.id,
@@ -3266,6 +3278,11 @@ function projectMarkdown(project=currentProject()){
   if(!project)return '';
   const root=project.nodes.find(n=>!n.parentId)||project.nodes[0];
   const childrenOf=id=>project.nodes.filter(n=>n.parentId===id);
+  const mvp=project.mvp||{};
+  const mustHave=Array.isArray(mvp.mustHaveFeatures)?mvp.mustHaveFeatures:[];
+  const directions=Array.isArray(project.directions)&&project.directions.length
+    ? project.directions
+    : childrenOf(root?.id).map(n=>({title:n.title,reason:n.pain||n.desc,validation:n.validation,decision:n.decision}));
   const lineFor=(n,level=0)=>{
     const prefix='  '.repeat(level);
     const decision=n.decision==='keep'?'已收藏':n.decision==='drop'?'以后再看':'待验证';
@@ -3286,6 +3303,18 @@ function projectMarkdown(project=currentProject()){
     project.seed,
     '',
     `更新时间：${formatTime(project.updatedAt)}`,
+    '',
+    `## 核心 MVP`,
+    mvp.goal||root?.desc||project.seed||'- 暂无 MVP 目标',
+    '',
+    `### 必做项`,
+    mustHave.length?mustHave.map(item=>`- ${item.title}：${item.reason||item.validation||'待补充原因'}`).join('\n'):'- 暂无必做项',
+    '',
+    `### MVP 验证`,
+    mvp.validation||root?.validation||'- 暂无验证动作',
+    '',
+    `## 发散方向`,
+    directions.length?directions.map(item=>`- ${item.title}：${item.reason||item.desc||'待补充说明'}；验证：${item.validation||'待补充验证'}；状态：${item.decision==='keep'?'已收藏':item.decision==='drop'?'以后再看':'待验证'}`).join('\n'):'- 暂无方向',
     '',
     `## 灵感备选库`,
     saved.length?saved.map(n=>`- ${n.title}：${n.validation||n.desc}`).join('\n'):'- 暂无收藏',

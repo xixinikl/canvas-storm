@@ -133,6 +133,25 @@ async function runTests() {
 
     const reloaded = await api('GET', '/api/users/api-user/projects');
     assert(reloaded.data.data.projects[0].title === '线上衣橱', '可重新读取用户项目');
+    const structuredProjects = [{
+      id: 'project_mvp_1',
+      title: 'MVP 项目',
+      schemaVersion: 2,
+      mvp: {
+        goal: '先验证核心入口',
+        mustHaveFeatures: [{ title: '核心入口', reason: '第一次使用必须成立', validation: '3 个用户手工验证' }],
+        validation: '观察 3 个用户完成第一次使用',
+      },
+      directions: [{ nodeId: 'direction_1', title: '方向一', reason: '扩展路径', validation: '访谈验证' }],
+      decisions: { ideaPool: ['direction_1'], later: [] },
+      nodes: [{ id: 'root', title: 'MVP 项目', parentId: null }, { id: 'direction_1', title: '方向一', parentId: 'root', decision: 'keep' }],
+    }];
+    const structuredSaved = await api('PUT', '/api/users/api-user/projects', { projects: structuredProjects });
+    assert(structuredSaved.status === 200, `保存 MVP-first 用户项目返回 200，实际 ${structuredSaved.status}`);
+    const structuredReloaded = await api('GET', '/api/users/api-user/projects');
+    assert(structuredReloaded.data.data.projects[0].mvp.goal === '先验证核心入口', '用户项目 API 保留 MVP 目标');
+    assert(structuredReloaded.data.data.projects[0].directions[0].title === '方向一', '用户项目 API 保留方向列表');
+    assert(structuredReloaded.data.data.projects[0].decisions.ideaPool[0] === 'direction_1', '用户项目 API 保留决策记录');
 
     const invalid = await api('PUT', '/api/users/api-user/projects', { projects: {} });
     assert(invalid.status === 400, `projects 非数组返回 400，实际 ${invalid.status}`);
