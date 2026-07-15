@@ -9,6 +9,14 @@ data/
 !quality/data/
 !quality/data/**
 
+# 本地验收产物
+.playwright-cli/
+output/
+!.xds/
+.xds/*
+!.xds/goals/
+!.xds/goals/**
+
 # 系统文件
 .DS_Store
 Thumbs.db

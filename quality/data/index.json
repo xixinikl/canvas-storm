@@ -1,15 +1,25 @@
 {
   "schemaVersion": 1,
   "project": "canvas-storm",
-  "generatedAt": "2026-07-12T05:12:16.855Z",
-  "latestDate": "2026-07-12",
+  "generatedAt": "2026-07-14T16:22:57.238Z",
+  "latestDate": "2026-07-15",
   "totals": {
-    "runs": 1,
-    "pass": 0,
+    "runs": 2,
+    "pass": 1,
     "conditional": 0,
     "fail": 1
   },
   "runs": [
+    {
+      "date": "2026-07-15",
+      "status": "pass",
+      "reason": "全部 5 项真实检查通过。",
+      "testedSha": "61c932be357f",
+      "checkTotal": 5,
+      "checkPassed": 5,
+      "checkFailed": 0,
+      "path": "quality/data/runs/2026-07-15.json"
+    },
     {
       "date": "2026-07-12",
       "status": "fail",

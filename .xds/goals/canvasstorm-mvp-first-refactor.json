@@ -1,0 +1,251 @@
+{
+  "schemaVersion": 1,
+  "id": "canvasstorm-mvp-first-refactor",
+  "title": "CanvasStorm MVP-first 重构",
+  "objective": "把 CanvasStorm 从混合功能图原型推进为可验证的 MVP-first 功能发散工具，并按 PR 阶段记录百分比和证据。",
+  "status": "verified",
+  "createdAt": "2026-07-14T15:19:25+00:00",
+  "updatedAt": "2026-07-14T16:23:19+00:00",
+  "tasks": [
+    {
+      "id": "PR0",
+      "title": "状态和规划收口",
+      "acceptance": "Goal 文档、PR 计划、交接状态和项目 adapter 已落地；xixi goal 可显示百分比；工作区可提交。",
+      "dependsOn": [],
+      "status": "verified",
+      "evidence": [
+        {
+          "id": "evidence-1",
+          "type": "test",
+          "value": "PR0 evidence: goal lint pass; xixi-dev-system doctor pass; npm test pass (HTML ok, API 52 passed, WebSocket 12 passed, frontend 129 passed); files created/updated: GOAL_MVP_FIRST_REFACTOR.md, PR_PLAN.md, CURRENT_STATUS.md, HANDOFF.md, .xixi-dev-system.json, .xds/goals/canvasstorm-mvp-first-refactor.json.",
+          "recordedAt": "2026-07-14T15:20:44+00:00"
+        }
+      ],
+      "startedAt": "2026-07-14T15:19:37+00:00",
+      "completedAt": "2026-07-14T15:20:44+00:00"
+    },
+    {
+      "id": "PR1",
+      "title": "预览和分支卫生收口",
+      "acceptance": "现有预览 PR 和本地超前提交状态明确；需要上传或关闭的分支处理完毕；主开发分支状态清楚。",
+      "dependsOn": [
+        "PR0"
+      ],
+      "status": "verified",
+      "evidence": [
+        {
+          "id": "evidence-2",
+          "type": "url",
+          "value": "PR1 evidence: PR #4 merged into cx/direction-workbench-ci at merge commit 7f432c5; Realtime preview CI verify checks completed successfully twice; cx/realtime-preview-v1 local ahead commit pushed and branch became mergeable before merge. URL: https://github.com/xixinikl/canvas-storm/pull/4",
+          "recordedAt": "2026-07-14T15:27:23+00:00"
+        }
+      ],
+      "startedAt": "2026-07-14T15:23:31+00:00",
+      "completedAt": "2026-07-14T15:27:23+00:00"
+    },
+    {
+      "id": "PR2",
+      "title": "MVP-first 数据模型",
+      "acceptance": "项目结构支持 MVP 主线、发散方向、方向节点和决策记录；旧项目可兼容打开；测试覆盖新旧结构。",
+      "dependsOn": [
+        "PR1"
+      ],
+      "status": "verified",
+      "evidence": [
+        {
+          "id": "evidence-3",
+          "type": "test",
+          "value": "PR2 evidence: implemented schemaVersion 2 with mvp, directions, decisions, and node roles; legacy node-only projects migrate on login; npm test passed (HTML ok, API 52 passed, WebSocket 12 passed, frontend 143 passed).",
+          "recordedAt": "2026-07-14T15:31:02+00:00"
+        }
+      ],
+      "startedAt": "2026-07-14T15:28:31+00:00",
+      "completedAt": "2026-07-14T15:31:02+00:00"
+    },
+    {
+      "id": "PR3",
+      "title": "AI 和 fallback 输出契约",
+      "acceptance": "AI prompt、接口解析和本地降级均产出 MVP-first 结构；异常输出有容错；相关 API/前端测试通过。",
+      "dependsOn": [
+        "PR2"
+      ],
+      "status": "verified",
+      "evidence": [
+        {
+          "id": "evidence-4",
+          "type": "test",
+          "value": "PR3 evidence: AI root generation now requests/accepts {mvp,directions}; child generation requests/accepts {children}; legacy array responses remain compatible; fallbackGenerate emits the same structured contract; npm test passed (HTML ok, API 52 passed, WebSocket 12 passed, frontend 150 passed).",
+          "recordedAt": "2026-07-14T15:40:13+00:00"
+        }
+      ],
+      "startedAt": "2026-07-14T15:37:41+00:00",
+      "completedAt": "2026-07-14T15:40:13+00:00"
+    },
+    {
+      "id": "PR4",
+      "title": "首屏信息架构",
+      "acceptance": "首屏清楚展示项目想法、核心 MVP 和方向选择；主操作唯一；桌面和移动端无明显信息拥挤。",
+      "dependsOn": [
+        "PR3"
+      ],
+      "status": "verified",
+      "evidence": [
+        {
+          "id": "evidence-5",
+          "type": "screenshot",
+          "value": "PR4 evidence: first screen now renders MVP overview plus direction rail; frontend assertions verify core MVP/directions and direction click; npm test passed (HTML ok, API 52 passed, WebSocket 12 passed, frontend 156 passed); browser screenshots verified desktop and mobile with no horizontal overflow: output/playwright/desktop-mvp-first-pr4.png, output/playwright/mobile-mvp-first-pr4-fixed.png.",
+          "recordedAt": "2026-07-14T15:59:07+00:00"
+        }
+      ],
+      "startedAt": "2026-07-14T15:50:43+00:00",
+      "completedAt": "2026-07-14T15:59:07+00:00"
+    },
+    {
+      "id": "PR5",
+      "title": "方向画布和交互语义",
+      "acceptance": "选择方向、补充当前层、进入下一层三个行为语义清楚；画布中心想法可见，子节点不重叠。",
+      "dependsOn": [
+        "PR4"
+      ],
+      "status": "verified",
+      "evidence": [
+        {
+          "id": "evidence-6",
+          "type": "test",
+          "value": "PR5 方向画布和交互语义完成：npm test 通过（API 52、WS 12、前端 162）；Playwright 桌面/手机验证 direction/child 语义、无横向溢出、手机推荐节点不被命令条遮挡；截图 output/playwright/pr5-direction-semantics-desktop.png、pr5-child-layer-semantics-desktop.png、pr5-direction-semantics-mobile.png、pr5-child-layer-semantics-mobile.png",
+          "recordedAt": "2026-07-14T16:13:27+00:00"
+        }
+      ],
+      "startedAt": "2026-07-14T16:00:55+00:00",
+      "completedAt": "2026-07-14T16:13:27+00:00"
+    },
+    {
+      "id": "PR6",
+      "title": "持久化、导出和测试补强",
+      "acceptance": "用户项目保存/恢复、灵感备选库、以后再看和导出均适配新结构；npm test 通过。",
+      "dependsOn": [
+        "PR5"
+      ],
+      "status": "verified",
+      "evidence": [
+        {
+          "id": "evidence-7",
+          "type": "test",
+          "value": "PR6 持久化、导出和测试补强完成：npm test 通过（API 56、WS 12、前端 167）；前端测试覆盖 MVP 保存不覆盖 AI 目标、Markdown 导出核心 MVP/发散方向；API 测试覆盖 mvp/directions/decisions 保存读取；Playwright 浏览器验证刷新后 MVP、directions、ideaPool 保留，Markdown 包含核心 MVP、发散方向、灵感备选库。",
+          "recordedAt": "2026-07-14T16:17:33+00:00"
+        }
+      ],
+      "startedAt": "2026-07-14T16:15:23+00:00",
+      "completedAt": "2026-07-14T16:17:33+00:00"
+    },
+    {
+      "id": "PR7",
+      "title": "浏览器验收和合并准备",
+      "acceptance": "桌面/移动端真实路径走通；PR 描述、测试证据、已知边界和合并建议齐全。",
+      "dependsOn": [
+        "PR6"
+      ],
+      "status": "verified",
+      "evidence": [
+        {
+          "id": "evidence-8",
+          "type": "test",
+          "value": "PR7 浏览器验收和合并准备完成：已合并 origin/main 并解决 .xixi-dev-system.json/README.md 冲突；npm test 通过（API 56、WS 12、前端 167）；Playwright 最终桌面/手机主路径通过并生成 pr7-final-* 截图；quality report 本地通过 5/5 且包含 npm test；PR 描述准备更新为 100%。",
+          "recordedAt": "2026-07-14T16:23:19+00:00"
+        }
+      ],
+      "startedAt": "2026-07-14T16:18:57+00:00",
+      "completedAt": "2026-07-14T16:23:19+00:00"
+    }
+  ],
+  "runs": [
+    {
+      "id": "run-1",
+      "taskId": "PR0",
+      "status": "verified",
+      "startedAt": "2026-07-14T15:19:37+00:00",
+      "completedAt": "2026-07-14T15:20:44+00:00",
+      "evidenceIds": [
+        "evidence-1"
+      ]
+    },
+    {
+      "id": "run-2",
+      "taskId": "PR1",
+      "status": "verified",
+      "startedAt": "2026-07-14T15:23:31+00:00",
+      "completedAt": "2026-07-14T15:27:23+00:00",
+      "evidenceIds": [
+        "evidence-2"
+      ]
+    },
+    {
+      "id": "run-3",
+      "taskId": "PR2",
+      "status": "verified",
+      "startedAt": "2026-07-14T15:28:31+00:00",
+      "completedAt": "2026-07-14T15:31:02+00:00",
+      "evidenceIds": [
+        "evidence-3"
+      ]
+    },
+    {
+      "id": "run-4",
+      "taskId": "PR3",
+      "status": "verified",
+      "startedAt": "2026-07-14T15:37:41+00:00",
+      "completedAt": "2026-07-14T15:40:13+00:00",
+      "evidenceIds": [
+        "evidence-4"
+      ]
+    },
+    {
+      "id": "run-5",
+      "taskId": "PR4",
+      "status": "verified",
+      "startedAt": "2026-07-14T15:50:43+00:00",
+      "completedAt": "2026-07-14T15:59:07+00:00",
+      "evidenceIds": [
+        "evidence-5"
+      ]
+    },
+    {
+      "id": "run-6",
+      "taskId": "PR5",
+      "status": "verified",
+      "startedAt": "2026-07-14T16:00:55+00:00",
+      "completedAt": "2026-07-14T16:13:27+00:00",
+      "evidenceIds": [
+        "evidence-6"
+      ]
+    },
+    {
+      "id": "run-7",
+      "taskId": "PR6",
+      "status": "verified",
+      "startedAt": "2026-07-14T16:15:23+00:00",
+      "completedAt": "2026-07-14T16:17:33+00:00",
+      "evidenceIds": [
+        "evidence-7"
+      ]
+    },
+    {
+      "id": "run-8",
+      "taskId": "PR7",
+      "status": "verified",
+      "startedAt": "2026-07-14T16:18:57+00:00",
+      "completedAt": "2026-07-14T16:23:19+00:00",
+      "evidenceIds": [
+        "evidence-8"
+      ]
+    }
+  ],
+  "blockers": [],
+  "progress": {
+    "verified": 8,
+    "total": 8,
+    "percent": 100
+  },
+  "currentTaskId": null,
+  "nextTaskId": null
+}

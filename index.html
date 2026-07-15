@@ -3,1101 +3,3986 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CanvasStorm - 头脑风暴画布</title>
+<title>CanvasStorm - 功能发散图</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23172033'/%3E%3Cpath d='M18 33h12m4 0h12M32 19v10m0 6v10' stroke='%23fff' stroke-width='5' stroke-linecap='round'/%3E%3Ccircle cx='32' cy='32' r='6' fill='%232563eb'/%3E%3C/svg%3E">
 <style>
-:root {
-  --bg: #f0f2f5; --surface: #fafbfc; --surface2: #eef0f2;
-  --border: #e0e3e8; --text: #1b1e24; --text2: #6b7280;
-  --accent: #4361ee; --accent-light: #eff2ff;
-  --green: #059669; --orange: #d97706;
-  --red: #dc2626; --purple: #7c3aed;
-  --node-bg: #ffffff;
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-md: 0 4px 20px rgba(0,0,0,0.06);
-  --shadow-lg: 0 12px 36px rgba(0,0,0,0.08);
-  --radius: 12px; --radius-sm: 8px;
+:root{
+  --bg:#f2eee5;
+  --surface:#fff9ed;
+  --surface-2:#ebe4d7;
+  --ink:#171510;
+  --muted:#6f6a5f;
+  --soft:#a59c8d;
+  --line:#191713;
+  --line-2:#cec3b0;
+  --nav:#171510;
+  --nav-2:#2a261f;
+  --blue:#6f8f5f;
+  --blue-2:#e6eddf;
+  --green:#6f8f5f;
+  --green-2:#e6eddf;
+  --orange:#a8835f;
+  --orange-2:#f2e4d2;
+  --red:#a76555;
+  --red-2:#f1ddd6;
+  --violet:#7e9698;
+  --violet-2:#e4eceb;
+  --map-bg:#fbf6ea;
+  --map-bg-2:#eee6d8;
+  --map-line:rgba(23,21,16,.052);
+  --map-line-strong:rgba(23,21,16,.095);
+  --map-mint:rgba(111,143,95,.11);
+  --stage:#141611;
+  --stage-2:#1f231b;
+  --stage-line:rgba(244,239,227,.1);
+  --stage-muted:rgba(244,239,227,.58);
+  --stage-card:#fff8e8;
+  --route:#c8dd9b;
+  --shadow:0 18px 48px rgba(47,39,28,.12);
+  --shadow-sm:0 8px 24px rgba(47,39,28,.07);
 }
-*{margin:0;padding:0;box-sizing:border-box}
+*{box-sizing:border-box}
+@keyframes fadeRise{
+  from{opacity:0;transform:translateY(12px)}
+  to{opacity:1;transform:translateY(0)}
+}
+@keyframes fadeOnly{
+  from{opacity:0}
+  to{opacity:1}
+}
+@keyframes graphNodeIn{
+  from{opacity:0;transform:translate(-50%,-46%) scale(.94)}
+  to{opacity:1;transform:translate(-50%,-50%) scale(1)}
+}
+@keyframes routeGlow{
+  0%,100%{filter:drop-shadow(0 0 0 rgba(111,143,95,0))}
+  50%{filter:drop-shadow(0 0 5px rgba(111,143,95,.42))}
+}
+@keyframes softPulse{
+  0%,100%{box-shadow:0 0 0 4px rgba(111,143,95,.13),0 18px 36px rgba(47,39,28,.13)}
+  50%{box-shadow:0 0 0 7px rgba(111,143,95,.08),0 22px 42px rgba(47,39,28,.16)}
+}
+@keyframes gridDrift{
+  from{background-position:0 0,0 0,0 0,0 0,0 0,0 0,0 0,0 0}
+  to{background-position:0 0,0 0,0 0,0 0,0 0,32px 32px,-32px 32px,0 0}
+}
+@keyframes modalIn{
+  from{opacity:0;transform:translateY(18px) scale(.98)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+@keyframes dockIn{
+  from{opacity:0;transform:translate(-50%,12px)}
+  to{opacity:1;transform:translate(-50%,0)}
+}
+@keyframes letterDrift{
+  from{transform:translate3d(0,0,0)}
+  to{transform:translate3d(-180px,0,0)}
+}
+@keyframes revealDisc{
+  0%{opacity:.96;transform:translate(-50%,-50%) scale(.18)}
+  58%{opacity:.96}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(1.38)}
+}
 body{
-  background:var(--bg);color:var(--text);
-  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC","Microsoft YaHei",sans-serif;
-  height:100vh;overflow:hidden;user-select:none;display:flex;flex-direction:column;
+  margin:0;
+  min-height:100vh;
+  overflow:hidden;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC","Microsoft YaHei",Arial,sans-serif;
 }
-
-/* 顶栏 */
-.toolbar{
-  height:44px;background:var(--surface);border-bottom:1px solid var(--border);
-  display:flex;align-items:center;padding:0 14px;gap:8px;
-  z-index:100;flex-shrink:0;box-shadow:var(--shadow-sm);
+body.modal-open{overflow:hidden}
+body.modal-open .action-dock{
+  opacity:0!important;
+  pointer-events:none;
+  transform:translateY(8px);
+  animation:none!important;
 }
-.toolbar .logo{font-weight:800;font-size:14px;letter-spacing:-0.02em;color:var(--text)}
-.toolbar .logo span{color:var(--accent)}
-.toolbar .sep{width:1px;height:18px;background:var(--border);margin:0 4px}
-.tb{
-  padding:5px 10px;border:none;border-radius:var(--radius-sm);
-  background:transparent;color:var(--text2);font-size:11px;
-  cursor:pointer;transition:all 0.15s;font-weight:500;white-space:nowrap;
-  display:flex;align-items:center;gap:4px;
+button,input,textarea{font:inherit}
+button{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+button:disabled{cursor:not-allowed;opacity:.58}
+button:focus-visible,input:focus-visible,textarea:focus-visible{
+  outline:0;
+  box-shadow:0 0 0 4px rgba(111,143,95,.2);
 }
-.tb:hover{background:var(--surface2);color:var(--text)}
-.tb.pri{background:var(--accent);color:#fff;font-weight:600}
-.tb.pri:hover{filter:brightness(1.08)}
-.tb.warn:hover{background:rgba(220,38,38,0.08);color:var(--red)}
-.tb:disabled{opacity:0.35;pointer-events:none}
-.spacer{flex:1}
-.zoom-info{font-size:11px;color:var(--text2);min-width:46px;text-align:center;background:var(--surface2);border-radius:var(--radius-sm);padding:3px 8px}
-
-/* 主体 */
-.main-layout{flex:1;display:flex;overflow:hidden;position:relative}
-
-/* 左侧会话面板 */
-.session-panel{
-  width:240px;background:var(--surface);border-right:1px solid var(--border);
-  display:flex;flex-direction:column;flex-shrink:0;transition:width 0.25s;
+.hidden{display:none!important}
+.auth{
+  min-height:100vh;
+  display:grid;
+  grid-template-columns:minmax(520px,1fr) minmax(390px,460px);
+  background:var(--bg);
 }
-.session-panel.collapsed{width:0;overflow:hidden;border-right:none}
-.session-panel .sp-header{
-  padding:12px 14px;border-bottom:1px solid var(--border);
-  display:flex;align-items:center;justify-content:space-between;
+.auth-hero{
+  padding:34px 40px 40px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  background:
+    radial-gradient(circle at 82% 18%, rgba(111,143,95,.12), transparent 24%),
+    var(--surface);
+  color:var(--ink);
+  border:16px solid var(--bg);
+  border-right:0;
+  animation:fadeRise .55s ease both;
 }
-.sp-header h3{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em}
-.sp-header .new-session-btn{
-  width:26px;height:26px;border:none;border-radius:var(--radius-sm);background:var(--accent);color:#fff;
-  font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;
-  transition:filter 0.15s;
+.brand{display:flex;align-items:center;gap:12px;font-weight:900;letter-spacing:.01em}
+.brand-mark{
+  width:36px;height:36px;border-radius:0;
+  background:var(--nav);color:#fff;
+  display:grid;place-items:center;font-weight:950;
 }
-.sp-header .new-session-btn:hover{filter:brightness(1.1)}
-.session-list{flex:1;overflow-y:auto;padding:6px}
-.session-item{
-  padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;margin-bottom:2px;
-  border:1px solid transparent;transition:all 0.15s;display:flex;align-items:center;gap:8px;
+.auth-title{max-width:720px}
+.auth-title h1{font-size:58px;line-height:.98;margin:0 0 18px;letter-spacing:0}
+.auth-title p{font-size:17px;line-height:1.7;margin:0;color:var(--muted);max-width:620px}
+.auth-graph-preview{
+  max-width:760px;
+  min-height:340px;
+  position:relative;
+  border:1px solid var(--line);
+  border-radius:0;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(200,221,155,.16) 0 10%, transparent 10.8%),
+    radial-gradient(ellipse at 50% 48%, transparent 0 32%, rgba(200,221,155,.14) 32.3%, transparent 33.3%),
+    linear-gradient(135deg,#10110e,#20231b),
+    linear-gradient(rgba(244,239,227,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(244,239,227,.035) 1px, transparent 1px);
+  background-size:auto,auto,auto,28px 28px,28px 28px;
+  overflow:hidden;
+  box-shadow:none;
 }
-.session-item:hover{background:var(--surface2)}
-.session-item.active{background:var(--accent-light);border-color:var(--accent)}
-.session-item .s-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:var(--accent)}
-.session-item .s-info{flex:1;min-width:0}
-.session-item .s-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.session-item .s-meta{font-size:10px;color:var(--text2);margin-top:2px}
-.session-item .s-del{
-  width:20px;height:20px;border:none;border-radius:3px;background:transparent;color:var(--text2);
-  cursor:pointer;font-size:13px;opacity:0;transition:all 0.15s;flex-shrink:0;
+.auth-graph-preview::before{
+  content:"示例功能图";
+  position:absolute;
+  left:18px;
+  top:16px;
+  color:rgba(255,248,230,.5);
+  font-size:12px;
+  font-weight:950;
 }
-.session-item:hover .s-del{opacity:1}
-.session-item .s-del:hover{background:rgba(220,38,38,0.08);color:var(--red)}
-
-/* 画布区 */
-.canvas-wrapper{flex:1;position:relative;overflow:hidden}
-.canvas-container{
-  width:100%;height:100%;position:relative;overflow:hidden;
-  cursor:grab;background:var(--bg);
+.auth-line{
+  position:absolute;
+  height:2px;
+  background:linear-gradient(90deg,rgba(200,221,155,.88),rgba(244,239,227,.24));
+  transform-origin:left center;
+  z-index:1;
 }
-.canvas-container:active{cursor:grabbing}
-.canvas-container.panning{cursor:grabbing}
-.canvas-layer{position:absolute;top:0;left:0;transform-origin:0 0;width:12000px;height:12000px}
-.edges-svg{position:absolute;top:0;left:0;width:12000px;height:12000px;pointer-events:none;z-index:0}
-
-/* 网格背景（圆点图案） */
-.grid-bg{
-  position:absolute;top:0;left:0;width:12000px;height:12000px;
-  pointer-events:none;z-index:-1;
-  background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
-  background-size: 40px 40px;
-  opacity: 0.22;
+.auth-line.l1{width:180px;left:calc(50% - 84px);top:162px;transform:rotate(158deg)}
+.auth-line.l2{width:132px;left:calc(50% - 66px);top:164px;transform:rotate(90deg)}
+.auth-line.l3{width:180px;left:calc(50% + 44px);top:162px;transform:rotate(22deg)}
+.auth-node{
+  position:absolute;
+  z-index:2;
+  width:142px;
+  border:1px solid rgba(255,248,230,.48);
+  background:rgba(255,248,230,.18);
+  color:#fff8e8;
+  border-radius:0;
+  padding:12px;
+  backdrop-filter:blur(10px);
+  box-shadow:0 14px 34px rgba(0,0,0,.24);
+  animation:fadeOnly .62s ease both;
 }
-
-/* 输入引导遮罩 */
-.entry-overlay{
-  position:absolute;inset:0;z-index:400;
-  background:rgba(240,242,245,0.94);
-  display:flex;align-items:center;justify-content:center;
-  backdrop-filter:blur(8px);transition:opacity 0.4s,visibility 0.4s;
+.auth-node.root{
+  left:50%;
+  top:52px;
+  transform:translateX(-50%);
+  width:176px;
+  text-align:center;
+  background:var(--stage-card);
+  color:var(--ink);
+  border-color:var(--route);
+  box-shadow:0 22px 44px rgba(0,0,0,.24),0 0 0 6px rgba(200,221,155,.12);
 }
-.entry-overlay.hidden{opacity:0;visibility:hidden;pointer-events:none}
-.entry-card{
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:16px;padding:36px 30px;width:460px;
-  display:flex;flex-direction:column;gap:14px;
-  box-shadow:var(--shadow-lg);
+.auth-node.n1{
+  background:var(--stage-card);
+  color:var(--ink);
+  border-color:var(--route);
+  box-shadow:0 22px 44px rgba(0,0,0,.24),0 0 0 6px rgba(200,221,155,.12);
 }
-.entry-card h2{font-size:24px;font-weight:800;text-align:center;letter-spacing:-0.02em;margin:0}
-.entry-card h2 span{color:var(--accent)}
-.entry-card .sub{text-align:center;font-size:12px;color:var(--text2);margin:-4px 0 4px}
-.entry-card .field-label{font-size:10px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:-8px}
-.entry-card textarea{
-  width:100%;min-height:90px;background:var(--bg);border:1px solid var(--border);
-  border-radius:var(--radius);color:var(--text);padding:12px;font-size:13px;
-  resize:vertical;font-family:inherit;line-height:1.65;
+.auth-node.n1{left:36px;bottom:34px;animation-delay:.08s}
+.auth-node.n2{left:50%;bottom:34px;transform:translateX(-50%);animation-delay:.16s}
+.auth-node.n3{right:36px;bottom:34px;animation-delay:.24s}
+.auth-node small{
+  display:inline-flex;
+  border-radius:999px;
+  padding:3px 7px;
+  background:rgba(200,221,155,.14);
+  color:#dcebb9;
+  font-size:11px;
+  font-weight:950;
+  margin-bottom:7px;
 }
-.entry-card textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(67,97,238,0.08)}
-.entry-card textarea::placeholder{color:var(--text2)}
-.param-row{display:flex;gap:8px;align-items:flex-end}
-.param-item{display:flex;flex-direction:column;gap:4px}
-.param-label{font-size:10px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
-.param-item input{
-  background:var(--bg);border:1px solid var(--border);
-  border-radius:var(--radius-sm);color:var(--text);padding:8px 12px;font-size:13px;
-  text-align:center;font-weight:600;
+.auth-node.root small{background:#e9f2d3;color:#5f7444}
+.auth-node.n1 small{background:#e9f2d3;color:#5f7444}
+.auth-node b{display:block;font-size:15px;margin-bottom:5px}
+.auth-node span{display:block;color:rgba(255,248,230,.68);font-size:12px;line-height:1.45}
+.auth-node.root span{color:var(--muted)}
+.auth-node.n1 span{color:var(--muted)}
+.auth-panel{
+  display:grid;place-items:center;padding:40px;
+  background:
+    radial-gradient(circle at 20% 18%, rgba(126,150,152,.12), transparent 26%),
+    radial-gradient(circle at 78% 82%, rgba(111,143,95,.12), transparent 28%),
+    var(--bg);
+  border:16px solid var(--bg);
+  border-left:0;
 }
-.param-item input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(67,97,238,0.08)}
-.param-row select{
-  flex:1;background:var(--bg);border:1px solid var(--border);
-  border-radius:var(--radius-sm);color:var(--text);padding:8px 12px;font-size:13px;cursor:pointer;
+.login-card{
+  width:100%;max-width:430px;background:rgba(255,249,237,.94);
+  border:1px solid var(--line);
+  border-radius:0;padding:24px;box-shadow:0 18px 44px rgba(47,39,28,.1);
+  backdrop-filter:blur(14px);
+  animation:fadeRise .58s ease both;
 }
-.param-row select:focus{outline:none;border-color:var(--accent)}
-.api-row{display:flex;gap:6px;align-items:center}
-.api-row input{
-  flex:1;background:var(--bg);border:1px solid var(--border);
-  border-radius:var(--radius-sm);color:var(--text);padding:7px 10px;font-size:11px;
+.login-badge{
+  display:inline-flex;
+  height:28px;
+  align-items:center;
+  border-radius:999px;
+  padding:0 10px;
+  background:var(--blue-2);
+  border:1px solid #bac8ad;
+  color:#4f7044;
+  font-size:12px;
+  font-weight:950;
+  margin-bottom:12px;
 }
-.api-row input:focus{outline:none;border-color:var(--accent)}
-.api-row button{
-  padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);
-  background:var(--surface2);color:var(--text2);font-size:11px;cursor:pointer;white-space:nowrap;
+.login-card h2{font-size:28px;line-height:1.1;margin:0 0 8px}
+.login-card p{margin:0 0 14px;color:var(--muted);line-height:1.5}
+.login-summary{
+  display:none;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin:14px 0 18px;
 }
-.api-row button:hover{border-color:var(--accent);color:var(--accent)}
-.btn-launch{
-  width:100%;padding:12px;border:none;border-radius:var(--radius);
-  background:var(--accent);color:#fff;font-weight:700;font-size:14px;
-  cursor:pointer;transition:all 0.15s;
+.login-summary div{
+  border:1px solid var(--line);
+  background:var(--surface);
+  border-radius:0;
+  padding:10px;
 }
-.btn-launch:hover{filter:brightness(1.08)}
-.btn-launch:active{transform:scale(0.98)}
-.btn-launch.loading{opacity:0.7;pointer-events:none}
-.entry-footer{text-align:center;font-size:10px;color:var(--text2);line-height:1.6}
-
-/* 节点 */
+.login-summary b{display:block;font-size:13px;margin-bottom:4px}
+.login-summary span{display:block;color:var(--muted);font-size:12px;line-height:1.4}
+.recent-spaces{
+  display:grid;
+  gap:9px;
+  margin-top:18px;
+}
+.recent-spaces h3{
+  font-size:13px;
+  margin:4px 0 0;
+  color:#344054;
+}
+.space-card{
+  width:100%;
+  border:1px solid var(--line);
+  background:rgba(255,255,255,.86);
+  border-radius:0;
+  padding:12px;
+  text-align:left;
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:8px;
+  align-items:center;
+}
+.space-card:hover{border-color:#bac8ad;box-shadow:0 10px 22px rgba(47,39,28,.08)}
+.space-card b{display:block;font-size:13px;margin-bottom:4px;color:var(--ink)}
+.space-card span{display:block;font-size:12px;color:var(--muted);line-height:1.4}
+.space-card small{
+  display:inline-flex;
+  height:28px;
+  align-items:center;
+  border-radius:999px;
+  background:var(--blue-2);
+  color:#4f7044;
+  font-weight:900;
+  padding:0 9px;
+}
+.recent-empty{
+  border:1px dashed var(--line-2);
+  color:var(--muted);
+  border-radius:0;
+  padding:12px;
+  font-size:13px;
+  line-height:1.5;
+}
+.field{display:grid;gap:7px;margin-bottom:14px}
+.field label{font-size:13px;font-weight:800;color:#344054}
+.field input,.field textarea{
+  width:100%;border:1px solid var(--line);background:#fff;border-radius:0;
+  padding:12px 13px;outline:none;color:var(--ink);
+}
+.field textarea{resize:vertical;min-height:92px;line-height:1.55}
+.field input:focus,.field textarea:focus{border-color:var(--green);box-shadow:0 0 0 4px rgba(111,143,95,.16)}
+.primary,.secondary,.ghost{
+  min-height:44px;border-radius:10px;padding:0 16px;font-weight:900;
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease,background .18s ease,color .18s ease;
+}
+.primary{border:1px solid var(--ink);background:var(--ink);color:#fff;box-shadow:0 10px 24px rgba(23,21,16,.18)}
+.secondary{border:1px solid var(--line);background:#fff;color:#344054}
+.ghost{border:0;background:transparent;color:var(--muted)}
+.primary:hover{transform:translateY(-1px);box-shadow:0 14px 28px rgba(23,21,16,.24)}
+.secondary:hover{border-color:#afc0d6;background:#f8fafc;transform:translateY(-1px)}
+.wide{width:100%}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.chip-btn{
+  border:1px solid var(--line);background:#fff;border-radius:999px;
+  padding:7px 10px;font-size:12px;font-weight:850;color:#475467;
+}
+.app{
+  --frame:16px;
+  --panel-pad-x:24px;
+  height:100vh;
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  grid-template-rows:66px minmax(0,1fr) 88px;
+  background:var(--bg);
+  gap:0;
+  position:relative;
+}
+.topbar{
+  grid-column:1/-1;
+  display:flex;align-items:center;gap:24px;padding:0 28px;
+  border-bottom:1px solid #111;
+  background:rgba(255,254,250,.78);
+  backdrop-filter:blur(16px);
+  color:#111;
+}
+.topbar .brand{color:#111;min-width:188px;font-size:20px;gap:9px}
+.topbar .brand-mark{background:#111;color:#fff;width:34px;height:34px;border-radius:0;font-size:12px}
+.topbar-title{
+  min-width:0;
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:28px;
+}
+.topbar-title b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar-title span{display:block;font-size:13px;color:#111;margin-top:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ai-status{
+  display:inline-flex;align-items:center;gap:7px;
+  height:34px;border-radius:999px;padding:0 12px;
+  border:1px solid #111;background:#fff;
+  color:#111;font-size:12px;font-weight:850;
+}
+.ai-status::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--orange)}
+.ai-status.ready{background:var(--blue-2);border-color:var(--line);color:#4f7044}
+.ai-status.ready::before{background:var(--green)}
+.user-pill{
+  display:flex;align-items:center;gap:9px;height:40px;padding:0 12px;
+  border:1px solid #111;border-radius:999px;background:#fff;
+  font-size:13px;font-weight:850;
+}
+.avatar{
+  width:24px;height:24px;border-radius:50%;display:grid;place-items:center;
+  background:#111;color:#fff;font-size:12px;font-weight:950;
+}
+.topbar .secondary{background:#fff;border-color:#111;color:#111}
+.topbar .secondary:hover{background:#f1f1ee}
+.topbar .primary{box-shadow:0 12px 24px rgba(23,21,16,.2)}
+.app.chrome-collapsed{
+  grid-template-rows:52px minmax(0,1fr) 82px;
+}
+.app.chrome-collapsed .topbar{
+  padding:0 20px;
+}
+.app.chrome-collapsed .topbar-title span,
+.app.chrome-collapsed .ai-status,
+.app.chrome-collapsed .export-wrap,
+.app.chrome-collapsed #topNewProjectBtn,
+.app.chrome-collapsed .user-pill,
+.app.chrome-collapsed #logoutBtn{
+  display:none;
+}
+.chrome-toggle{
+  min-height:40px;
+  border:1px solid var(--line-2);
+  border-radius:999px;
+  background:rgba(255,255,255,.72);
+  color:var(--ink);
+  padding:0 15px;
+  font-weight:900;
+}
+.export-wrap{position:relative}
+.export-menu{
+  position:absolute;
+  right:0;
+  top:48px;
+  width:198px;
+  padding:8px;
+  border:1px solid var(--line-2);
+  border-radius:14px;
+  background:#fffefa;
+  box-shadow:var(--shadow);
+  display:none;
+  z-index:30;
+}
+.export-menu.open{display:grid}
+.export-menu button{
+  width:100%;
+  border:0;
+  border-radius:10px;
+  background:transparent;
+  padding:10px 11px;
+  text-align:left;
+  color:var(--ink);
+  font-weight:900;
+}
+.export-menu button:hover{background:#f3f7f1}
+.sidebar{
+  grid-column:1;
+  grid-row:3;
+  min-width:0;
+  overflow:hidden;
+  background:#141611;
+  color:#fff8e8;
+  padding:0;
+  margin:0 var(--frame) var(--frame);
+  border:1px solid #111;
+  border-top:0;
+}
+.side-section{
+  height:100%;
+  display:grid;
+  grid-template-columns:124px minmax(0,1fr);
+  gap:0;
+  align-items:stretch;
+  margin:0;
+}
+.side-head{
+  display:grid;
+  gap:10px;
+  align-content:center;
+  justify-items:start;
+  color:#fff8e8;font-size:17px;font-weight:950;margin:0;
+  min-width:0;
+  padding:14px 16px;
+  border-right:1px solid rgba(255,248,230,.18);
+}
+.side-head span{line-height:1.05}
+.side-head .chip-btn{border-color:rgba(255,248,230,.45);background:rgba(255,248,230,.08);color:#fff8e8;border-radius:0;height:30px;padding:0 10px}
+.project-list{
+  display:flex;
+  gap:0;
+  overflow:auto;
+  padding:0;
+  scrollbar-width:auto;
+}
+.project-list::-webkit-scrollbar{display:none}
+.project-card{
+  width:216px;
+  flex:0 0 216px;
+  min-height:100%;
+  border:0;
+  border-right:1px solid rgba(255,248,230,.16);
+  background:transparent;
+  color:#fff8e8;border-radius:0;padding:13px 16px;text-align:left;
+  box-shadow:none;
+  transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease,background .18s ease,color .18s ease;
+}
+.project-card:hover{background:rgba(255,248,230,.08);box-shadow:none;transform:none}
+.project-card.active{
+  background:var(--stage-card);
+  color:#171510;
+  box-shadow:none;
+}
+.project-card b{display:block;font-size:17px;line-height:1.12;margin-bottom:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.project-card span{display:block;color:rgba(255,248,230,.58);font-size:12px;line-height:1.45}
+.project-card.active span{color:#625d53}
+.start-card{
+  border:1px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.055);
+  border-radius:12px;
+  padding:11px;
+}
+.start-card b{display:block;font-size:13px;margin-bottom:5px;color:#fff}
+.start-card span{display:block;font-size:12px;line-height:1.45;color:#c8d5e8;margin-bottom:9px}
+.start-card button{width:100%}
+.new-project{
+  display:grid;gap:10px;
+}
+.new-project input,.new-project textarea{
+  border:1px solid var(--line);background:#fff;
+  color:var(--ink);border-radius:11px;padding:11px;outline:none;
+}
+.new-project textarea{resize:vertical;min-height:92px;line-height:1.55}
+.modal-backdrop{
+  position:fixed;
+  inset:0;
+  background:rgba(23,21,16,.48);
+  display:grid;
+  place-items:center;
+  padding:24px;
+  z-index:40;
+  overscroll-behavior:contain;
+}
+.project-modal{
+  position:relative;
+  z-index:1;
+  width:min(660px,100%);
+  max-height:calc(100dvh - 48px);
+  background:#fff9ed;
+  border:1px solid var(--line);
+  border-radius:0;
+  box-shadow:var(--shadow);
+  padding:0;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  animation:modalIn .22s ease both;
+}
+.modal-head{
+  display:flex;
+  align-items:start;
+  justify-content:space-between;
+  gap:16px;
+  margin:0;
+  padding:20px 22px 18px;
+  border-bottom:1px solid var(--line);
+  flex-shrink:0;
+}
+.modal-head h2{font-size:30px;line-height:1;margin:0 0 7px}
+.modal-head p{margin:0;color:var(--muted);line-height:1.45;max-width:520px}
+.icon-btn{
+  width:44px;height:44px;border:1px solid var(--line);background:#fff;border-radius:0;
+  color:var(--ink);font-weight:950;
+}
+.modal-grid{
+  display:block;
+  min-height:0;
+  overflow:auto;
+}
+.modal-form{
+  padding:18px 22px 16px;
+  border-right:0;
+}
+.example-row{
+  display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px;
+}
+.example-row button{
+  border:1px solid var(--line);
+  background:var(--surface);
+  border-radius:0;
+  min-height:36px;
+  padding:0 12px;
+  font-size:13px;
+  font-weight:850;
+  color:var(--ink);
+}
+.example-row button:hover{
+  background:var(--blue-2);
+}
+.creation-hint{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  align-content:start;
+  gap:0;
+  margin:0;
+  background:#f5efe3;
+  border-top:1px solid var(--line);
+}
+.creation-hint div{
+  border-right:1px solid var(--line);
+  border-bottom:0;
+  background:transparent;
+  border-radius:0;
+  padding:12px 14px;
+}
+.creation-hint div:last-child{border-right:0}
+.creation-hint b{display:block;font-size:13px;line-height:1.15;margin-bottom:5px}
+.creation-hint span{display:block;font-size:12px;line-height:1.38;color:var(--muted)}
+.modal-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  margin:0;
+  padding:14px 22px;
+  border-top:1px solid var(--line);
+  background:var(--surface);
+  flex-shrink:0;
+}
+.template-card{
+  width:100%;border:1px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.04);color:#e5edf7;border-radius:12px;
+  padding:10px;text-align:left;margin-bottom:7px;
+}
+.template-card b{display:block;font-size:13px;margin-bottom:4px}
+.template-card span{display:block;font-size:12px;color:#b8c5d8;line-height:1.45}
+.workspace{
+  grid-column:1;
+  grid-row:2;
+  min-width:0;min-height:0;overflow:hidden;
+  display:grid;grid-template-rows:auto 1fr;
+  background:#fffefa;
+  margin:var(--frame) var(--frame) 0;
+  border:1px solid #111;
+}
+.project-header{
+  padding:14px var(--panel-pad-x) 13px;
+  display:block;
+  background:#fffefa;
+  border-bottom:1px solid #111;
+}
+.project-intro{
+  display:grid;
+  grid-template-columns:minmax(360px,1fr) auto;
+  gap:22px;
+  align-items:center;
+}
+.project-copy{min-width:0}
+.project-kicker{
+  display:inline-flex;
+  width:max-content;
+  max-width:100%;
+  border:1px solid rgba(23,21,16,.18);
+  background:#f0eadf;
+  color:#171510;
+  border-radius:0;
+  padding:4px 9px;
+  font-size:12px;
+  font-weight:950;
+  margin-bottom:5px;
+}
+.project-header h1{font-size:34px;line-height:1;margin:0 0 6px;font-weight:950;letter-spacing:0}
+.project-header p{margin:0;color:#555b66;line-height:1.45;max-width:820px;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mvp-overview{
+  margin-top:12px;
+  display:grid;
+  grid-template-columns:minmax(260px,.86fr) minmax(0,1.14fr);
+  gap:12px;
+  align-items:stretch;
+}
+.mvp-panel,.direction-panel{
+  border:1px solid #111;
+  background:#fff9ed;
+  min-width:0;
+}
+.mvp-panel{
+  padding:12px 14px;
+  display:grid;
+  gap:8px;
+}
+.mvp-panel small,.direction-panel small{
+  display:block;
+  color:#5c6658;
+  font-size:11px;
+  font-weight:950;
+}
+.mvp-panel b{
+  display:block;
+  color:#111;
+  font-size:16px;
+  line-height:1.22;
+}
+.mvp-panel span{
+  display:block;
+  color:#5e625d;
+  font-size:12px;
+  line-height:1.42;
+}
+.mvp-list{
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+}
+.mvp-list span{
+  border:1px solid rgba(17,17,17,.18);
+  background:#eff2e7;
+  color:#111;
+  padding:5px 7px;
+  font-size:11px;
+  font-weight:900;
+}
+.mvp-note{
+  border-top:1px solid rgba(17,17,17,.12);
+  padding-top:8px;
+  color:#52635b;
+  font-size:12px;
+  line-height:1.45;
+}
+.direction-panel{
+  padding:10px;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  gap:9px;
+  align-items:center;
+}
+.direction-panel>small{
+  grid-row:1 / span 2;
+  align-self:start;
+  padding:5px 7px;
+  background:#111;
+  color:#fff8e8;
+  width:max-content;
+}
+.direction-rail{
+  display:flex;
+  gap:8px;
+  overflow:auto;
+  min-width:0;
+  scrollbar-width:none;
+}
+.direction-rail::-webkit-scrollbar{display:none}
+.direction-pill{
+  flex:0 0 auto;
+  max-width:188px;
+  min-height:48px;
+  border:1px solid rgba(17,17,17,.28);
+  background:#fffefa;
+  color:#111;
+  border-radius:0;
+  padding:8px 10px;
+  text-align:left;
+}
+.direction-pill.active{
+  background:#111;
+  color:#fff8e8;
+}
+.direction-pill b{
+  display:block;
+  font-size:13px;
+  line-height:1.15;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.direction-pill span{
+  display:block;
+  margin-top:3px;
+  color:inherit;
+  opacity:.72;
+  font-size:11px;
+  line-height:1.25;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.direction-pill em{
+  display:block;
+  margin-top:5px;
+  color:inherit;
+  opacity:.9;
+  font-style:normal;
+  font-size:10px;
+  font-weight:950;
+}
+.direction-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+  margin-top:7px;
+}
+.direction-meta i{
+  display:inline-flex;
+  border:1px solid rgba(17,17,17,.14);
+  background:rgba(255,255,255,.68);
+  border-radius:999px;
+  padding:3px 6px;
+  color:inherit;
+  opacity:.86;
+  font-style:normal;
+  font-size:10px;
+  font-weight:950;
+}
+.flow-strip{
+  display:flex;
+  gap:4px;
+  margin-top:0;
+  flex-wrap:nowrap;
+  justify-content:flex-end;
+  overflow:auto;
+  padding-bottom:1px;
+  scrollbar-width:none;
+}
+.flow-strip::-webkit-scrollbar{display:none}
+.flow-step{
+  min-width:0;
+  border:0;
+  background:transparent;
+  border-radius:999px;
+  padding:7px 10px;
+  min-height:38px;
+  position:relative;
+  display:grid;
+  grid-template-columns:8px minmax(0,1fr);
+  align-items:center;
+  column-gap:7px;
+  width:112px;
+  max-width:112px;
+  opacity:.58;
+  transition:transform .18s ease,border-color .18s ease,background .18s ease,opacity .18s ease;
+}
+.flow-step.done{
+  background:transparent;
+}
+.flow-step.active{
+  background:#111;
+  color:#fff;
+  opacity:1;
+  transform:none;
+}
+.flow-step::before{
+  content:"";
+  position:static;
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#b9c6d8;
+  grid-row:1 / span 2;
+}
+.flow-step.done::before{background:var(--green)}
+.flow-step.active::before{background:var(--green)}
+.flow-step.active small{color:#cfd4dd}
+.flow-step small{
+  display:block;
+  color:var(--muted);
+  font-size:9px;
+  font-weight:900;
+  margin:0 0 2px;
+  grid-column:2;
+}
+.flow-step b{
+  display:block;
+  font-size:10px;
+  line-height:1.25;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  grid-column:2;
+}
+.seed-box{
+  display:none;
+  width:100%;
+  margin-top:0;
+  border:1px solid var(--line);background:#fff;border-radius:16px;padding:14px;box-shadow:var(--shadow-sm);
+}
+.seed-box label{display:block;font-size:12px;font-weight:900;color:#475467;margin-bottom:7px}
+.seed-row{display:grid;grid-template-columns:1fr auto;gap:8px}
+.seed-row input{
+  border:1px solid var(--line);border-radius:10px;padding:10px 11px;outline:none;
+  background:#f8fafc;
+  color:#475467;
+}
+.canvas{
+  margin:0;
+  min-height:0;
+  position:relative;
+  border:0;
+  border-radius:0;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 50% 56%, rgba(200,221,155,.16) 0 9%, transparent 9.5%),
+    radial-gradient(ellipse at 50% 56%, transparent 0 20%, rgba(244,239,227,.12) 20.3%, transparent 21.1%),
+    radial-gradient(ellipse at 50% 56%, transparent 0 39%, rgba(200,221,155,.14) 39.25%, transparent 40.2%),
+    radial-gradient(ellipse at 50% 56%, transparent 0 60%, rgba(244,239,227,.08) 60.2%, transparent 61%),
+    linear-gradient(135deg,#10110e 0%,#191c15 42%,#26261e 100%),
+    linear-gradient(rgba(244,239,227,.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(244,239,227,.04) 1px, transparent 1px),
+    var(--stage);
+  background-size:auto,auto,auto,auto,auto,34px 34px,34px 34px,auto;
+  box-shadow:none;
+  animation:gridDrift 28s linear infinite;
+}
+.canvas::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index:1;
+  background:
+    linear-gradient(90deg, transparent 0 49.9%, rgba(244,239,227,.12) 49.9% 50.08%, transparent 50.08%),
+    linear-gradient(0deg, transparent 0 55.8%, rgba(244,239,227,.1) 55.8% 55.98%, transparent 55.98%),
+    linear-gradient(180deg,rgba(255,249,237,.08),transparent 32%,rgba(0,0,0,.18));
+  mask-image:linear-gradient(90deg,transparent,black 12%,black 88%,transparent);
+}
+.canvas::before{
+  content:"FUNCTION MAP";
+  position:absolute;
+  right:24px;
+  top:18px;
+  z-index:1;
+  color:rgba(244,239,227,.22);
+  font-weight:950;
+  font-size:12px;
+  letter-spacing:.08em;
+}
+.canvas-toolbar{
+  position:absolute;left:24px;top:16px;right:24px;z-index:6;
+  display:none;
+  align-items:flex-start;justify-content:flex-end;gap:14px;
+  pointer-events:none;
+}
+.map-letters{
+  display:none;
+}
+.map-letters span{display:block}
+.stage-reveal{
+  display:none;
+}
+.canvas-guide{
+  display:none!important;
+  width:min(470px,calc(100% - 260px));
+  border:1px solid rgba(183,205,253,.9);
+  background:rgba(255,255,255,.92);
+  border-radius:14px;
+  padding:9px 12px;
+  box-shadow:0 14px 34px rgba(47,39,28,.09);
+  backdrop-filter:blur(12px);
+  grid-template-columns:auto minmax(0,1fr);
+  column-gap:10px;
+  align-items:center;
+}
+.canvas-guide small{
+  display:inline-flex;
+  width:max-content;
+  height:24px;
+  align-items:center;
+  border-radius:999px;
+  padding:0 8px;
+  background:var(--blue-2);
+  color:#4f7044;
+  font-size:12px;
+  font-weight:950;
+  margin:0;
+  grid-row:1 / span 2;
+}
+.canvas-guide b{
+  display:block;
+  font-size:14px;
+  line-height:1.25;
+  margin:0 0 2px;
+}
+.canvas-guide span{
+  display:block;
+  color:#475467;
+  font-size:12px;
+  line-height:1.48;
+}
+.canvas-stats{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.canvas-pill{
+  height:32px;display:inline-flex;align-items:center;gap:7px;
+  border:1px solid #111;background:#fffefa;
+  border-radius:0;padding:0 11px;backdrop-filter:blur(10px);
+  color:#111;font-size:12px;font-weight:900;box-shadow:none;
+}
+.canvas-pill b{color:#111}
+.action-dock{
+  position:absolute;
+  left:50%;
+  bottom:24px;
+  z-index:8;
+  width:min(780px,calc(100% - 48px));
+  transform:translateX(-50%);
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:14px;
+  align-items:center;
+  min-height:66px;
+  padding:12px 14px 12px 18px;
+  border:1px solid rgba(255,248,230,.78);
+  border-radius:0;
+  background:rgba(255,248,230,.96);
+  box-shadow:0 22px 58px rgba(0,0,0,.28),0 0 0 1px rgba(200,221,155,.18);
+  backdrop-filter:blur(18px);
+  animation:dockIn .34s ease both;
+}
+.action-dock.show-proof{
+  min-height:118px;
+  align-items:start;
+  padding-top:14px;
+  padding-bottom:14px;
+}
+.action-dock::before{
+  content:"";
+  position:absolute;
+  inset:0 auto 0 0;
+  width:4px;
+  border-radius:0;
+  background:var(--route);
+}
+.action-copy{
+  min-width:0;
+  padding-left:2px;
+}
+.action-copy small{
+  display:inline-flex;
+  align-items:center;
+  height:24px;
+  border-radius:0;
+  padding:0 8px;
+  background:#ebe9dc;
+  color:#111;
+  font-size:12px;
+  font-weight:950;
+  margin-bottom:6px;
+}
+.action-copy b{
+  display:block;
+  font-size:17px;
+  line-height:1.24;
+  margin-bottom:3px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  color:#111;
+}
+.action-copy span{
+  display:block;
+  color:#60646c;
+  font-size:12px;
+  line-height:1.45;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.action-proof{
+  display:none;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:10px;
+  margin-top:9px;
+}
+.action-dock.show-proof .action-proof{display:grid}
+.action-proof span{
+  display:block;
+  min-width:0;
+  border:1px solid rgba(23,21,16,.14);
+  padding:8px 10px;
+  background:rgba(255,254,250,.72);
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.45;
+  white-space:normal;
+  overflow:visible;
+  text-overflow:clip;
+}
+.action-proof b{
+  display:inline-block;
+  font-size:11px;
+  margin:0 6px 0 0;
+  color:var(--ink);
+}
+.action-buttons{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+  max-width:410px;
+}
+.action-buttons .primary{
+  min-width:164px;
+  min-height:48px;
+  border-radius:0;
+  background:#111;
+  color:#fff8e8;
+}
+.action-buttons .secondary{
+  min-height:48px;
+  border-radius:0;
+}
+.action-buttons .tool{
+  min-height:34px;
+  border:1px solid rgba(23,21,16,.28);
+  background:rgba(255,254,250,.76);
+  color:#171510;
+  border-radius:0;
+  padding:0 10px;
+  font-size:12px;
+  font-weight:900;
+}
+.action-buttons .tool.danger{
+  border-color:rgba(167,101,85,.42);
+  color:#7f3328;
+}
+.canvas-empty{
+  position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:40px;
+}
+.empty-card{
+  max-width:520px;background:#fff;border:1px solid var(--line);border-radius:18px;
+  padding:24px;box-shadow:var(--shadow-sm);
+}
+.empty-card h2{font-size:24px;margin:0 0 10px}
+.empty-card p{margin:0 0 18px;color:var(--muted);line-height:1.65}
+.graph-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
+.graph-svg path{transition:opacity .24s ease,stroke-width .24s ease}
+.graph-svg .path-active{animation:routeGlow 2.8s ease-in-out infinite}
+.graph-svg .path-recommended{filter:drop-shadow(0 0 8px rgba(200,221,155,.55))}
+.graph-stage{position:absolute;inset:0;z-index:3}
 .node{
-  position:absolute;z-index:10;background:var(--node-bg);
-  border:1px solid var(--border);border-radius:var(--radius);
-  padding:14px 16px 14px 14px;width:240px;cursor:pointer;
-  transition:border-color 0.2s,box-shadow 0.2s,transform 0.15s;
-  box-shadow:var(--shadow-sm);
-  border-left:3px solid var(--border);
+  position:absolute;width:156px;min-height:76px;transform:translate(-50%,-50%);
+  border:1px solid rgba(255,248,230,.32);border-radius:0;background:rgba(255,248,230,.1);
+  padding:12px;text-align:left;box-shadow:0 16px 36px rgba(0,0,0,.18);
+  color:#fff8e8;appearance:none;font:inherit;
+  z-index:2;
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  backdrop-filter:blur(8px);
+  animation:graphNodeIn .38s cubic-bezier(.2,.8,.2,1) both;
+  animation-delay:calc(var(--node-order,0) * 34ms);
+  transition:border-color .2s ease,box-shadow .2s ease,opacity .2s ease,filter .2s ease,transform .18s ease,background .2s ease;
+}
+.node:focus-visible{outline:0;box-shadow:0 0 0 4px rgba(200,221,155,.24),0 18px 42px rgba(0,0,0,.28)}
+.node:hover{border-color:rgba(255,248,230,.74);box-shadow:0 18px 42px rgba(0,0,0,.28);transform:translate(-50%,-52%)}
+.node.active{border-color:rgba(200,221,155,.92);box-shadow:0 0 0 4px rgba(200,221,155,.14),0 18px 42px rgba(0,0,0,.28);z-index:5}
+.node.in-path{border-color:rgba(255,248,230,.48);box-shadow:0 16px 36px rgba(0,0,0,.2)}
+.node.recommended{
+  border-color:var(--route);
+  box-shadow:0 0 0 5px rgba(200,221,155,.13),0 24px 58px rgba(0,0,0,.36);
+  animation:graphNodeIn .38s cubic-bezier(.2,.8,.2,1) both,softPulse 2.6s ease-in-out infinite .45s;
+}
+.node.recommended::after{
+  content:attr(data-badge);
+  position:absolute;
+  right:-8px;
+  top:-12px;
+  height:22px;
+  display:inline-flex;
+  align-items:center;
+  border-radius:999px;
+  padding:0 8px;
+  background:var(--route);
+  color:#171510;
+  font-size:11px;
+  font-weight:950;
+  box-shadow:0 10px 22px rgba(47,39,28,.18);
+}
+.node.dimmed{opacity:.24;filter:saturate(.6)}
+.node.root{
+  width:220px;min-height:152px;background:
+    radial-gradient(circle at 38% 28%,#fffaf0,#e7dcc7 72%);
+  color:#171510;border-color:rgba(255,248,230,.9);z-index:4;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  border-radius:50%;
+  padding:18px;
+  box-shadow:0 24px 60px rgba(0,0,0,.38),0 0 0 10px rgba(255,248,230,.05);
+}
+.node.root.root-hub{
+  width:188px;
+  min-height:124px;
+  background:radial-gradient(circle at 38% 28%,#fffaf0,#e7dcc7 72%);
+  box-shadow:0 20px 48px rgba(0,0,0,.34),0 0 0 10px rgba(255,248,230,.05);
+  opacity:1;
+}
+.node.choice-primary{
+  width:218px;
+  min-height:112px;
+  background:var(--stage-card);
+  color:#171510;
+  border-color:var(--route);
+  box-shadow:0 26px 60px rgba(0,0,0,.42),0 0 0 6px rgba(200,221,155,.15);
+  z-index:6;
+}
+.node.choice-alternate{
+  opacity:.72;
+  background:rgba(255,248,230,.1);
+  box-shadow:0 14px 30px rgba(0,0,0,.16);
+}
+.node.choice-alternate:hover,
+.node.choice-alternate:focus-visible{
+  opacity:1;
+}
+.node.kept{border-color:rgba(200,221,155,.7)}
+.node.dropped{border-color:rgba(214,178,168,.62);opacity:.58}
+.node.root.kept,.node.root.dropped{background:radial-gradient(circle at 38% 28%,#fffaf0,#e7dcc7 72%);border-color:rgba(255,248,230,.9);opacity:1}
+.node.choice-primary.kept,
+.node.choice-primary.dropped{
+  background:var(--stage-card);
+  border-color:var(--route);
+  color:#171510;
+  opacity:1;
+}
+.node.type-core{border-color:rgba(200,221,155,.5)}
+.node.type-growth{border-color:rgba(126,150,152,.56)}
+.node.type-experience{border-color:rgba(184,194,166,.5)}
+.node.type-validate{border-color:rgba(217,192,162,.56)}
+.node.type-hold{border-color:rgba(214,178,168,.5)}
+.node.choice-primary.type-core,
+.node.choice-primary.type-growth,
+.node.choice-primary.type-experience,
+.node.choice-primary.type-validate,
+.node.choice-primary.type-hold{
+  background:var(--stage-card);
+  border-color:var(--route);
+}
+.node small{
+  display:inline-flex;align-items:center;width:max-content;border-radius:0;padding:4px 8px;
+  background:rgba(255,248,230,.12);color:#e9e2d4;font-size:11px;font-weight:900;
+}
+.node.root small{background:rgba(23,21,16,.08);color:#5f6f4e}
+.node.type-growth small{background:rgba(126,150,152,.2);color:#d5e4e3}
+.node.type-experience small{background:rgba(200,221,155,.16);color:#e3f0c7}
+.node.type-validate small{background:rgba(217,192,162,.18);color:#f0d8b7}
+.node.type-hold small{background:rgba(214,178,168,.16);color:#edd0c8}
+.node.choice-primary small{
+  background:#e9f2d3;
+  color:#5f7444;
+}
+.node b{
+  display:-webkit-box;
+  font-size:14px;
+  line-height:1.25;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  overflow:hidden;
+}
+.node.root b{font-size:20px}
+.node.choice-primary b{
+  font-size:20px;
+  line-height:1.18;
+}
+.node span{
+  display:none;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  overflow:hidden;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.5;
+}
+.node.root span{
+  display:-webkit-box;
+  color:#544f46;
+  font-size:12px;
+  line-height:1.45;
+  margin-top:2px;
+}
+.node.choice-primary span{
+  display:-webkit-box;
+  color:#59544b;
+  font-size:12px;
+  line-height:1.45;
+}
+.inspector{
+  display:none;
+}
+.inspector-card{border:0;border-bottom:1px solid #111;border-radius:0;padding:14px;background:transparent;box-shadow:none;backdrop-filter:none;margin:0}
+.inspector-card{animation:fadeRise .32s ease both}
+.inspector-card:first-child{
+  border-color:#111;
+  background:#fffefa;
+  box-shadow:none;
+}
+.inspector-card h2{font-size:22px;line-height:1.08;margin:0 0 8px;font-weight:950}
+.inspector-card p{
+  margin:0;color:var(--muted);line-height:1.55;font-size:13px;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;
+}
+.detail-eyebrow{
+  display:inline-flex;
+  color:#fff;
+  background:#111;
+  border:1px solid #111;
+  border-radius:0;
+  padding:4px 8px;
+  font-size:12px;
+  font-weight:950;
+  margin-bottom:9px;
+}
+.meta-grid{display:grid;gap:7px;margin-top:11px}
+.recommend-box{
+  border:1px solid #111;
+  background:#f6f5f2;
+  border-radius:0;
+  padding:12px;
+  margin:12px 0 0;
+}
+.recommend-box b{display:block;font-size:12px;color:#4f7044;margin-bottom:5px}
+.recommend-box strong{display:block;font-size:15px;color:#172033;margin-bottom:4px}
+.recommend-box span{display:block;font-size:12px;color:#475467;line-height:1.45}
+.meta-row{
+  display:grid;
+  grid-template-columns:72px minmax(0,1fr);
+  gap:8px;
+  align-items:start;
+  border-top:1px solid #111;
+  padding-top:8px;
+}
+.meta-row b{display:block;font-size:12px;color:#475467}
+.meta-row span{font-size:12px;line-height:1.42;color:var(--ink)}
+.agent-brief{
+  border:1px solid rgba(17,17,17,.13);
+  background:#fffefa;
+  border-radius:14px;
+  padding:11px;
+  margin-top:12px;
+}
+.agent-brief b{
+  display:block;
+  font-size:13px;
+  margin-bottom:6px;
+  color:#171510;
+}
+.agent-brief span{
+  display:block;
+  color:#5f665e;
+  font-size:12px;
+  line-height:1.48;
+}
+.feature-tags{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:11px;
+}
+.feature-tags span{
+  border:1px solid rgba(17,17,17,.13);
+  border-radius:999px;
+  background:#f7faf3;
+  color:#4d6344;
+  padding:5px 8px;
+  font-size:11px;
+  font-weight:950;
+}
+.decision-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.decision-row .primary{grid-column:1/-1}
+.decision-row.secondary-mode .primary{
+  grid-column:auto;
+  border:1px solid #bac8ad;
+  background:var(--blue-2);
+  color:#4f7044;
+  box-shadow:none;
+}
+.decision-row.choice-mode{grid-template-columns:1fr}
+.decision-row.choice-mode .primary{grid-column:1}
+.node-tools{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:12px;
+}
+.node-tools button{
+  min-height:34px;
+  border:1px solid rgba(23,21,16,.22);
+  background:#fffdf7;
+  color:#171510;
+  border-radius:0;
+  padding:0 10px;
+  font-size:12px;
+  font-weight:900;
+}
+.node-tools button:hover{background:#efeee7}
+.node-tools .danger{color:#7f3328;border-color:rgba(127,51,40,.28)}
+.keep{background:var(--green);color:#fff;border:0}
+.drop{background:var(--red);color:#fff;border:0}
+.child-choice-list{
+  display:grid;
+  gap:8px;
+  margin-top:12px;
+}
+.child-choice{
+  width:100%;
+  border:1px solid #111;
+  background:#fffefa;
+  border-radius:0;
+  padding:10px;
+  text-align:left;
+}
+.child-choice:hover{background:#f2f1ee;box-shadow:none}
+.child-choice.recommended-choice{
+  border-color:#111;
+  background:#f6f5f2;
+}
+.child-choice small{
+  display:inline-flex;
+  border-radius:0;
+  padding:3px 7px;
+  background:var(--blue-2);
+  color:#4f7044;
+  font-size:11px;
+  font-weight:950;
+  margin-bottom:7px;
+}
+.child-choice b{display:block;font-size:14px;margin-bottom:4px}
+.child-choice span{display:block;color:#475467;font-size:12px;line-height:1.42}
+.mini-tabs{display:flex;gap:6px;margin-bottom:12px}
+.mini-tab{
+  border:1px solid #111;background:#fff;border-radius:0;padding:7px 10px;
+  color:#475467;font-size:12px;font-weight:900;
+}
+.mini-tab.active{background:var(--nav);border-color:var(--nav);color:#fff}
+.decision-board{display:grid;gap:8px}
+.decision-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.decision-title h2{font-size:16px;margin:0}
+.decision-title span{font-size:12px;color:var(--muted);font-weight:850}
+.decision-section{
+  border:1px solid #111;
+  background:#fffefa;
+  border-radius:0;
+  padding:9px;
+}
+.decision-section header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin-bottom:8px;
+}
+.decision-section header b{font-size:12px;color:#344054}
+.decision-section header small{
+  min-width:22px;
+  height:22px;
+  display:grid;
+  place-items:center;
+  border-radius:0;
+  background:#fff;
+  border:1px solid var(--line);
+  color:#475467;
+  font-weight:900;
+}
+.decision-items{display:grid;gap:6px}
+.decision-more{font-size:12px;color:var(--muted);line-height:1.4;padding:2px 2px 0}
+.decision-empty{font-size:12px;color:var(--muted);line-height:1.45}
+.decision-item{
+  width:100%;
+  border:1px solid #111;
+  background:#fffefa;
+  border-radius:0;
+  padding:8px;
+  text-align:left;
+}
+.decision-item:hover{background:#f2f1ee;box-shadow:none}
+.decision-item b{display:block;font-size:13px;margin-bottom:4px;color:var(--ink)}
+.decision-item span{display:block;font-size:12px;color:var(--muted);line-height:1.42}
+.decision-section.mvp{background:#f5f8ed;border-color:#bac8ad}
+.decision-section.validate{background:#fbf0df;border-color:#d9c0a2}
+.decision-section.drop{background:#fbefea;border-color:#d6b2a8}
+.decision-section.next{background:#f1f7f6;border-color:#bdcccd}
+.decision-hero{
+  border:1px solid #111;
+  background:#111;
+  color:#fff;
+  border-radius:0;
+  padding:10px;
+}
+.decision-hero small{
+  display:block;
+  color:#cfd4dd;
+  font-size:12px;
+  font-weight:950;
+  margin-bottom:5px;
+}
+.decision-hero b{display:block;font-size:16px;margin-bottom:5px}
+.decision-hero p{margin:0;color:#d5d9df;font-size:12px;line-height:1.45;display:block;-webkit-line-clamp:unset}
+.decision-hero button{
+  height:30px;
+  border:0;
+  background:var(--green);
+  color:#fff;
+  border-radius:9px;
+  padding:0 11px;
+  font-weight:900;
+  font-size:12px;
+}
+.decision-summary-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+.decision-stat{
+  border:1px solid #111;
+  background:#fffefa;
+  border-radius:0;
+  padding:8px;
+}
+.decision-stat b{display:block;font-size:13px;margin-bottom:4px}
+.decision-stat span{display:block;font-size:12px;color:var(--muted);line-height:1.4}
+.decision-compact{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:7px;
+}
+.decision-compact .decision-hero{grid-column:1/-1}
+.decision-compact .decision-stat:nth-child(n+5){display:none}
+
+/* Canvas clarity pass: make the product feel like an editable map, not a dense poster. */
+.app{
+  grid-template-columns:minmax(0,1fr) 330px;
+  grid-template-rows:64px minmax(0,1fr) 82px;
+  background:#f4f3ee;
+}
+.topbar{
+  grid-column:1/-1;
+  background:rgba(250,249,244,.9);
+  border-bottom:1px solid rgba(17,17,17,.18);
+}
+.workspace{
+  grid-column:1;
+  grid-row:2;
+  margin:12px 8px 0 12px;
+  border:1px solid rgba(17,17,17,.16);
+  background:#fdfbf4;
+}
+.project-header{
+  padding:12px 18px;
+  border-bottom:1px solid rgba(17,17,17,.12);
+  background:#fffdf7;
+}
+.project-kicker{
+  border-color:rgba(17,17,17,.12);
+  background:#efeee7;
+  font-size:11px;
+}
+.project-header h1{font-size:28px}
+.project-header p{font-size:13px;color:#626059}
+.flow-step{
+  width:104px;
+  max-width:104px;
+  opacity:.5;
+}
+.flow-step.active{
+  background:#171510;
+}
+.sidebar{
+  grid-column:1/-1;
+  grid-row:3;
+  margin:0 12px 12px;
+  border:1px solid rgba(17,17,17,.18);
+  border-top:0;
+  background:#171510;
+}
+.inspector{
+  display:block;
+  grid-column:2;
+  grid-row:2;
+  min-width:0;
+  overflow:auto;
+  margin:12px 12px 0 4px;
+  border:1px solid rgba(17,17,17,.16);
+  background:#fffdf7;
+  box-shadow:none;
+  color:#171510;
+  opacity:1;
+}
+.inspector-card{
+  padding:14px 14px 16px;
+  border-bottom:1px solid rgba(17,17,17,.12);
+  color:#171510;
+  opacity:1;
+}
+.inspector-card:first-child{background:#fffdf7}
+.inspector-card h2{font-size:20px;letter-spacing:0;color:#171510}
+.inspector-card p{-webkit-line-clamp:4;color:#454b43}
+.inspector .recommend-box strong,
+.inspector .meta-row span,
+.inspector .agent-brief span,
+.inspector .child-choice b,
+.inspector .decision-item b{color:#171510}
+.inspector .detail-eyebrow,
+.inspector .feature-tags span{opacity:1}
+.detail-eyebrow{
+  background:#efeee7;
+  color:#171510;
+  border-color:rgba(17,17,17,.12);
+}
+.canvas{
+  background:
+    radial-gradient(circle at 50% 52%, rgba(111,143,95,.08) 0 12%, transparent 12.5%),
+    linear-gradient(rgba(23,21,16,.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(23,21,16,.055) 1px, transparent 1px),
+    #fbfaf4;
+  background-size:auto,32px 32px,32px 32px,auto;
+  animation:none;
+}
+.canvas::after{
+  background:
+    linear-gradient(90deg, transparent 0 49.95%, rgba(23,21,16,.09) 49.95% 50.05%, transparent 50.05%),
+    linear-gradient(0deg, transparent 0 55.9%, rgba(23,21,16,.075) 55.9% 56.02%, transparent 56.02%);
+  mask-image:none;
+}
+.canvas::before{
+  content:"功能画布";
+  color:rgba(23,21,16,.22);
+  right:20px;
+  top:16px;
+  letter-spacing:.14em;
+}
+.canvas-toolbar{
+  display:flex;
+  left:18px;
+  right:18px;
+  top:14px;
+}
+.canvas-stats{justify-content:flex-end}
+.canvas-pill{
+  border-color:rgba(17,17,17,.14);
+  background:rgba(255,253,247,.84);
+  border-radius:999px;
+  height:30px;
+}
+.graph-svg path{
+  stroke-linecap:round;
+  transition:opacity .18s ease,stroke-width .18s ease;
+}
+.graph-svg .path-recommended{filter:none}
+.node,
+.node.root,
+.node.root.root-hub,
+.node.choice-primary{
+  width:176px;
+  height:90px;
+  min-height:90px;
+  border-radius:12px;
+  padding:11px 12px;
+  background:#fffdf7;
+  color:#171510;
+  border:1px solid rgba(23,21,16,.18);
+  box-shadow:0 10px 24px rgba(31,27,20,.08);
+  align-items:flex-start;
+  justify-content:flex-start;
+  text-align:left;
+  backdrop-filter:none;
+  overflow:visible;
 }
 .node:hover{
-  border-color:var(--accent);border-left-color:var(--accent);
-  box-shadow:var(--shadow-md);transform:translateY(-1px);
+  border-color:rgba(23,21,16,.42);
+  box-shadow:0 14px 28px rgba(31,27,20,.12);
+}
+.node.active,
+.node.choice-primary.active{
+  border-color:#171510;
+  box-shadow:0 0 0 3px rgba(23,21,16,.08),0 16px 34px rgba(31,27,20,.14);
+  z-index:7;
+}
+.node.recommended{
+  border-color:#6f8f5f;
+  box-shadow:0 0 0 3px rgba(111,143,95,.14),0 14px 30px rgba(31,27,20,.12);
+  animation:graphNodeIn .28s cubic-bezier(.2,.8,.2,1) both;
+}
+.node.recommended::after{
+  right:10px;
+  top:-11px;
+  height:20px;
+  border-radius:999px;
+  background:#dfe9d2;
+  color:#415b37;
+  box-shadow:none;
 }
 .node.root{
-  width:380px;padding:18px 20px 16px 18px;
-  background:var(--node-bg);
-  border-color:var(--accent);border-left-color:var(--accent);
-  box-shadow:var(--shadow-md);
+  background:#171510;
+  color:#fffdf7;
+  border-color:#171510;
 }
-.node.selected{
-  border-color:var(--accent);border-left-color:var(--accent);
-  box-shadow:0 0 0 2px rgba(67,97,238,0.2),var(--shadow-md);
+.node.root.kept,
+.node.root.dropped{
+  background:#171510;
+  color:#fffdf7;
+  border-color:#171510;
+  opacity:1;
 }
-.node.thinking{
-  animation:thinking-pulse 1.8s ease-in-out infinite;
+.node.root small{background:rgba(255,255,255,.12);color:#f7f2e7}
+.node.root span{color:rgba(255,253,247,.7)}
+.node.choice-primary{
+  border-color:#6f8f5f;
+  background:#f7fbf2;
 }
-@keyframes thinking-pulse{
-  0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,0.35),var(--shadow-md);border-color:rgba(124,58,237,0.5)}
-  50%{box-shadow:0 0 0 12px rgba(124,58,237,0),var(--shadow-md);border-color:var(--purple)}
+.node.choice-alternate{
+  opacity:1;
+  background:#fffdf7;
 }
-.node .node-title{
-  font-size:13px;font-weight:700;margin-bottom:5px;
-  display:flex;align-items:flex-start;gap:7px;line-height:1.4;
-  color:var(--text);
+.node.dimmed{
+  opacity:.42;
+  filter:saturate(.8);
 }
-.node.root .node-title{font-size:17px}
-.node .node-title .icon{font-size:15px;flex-shrink:0;margin-top:1px;opacity:0.85}
-.node .node-desc{font-size:11px;color:var(--text2);line-height:1.55;margin-bottom:10px}
-.node .scores{display:flex;flex-direction:column;gap:4px}
-.score-row{display:flex;align-items:center;gap:7px;font-size:10px}
-.score-label{width:22px;color:var(--text2);text-align:right;flex-shrink:0;font-size:10px;font-weight:500}
-.score-track{flex:1;height:4px;background:var(--surface2);border-radius:3px;overflow:hidden}
-.score-fill{height:100%;border-radius:3px}
-.score-fill.diff{background:var(--red)}
-.score-fill.inno{background:var(--purple)}
-.score-fill.prac{background:var(--green)}
-.score-val{width:26px;font-size:10px;text-align:left;font-weight:600;color:var(--text)}
-
-.node .category-tag{
-  font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;
-  padding:2px 8px;border-radius:10px;
-  display:inline-flex;align-items:center;gap:3px;
-  background:var(--accent-light);color:var(--accent);
+.node.dropped{
+  opacity:.52;
+  border-style:dashed;
 }
-
-.node .thinking-badge{
-  display:flex;align-items:center;gap:8px;font-size:12px;color:var(--purple);
-  margin-top:10px;font-weight:700;padding:8px 12px;
-  background:rgba(124,58,237,0.06);border-radius:8px;
+.node.kept{border-color:#6f8f5f}
+.node small,
+.node.choice-primary small{
+  border-radius:999px;
+  background:#efeee7;
+  color:#5f5c54;
+  padding:3px 7px;
+  font-size:10px;
 }
-
-/* 上下文菜单 */
-.ctx-menu{
-  position:fixed;z-index:500;background:var(--surface);
-  border:1px solid var(--border);border-radius:var(--radius);
-  box-shadow:var(--shadow-lg);padding:4px;min-width:140px;
-  animation:menuIn 0.12s ease-out;
+.node.type-core small{background:#dfe9d2;color:#415b37}
+.node.type-growth small{background:#e1ebea;color:#4d696a}
+.node.type-experience small{background:#eee9dc;color:#6a5a42}
+.node.type-validate small{background:#f2e4d2;color:#765337}
+.node.type-hold small{background:#f1ddd6;color:#7f3328}
+.node b,
+.node.root b,
+.node.choice-primary b{
+  font-size:15px;
+  line-height:1.22;
+  -webkit-line-clamp:2;
 }
-@keyframes menuIn{from{opacity:0;transform:scale(0.92)}to{opacity:1;transform:scale(1)}}
-.ctx-menu-item{
-  padding:8px 12px;border-radius:var(--radius-sm);font-size:12px;cursor:pointer;
-  display:flex;align-items:center;gap:8px;transition:background 0.1s;font-weight:500;
+.node span,
+.node.root span,
+.node.choice-primary span{
+  display:none;
 }
-.ctx-menu-item:hover{background:var(--accent-light)}
-.ctx-menu-item .mi-icon{font-size:14px;width:18px;text-align:center}
-.ctx-menu-item .mi-label{flex:1}
-.ctx-menu-item .mi-short{font-size:10px;color:var(--text2)}
-.ctx-menu-item.delete:hover{background:rgba(220,38,38,0.06);color:var(--red)}
-.ctx-menu-sep{height:1px;background:var(--border);margin:4px 0}
-
-/* Toast */
+.node.active span,
+.node.choice-primary span{
+  display:-webkit-box;
+  color:#65625a;
+  font-size:11px;
+  line-height:1.38;
+  -webkit-line-clamp:1;
+}
+.node.root.active span{color:rgba(255,253,247,.68)}
+.action-dock{
+  display:none;
+  width:min(680px,calc(100% - 44px));
+  min-height:58px;
+  bottom:18px;
+  border:1px solid rgba(23,21,16,.16);
+  background:rgba(255,253,247,.94);
+  box-shadow:0 18px 48px rgba(31,27,20,.12);
+}
+.action-dock.show-proof{
+  min-height:58px;
+  align-items:center;
+}
+.action-dock.show-proof .action-proof{display:none}
+.action-copy small{
+  background:#efeee7;
+  font-size:11px;
+}
+.action-copy b{font-size:15px}
+.action-copy span{color:#67645d}
+.action-buttons{max-width:360px}
+.action-buttons .primary{min-width:132px;min-height:42px}
+.action-buttons .secondary{min-height:42px}
+.action-buttons .tool{min-height:32px}
+.list{display:grid;gap:8px}
+.list-item{border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--surface-2)}
+.list-item b{display:block;font-size:13px;margin-bottom:4px}
+.list-item span{font-size:12px;color:var(--muted);line-height:1.45}
 .toast{
-  position:fixed;bottom:28px;left:50%;transform:translateX(-50%);
-  background:var(--text);color:#fff;border-radius:8px;
-  padding:10px 22px;font-size:12px;font-weight:500;
-  opacity:0;transition:opacity 0.3s;z-index:999;pointer-events:none;
-  box-shadow:0 4px 16px rgba(0,0,0,0.2);
+  position:fixed;left:50%;bottom:22px;transform:translateX(-50%);
+  background:var(--nav);color:#fff;border-radius:12px;padding:11px 18px;
+  font-size:13px;font-weight:850;box-shadow:var(--shadow);
+  opacity:0;pointer-events:none;transition:opacity .2s;z-index:20;
 }
 .toast.show{opacity:1}
-
-/* 加载脉冲 */
-@keyframes thinking-pulse{
-  0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,0.3)}
-  50%{box-shadow:0 0 0 8px rgba(124,58,237,0)}
+.file-mode{min-height:100vh;display:grid;place-items:center;padding:24px;background:var(--bg)}
+.file-mode-card{width:min(560px,100%);background:#fff;border:1px solid var(--line);border-radius:18px;padding:24px;box-shadow:var(--shadow)}
+.file-mode-card h1{margin:0 0 10px;font-size:24px}
+.file-mode-card p{margin:0 0 16px;color:var(--muted);line-height:1.65}
+@media (max-width:1120px){
+  .app{height:auto;min-height:100vh;grid-template-columns:1fr;grid-template-rows:auto minmax(620px,1fr) 148px auto}
+  .topbar{height:auto;min-height:58px}
+  .topbar-title{justify-content:flex-start}
+  .sidebar{grid-column:1;grid-row:3;margin:0 12px 12px}
+  .workspace{grid-column:1;grid-row:2;margin:12px 12px 0}
+  .inspector{
+    display:block;
+    position:static;
+    width:auto;
+    grid-column:1;
+    grid-row:4;
+    border:1px solid #111;
+    margin:0 12px 12px;
+    max-height:none;
+    box-shadow:none;
+    backdrop-filter:none;
+  }
+  .seed-box{width:360px}
+  .project-intro{grid-template-columns:1fr}
+  .mvp-overview{grid-template-columns:1fr}
+  .direction-panel{grid-template-columns:1fr}
+  .direction-panel>small{grid-row:auto}
+  .flow-strip{justify-content:flex-start;overflow:auto;padding-bottom:1px}
 }
-
-@keyframes nodeIn{
-  from{opacity:0;transform:scale(0.7) translateY(8px)}
-  to{opacity:1;transform:scale(1) translateY(0)}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.001ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.001ms!important;
+    scroll-behavior:auto!important;
+  }
 }
-.node.new{animation:nodeIn 0.4s cubic-bezier(0.34,1.56,0.64,1)}
-
-/* 脉冲点动画 */
-@keyframes dot-bounce{
-  0%,80%,100%{transform:scale(0)}
-  40%{transform:scale(1)}
-}
-.thinking-dots{display:inline-flex;gap:3px;align-items:center}
-.thinking-dots span{
-  width:5px;height:5px;background:var(--purple);border-radius:50%;
-  display:inline-block;animation:dot-bounce 1.2s infinite ease-in-out;
-}
-.thinking-dots span:nth-child(2){animation-delay:0.15s}
-.thinking-dots span:nth-child(3){animation-delay:0.3s}
-
-.spinner{
-  display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.25);
-  border-top-color:#fff;border-radius:50%;animation:spin 0.6s linear infinite;
-}
-@keyframes spin{to{transform:rotate(360deg)}}
-
-/* 全局思考状态栏 */
-.thinking-bar{
-  width:100%;padding:10px 0;
-  background:linear-gradient(90deg,rgba(124,58,237,0.12),rgba(124,58,237,0.18),rgba(124,58,237,0.12));
-  border-bottom:1px solid rgba(124,58,237,0.25);
-  animation:bar-shimmer 2s ease-in-out infinite;
-}
-@keyframes bar-shimmer{
-  0%,100%{background-position:0% 50%}
-  50%{background-position:100% 50%}
-}
-.thinking-bar-inner{
-  display:flex;align-items:center;justify-content:center;gap:10px;
-  font-size:14px;font-weight:600;color:var(--purple);
-}
-.thinking-bar-dots{display:flex;gap:5px;align-items:center}
-.thinking-bar-dots span{
-  display:block;width:8px;height:8px;border-radius:50%;background:var(--purple);
-  animation:bar-dot 1.2s ease-in-out infinite;
-}
-.thinking-bar-dots span:nth-child(2){animation-delay:0.15s}
-.thinking-bar-dots span:nth-child(3){animation-delay:0.3s}
-@keyframes bar-dot{
-  0%,80%,100%{opacity:0.2;transform:scale(0.7)}
-  40%{opacity:1;transform:scale(1.2)}
+@media (max-width:760px){
+  body{overflow:auto}
+  .auth{display:block}
+  .auth-hero{
+    padding:18px 20px 16px;
+    min-height:auto;
+    gap:14px;
+  }
+  .auth-title h1{font-size:25px;line-height:1.06;margin-bottom:8px}
+  .auth-title p{font-size:13px;line-height:1.45;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+  .auth-graph-preview{
+    display:block;
+    max-width:none;
+    min-height:160px;
+    margin-top:2px;
+    border-color:rgba(23,21,16,.85);
+    background-size:auto,auto,auto,22px 22px,22px 22px;
+  }
+  .auth-graph-preview::before{left:12px;top:10px;font-size:11px}
+  .auth-node{width:124px;padding:9px}
+  .auth-node.root{left:auto;right:20px;top:34px;width:126px;transform:none}
+  .auth-node.n1{left:18px;bottom:24px}
+  .auth-node.n2,.auth-node.n3{display:none}
+  .auth-line{display:block;height:1px}
+  .auth-line.l1{width:138px;left:116px;top:94px;transform:rotate(-18deg)}
+  .auth-line.l2{display:none}
+  .auth-line.l3{display:none}
+  .auth-node b{font-size:13px}
+  .auth-node span{font-size:11px;-webkit-line-clamp:2;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden}
+  .auth-panel{padding:10px 20px 22px}
+  .login-card{padding:18px;border-radius:0}
+  .login-card h2{font-size:22px}
+  .login-card p{font-size:13px;line-height:1.45;margin-bottom:12px}
+  .login-summary{display:none}
+  .modal-backdrop{padding:12px;align-items:start;overflow:auto}
+  .project-modal{width:100%;margin:10px 0;background:#fff9ed}
+  .modal-head{padding:16px}
+  .modal-head h2{font-size:23px}
+  .modal-head p{font-size:13px}
+  .modal-grid{display:block;min-height:0}
+  .modal-form{padding:16px;border-right:0;border-bottom:0}
+  .example-row{gap:6px;margin-bottom:12px}
+  .example-row button{min-height:32px;padding:0 9px;font-size:12px}
+  .new-project textarea{min-height:72px}
+  .creation-hint{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .creation-hint div{padding:10px;border-right:1px solid var(--line);border-bottom:0}
+  .creation-hint div:last-child{border-right:0}
+  .creation-hint b{font-size:12px;text-align:center;margin:0}
+  .creation-hint span{display:none}
+  .modal-actions{padding:12px 16px}
+  .app{
+    height:auto;
+    min-height:100vh;
+    display:grid;
+    grid-template-columns:1fr;
+    grid-template-rows:auto auto 96px auto;
+    padding-bottom:94px;
+  }
+  .topbar{
+    position:sticky;
+    top:0;
+    z-index:10;
+    display:grid;
+    grid-template-columns:auto minmax(0,1fr) auto;
+    align-items:center;
+    gap:8px;
+    height:auto;
+    padding:10px;
+  }
+  .topbar .brand{
+    grid-column:1;
+    grid-row:1;
+    min-width:0;
+    width:34px;
+    font-size:20px;
+  }
+  .topbar .brand span:not(.brand-mark){display:none}
+  .topbar-title{display:none}
+  .ai-status{display:none}
+  #chromeToggleBtn{
+    grid-column:3;
+    grid-row:1;
+    white-space:nowrap;
+    min-height:36px;
+    padding:0 10px;
+    font-size:12px;
+  }
+  .export-wrap{
+    grid-column:2;
+    grid-row:2;
+    justify-self:start;
+  }
+  .export-menu{
+    left:0;
+    right:auto;
+    top:42px;
+  }
+  #topNewProjectBtn{
+    grid-column:3;
+    grid-row:2;
+    white-space:nowrap;
+    font-size:13px;
+    padding:0 10px;
+  }
+  .user-pill{
+    grid-column:2;
+    grid-row:1;
+    justify-self:start;
+    max-width:100%;
+  }
+  .user-pill span:last-child{
+    max-width:112px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  #logoutBtn{display:none}
+  .app.chrome-collapsed .topbar{
+    grid-template-columns:auto minmax(0,1fr) auto;
+  }
+  .app.chrome-collapsed .user-pill,
+  .app.chrome-collapsed .export-wrap,
+  .app.chrome-collapsed #topNewProjectBtn{display:none}
+  .topbar .primary,.topbar .secondary{min-height:38px;padding:0 12px}
+  .workspace{margin:10px;border-left:1px solid #111;border-right:1px solid #111}
+  .workspace{grid-column:1;grid-row:2}
+  .project-header{padding:12px 14px}
+  .project-kicker{font-size:11px;padding:3px 7px;margin-bottom:6px}
+  .project-header h1{font-size:25px;line-height:1.04;margin-bottom:6px}
+  .project-header p{font-size:13px;line-height:1.35;white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:1}
+  .mvp-overview{margin-top:10px;gap:8px}
+  .mvp-panel{padding:10px}
+  .mvp-panel b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mvp-panel span{display:none}
+  .mvp-list{flex-wrap:nowrap;overflow:hidden}
+  .mvp-list span{white-space:nowrap}
+  .direction-panel{padding:8px}
+  .direction-panel>small{padding:4px 6px;font-size:10px}
+  .direction-pill{max-width:146px;min-height:42px;padding:7px 8px}
+  .direction-pill b{font-size:12px}
+  .direction-pill span{display:none}
+  .flow-strip{margin-top:10px}
+  .sidebar{margin:0 10px 10px;height:96px}
+  .sidebar{grid-column:1;grid-row:3}
+  .side-section{grid-template-columns:88px minmax(0,1fr)}
+  .side-head{font-size:16px;padding:12px 10px}
+  .side-head span{white-space:nowrap}
+  .sidebar,.inspector{max-height:none}
+  .side-head{display:grid;align-content:center;justify-items:start;gap:10px}
+  .side-head .chip-btn{height:30px;padding:0 8px}
+  .project-list{
+    display:flex;
+    overflow-x:auto;
+    overflow-y:hidden;
+    scroll-snap-type:x proximity;
+  }
+  .project-card{
+    width:168px;
+    flex:0 0 168px;
+    min-width:168px;
+    min-height:100%;
+    padding:12px;
+    scroll-snap-align:start;
+  }
+  .project-card b{font-size:16px;white-space:nowrap;margin-bottom:7px}
+  .project-card span{font-size:11px;line-height:1.35}
+  .inspector{margin:0 10px 10px}
+  .inspector{grid-column:1;grid-row:4}
+  .app[data-stage="2"] .inspector,
+  .app[data-stage="3"] .inspector{display:none}
+  .inspector .decision-row{display:none}
+  body.dock-away .inspector .decision-row{display:grid}
+  .flow-strip{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    width:100%;
+    overflow:visible;
+  }
+  .flow-step{
+    flex:0 0 18px;
+    width:18px;
+    max-width:18px;
+    min-width:18px;
+    min-height:30px;
+    padding:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .flow-step small{display:none}
+  .flow-step b{display:none}
+  .flow-step::before{
+    width:7px;
+    height:7px;
+    flex:0 0 7px;
+  }
+  .flow-step.active{
+    flex:1 1 auto;
+    width:auto;
+    max-width:none;
+    min-width:118px;
+    display:grid;
+    grid-template-columns:8px minmax(0,1fr);
+    column-gap:7px;
+    padding:0 10px;
+  }
+  .flow-step.active b{display:block;font-size:11px;line-height:1.18}
+  .seed-box{width:100%}
+  .canvas{height:590px}
+  .canvas-toolbar{display:none}
+  .node{width:128px;min-height:64px;padding:10px;border-radius:0}
+  .node.root{width:176px;min-height:102px;border-radius:50%;padding:15px}
+  .node.root.root-hub{width:150px;min-height:92px}
+  .node.choice-primary{width:166px;min-height:92px;padding:12px}
+  .node.choice-primary b{font-size:18px}
+  .node.choice-primary span{-webkit-line-clamp:2}
+  .node.root b{font-size:18px}
+  .node,
+  .node.root,
+  .node.root.root-hub,
+  .node.choice-primary{
+    width:144px;
+    height:78px;
+    min-height:78px;
+    border-radius:12px;
+    padding:10px;
+  }
+  .node b,
+  .node.root b,
+  .node.choice-primary b{font-size:14px}
+  .node span,
+  .node.root span,
+  .node.choice-primary span{display:none}
+  .action-dock{
+    display:grid;
+    position:fixed;
+    left:12px;
+    right:12px;
+    bottom:12px;
+    width:auto;
+    transform:none;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:8px;
+    padding:10px;
+    z-index:30;
+    animation:fadeRise .28s ease both;
+    background:rgba(255,253,247,.98);
+    border-color:rgba(23,21,16,.22);
+  }
+  body.dock-away .action-dock{
+    display:none!important;
+    opacity:0!important;
+    pointer-events:none;
+    transform:translateY(8px);
+    animation:none!important;
+  }
+  .action-copy small{display:none}
+  .action-copy b{font-size:15px;white-space:normal}
+  .action-copy > span{display:none}
+  .action-proof{display:none}
+  .action-dock.show-proof .action-proof{display:none}
+  .action-buttons{display:flex;width:auto}
+  .action-buttons .primary{min-width:116px;height:40px}
+  .action-buttons .secondary{height:40px}
+  .action-buttons .tool{display:none}
 }
 </style>
 </head>
 <body>
-
-<!-- 顶栏 -->
-<div class="toolbar">
-  <div class="logo">Canvas<span>Storm</span></div>
-  <div class="sep"></div>
-  <button class="tb" onclick="toggleSessionPanel()">&#x2630; 会话列表</button>
-  <button class="tb" id="btnUndo" onclick="undo()" disabled>&#x21A9; 撤回</button>
-  <button class="tb" onclick="tidyLayout()">&#x25F0; 整理布局</button>
-  <button class="tb" onclick="fitView()">&#x2316; 适应画布</button>
-  <button class="tb" onclick="resetZoom()">1:1</button>
-  <button class="tb" onclick="exportMD()">导出MD</button>
-  <span class="spacer"></span>
-  <span class="zoom-info" id="zoomInfo">100%</span>
-</div>
-
-<!-- 全局思考状态栏 -->
-<div class="thinking-bar" id="thinkingBar" style="display:none">
-  <div class="thinking-bar-inner">
-    <span class="thinking-bar-dots"><span></span><span></span><span></span></span>
-    大模型正在思考中，请稍候...
-  </div>
-</div>
-
-<div class="main-layout">
-
-  <!-- 左侧会话面板 -->
-  <div class="session-panel" id="sessionPanel">
-    <div class="sp-header">
-      <h3>我的会话</h3>
-      <button class="new-session-btn" onclick="createNewSession()" title="新建会话">+</button>
+<section class="auth" id="authView">
+  <div class="auth-hero">
+    <div class="brand"><span class="brand-mark">CS</span><span>CanvasStorm</span></div>
+    <div class="auth-title">
+      <h1>把一个想法，长成一张可落地的功能图。</h1>
+      <p>从一个具体项目点开始，先推荐一个方向，再沿节点继续发散。看到有价值的功能就收藏进备选库，慢慢形成你的产品思路。</p>
     </div>
-    <div class="session-list" id="sessionList"></div>
+    <div class="auth-graph-preview" aria-label="线上衣橱功能图预览">
+      <div class="auth-line l1"></div>
+      <div class="auth-line l2"></div>
+      <div class="auth-line l3"></div>
+      <div class="auth-node root"><small>项目点</small><b>线上衣橱</b><span>把衣服扫进去，继续拆功能。</span></div>
+      <div class="auth-node n1"><small>核心功能</small><b>一键穿搭</b><span>先验证用户是否愿意照着穿。</span></div>
+      <div class="auth-node n2"><small>录入能力</small><b>拍照入库</b><span>降低第一次使用门槛。</span></div>
+      <div class="auth-node n3"><small>增长功能</small><b>一键发穿搭</b><span>验证用户是否真的愿意分享。</span></div>
+    </div>
   </div>
-
-  <!-- 画布 -->
-  <div class="canvas-wrapper">
-    <div class="canvas-container" id="canvasContainer">
-      <div class="grid-bg"></div>
-      <div class="canvas-layer" id="canvasLayer">
-        <svg class="edges-svg" id="edgesSvg"></svg>
+  <div class="auth-panel">
+    <div class="login-card">
+      <span class="login-badge">项目记录</span>
+      <h2>进入你的功能图空间</h2>
+      <p>输入一个名字，就能继续之前的项目记录；不同名字会保留各自的功能图。</p>
+      <div class="login-summary" aria-label="进入后可以做什么">
+        <div><b>按项目保存</b><span>不同用户名保留不同功能图记录。</span></div>
+        <div><b>从节点发散</b><span>选中功能后继续拆下一层。</span></div>
       </div>
+      <div class="field">
+        <label for="loginName">用户名</label>
+        <input id="loginName" name="username" autocomplete="username" spellcheck="false" placeholder="例如：米朵…">
+      </div>
+      <button class="primary wide" id="loginBtn">进入功能图空间</button>
+      <div class="chips">
+        <button class="chip-btn" data-login="米朵">米朵</button>
+        <button class="chip-btn" data-login="产品同学">产品同学</button>
+        <button class="chip-btn" data-login="独立开发者">独立开发者</button>
+      </div>
+      <div class="recent-spaces">
+        <h3>最近项目空间</h3>
+        <div id="recentSpaces"></div>
+      </div>
+    </div>
+  </div>
+</section>
 
-      <!-- 输入引导遮罩 -->
-      <div class="entry-overlay" id="entryOverlay">
-        <div class="entry-card">
-          <h2>Canvas<span>Storm</span></h2>
-          <p class="sub">输入项目想法，AI 帮你发散创新功能点</p>
-          <div class="field-label">DeepSeek API Key</div>
-          <div class="api-row">
-            <input type="password" id="apiKeyInput" placeholder="sk-...">
-            <button onclick="saveApiKey()">保存</button>
+<section class="app hidden" id="appView">
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">CS</span><span>CanvasStorm</span></div>
+    <div class="topbar-title">
+      <b id="topProjectTitle">项目功能图</b>
+      <span id="topProjectHint">市场痛点 → 最小 MVP → 拓展功能池</span>
+    </div>
+    <span class="ai-status" id="aiStatus">AI 检查中</span>
+    <button class="chrome-toggle" id="chromeToggleBtn">收起顶部栏</button>
+    <div class="export-wrap">
+      <button class="secondary" id="exportMenuBtn">导出</button>
+      <div class="export-menu" id="exportMenu">
+        <button id="exportProjectBtn">复制 Markdown</button>
+        <button id="downloadProjectBtn">下载 .md 文件</button>
+      </div>
+    </div>
+    <button class="primary" id="topNewProjectBtn">新建功能图</button>
+    <div class="user-pill"><span class="avatar" id="userAvatar">U</span><span id="userName">用户</span></div>
+    <button class="secondary" id="logoutBtn">退出</button>
+  </header>
+
+  <aside class="sidebar">
+    <div class="side-section">
+      <div class="side-head"><span>我的项目</span><button class="chip-btn" id="newProjectBtn">新建</button></div>
+      <div class="project-list" id="projectList"></div>
+    </div>
+  </aside>
+
+  <main class="workspace">
+    <section class="project-header">
+      <div class="project-intro">
+        <div class="project-copy">
+          <span class="project-kicker" id="projectKicker">当前任务：选一个功能方向</span>
+          <h1 id="projectTitle">线上衣橱功能图</h1>
+          <p id="projectDesc">围绕中心想法生成下一批功能。点击任何节点，可以继续从这个点发散。</p>
+        </div>
+        <div class="flow-strip" aria-label="当前流程">
+          <div class="flow-step done" id="flowProjectStep">
+            <small>1 项目</small>
+            <b id="flowProject">项目 · 线上衣橱</b>
           </div>
-          <div class="field-label">描述你的项目</div>
-          <textarea id="projectInput" placeholder="例如：一个面向独立开发者的项目管理工具，需要任务看板、时间追踪、自动排期..."></textarea>
-          <div class="param-row">
-            <div class="param-item">
-              <span class="param-label">生成数量</span>
-              <input type="number" id="countInput" value="6" min="2" max="15" style="width:60px">
-            </div>
-            <select id="styleSelect">
-              <option value="balanced">均衡发散</option>
-              <option value="bold">大胆创新</option>
-              <option value="practical">务实优先</option>
-            </select>
+          <div class="flow-step active" id="flowDirectionStep">
+            <small>2 方向</small>
+            <b id="flowNode">当前方向 · 中心想法</b>
           </div>
-          <button class="btn-launch" id="btnLaunch" onclick="launchSession()">&#x2728; 开始发散</button>
-          <p class="entry-footer">点击节点弹出操作菜单 · 滚轮缩放 · 拖拽平移 · Ctrl+Z 撤回</p>
+          <div class="flow-step" id="flowExpandStep">
+            <small>3 拆解</small>
+            <b>生成下一层</b>
+          </div>
+          <div class="flow-step" id="flowDecisionStep">
+            <small>4 收藏</small>
+            <b>加入备选</b>
+          </div>
         </div>
       </div>
+      <div class="mvp-overview" id="mvpOverview" aria-label="核心 MVP 和功能方向"></div>
+    <div class="seed-box">
+      <label for="seedInput">现在从这个点继续</label>
+      <div class="seed-row">
+        <input id="seedInput" name="currentDirection" autocomplete="off" placeholder="先选择一个节点…" readonly>
+        <button class="primary" id="generateBtn">生成下一层功能</button>
+      </div>
+    </div>
+    </section>
+    <section class="canvas" id="canvas">
+      <div class="canvas-toolbar" aria-label="功能图状态">
+        <div class="canvas-guide">
+          <small id="canvasStepBadge">第 2 步</small>
+          <b id="canvasActionTitle">当前任务：选一个功能方向</b>
+          <span id="canvasActionHint">点推荐节点，先沿一个最能证明价值的方向往下拆。</span>
+        </div>
+        <div class="canvas-stats">
+          <span class="canvas-pill">功能点 <b id="mapNodeCount">0</b></span>
+          <span class="canvas-pill">备选 <b id="mapKeepCount">0</b></span>
+          <span class="canvas-pill">不做 <b id="mapDropCount">0</b></span>
+        </div>
+      </div>
+      <div class="map-letters" aria-hidden="true">
+        <span>CANVAS STORM CANVAS STORM CANVAS STORM</span>
+        <span>STORM CANVAS STORM CANVAS STORM CANVAS</span>
+        <span>CANVAS STORM CANVAS STORM CANVAS STORM</span>
+        <span>STORM CANVAS STORM CANVAS STORM CANVAS</span>
+      </div>
+      <div class="stage-reveal" aria-hidden="true"></div>
+      <div class="action-dock" id="actionDock" aria-live="polite"></div>
+      <svg class="graph-svg" id="graphSvg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg>
+      <div class="graph-stage" id="graphStage"></div>
+      <div class="canvas-empty hidden" id="emptyState">
+        <div class="empty-card">
+          <h2>先创建一个中心想法</h2>
+          <p>例如“线上衣橱”。CanvasStorm 会从这个点生成功能分支，你可以继续点某个分支往下发散。</p>
+          <button class="primary" id="emptyCreateBtn">使用线上衣橱示例</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <aside class="inspector">
+    <section class="inspector-card" id="nodeDetail"></section>
+    <section class="inspector-card">
+      <div class="decision-title">
+        <h2>灵感备选库</h2>
+        <span>先看一个，但可以收藏多个</span>
+      </div>
+      <div class="decision-board" id="decisionBoard"></div>
+    </section>
+  </aside>
+</section>
+
+<section class="modal-backdrop hidden" id="projectModal" aria-modal="true" role="dialog" aria-labelledby="projectModalTitle">
+  <div class="project-modal">
+    <div class="modal-head">
+      <div>
+        <h2 id="projectModalTitle">新建功能图</h2>
+        <p>写项目点和真实场景，创建后自动生成第一层功能分支。</p>
+      </div>
+      <button class="icon-btn" id="closeProjectModal" aria-label="关闭">×</button>
+    </div>
+    <div class="modal-grid">
+      <div class="modal-form">
+        <div class="example-row" aria-label="示例项目">
+          <button type="button" data-project-example="wardrobe">线上衣橱</button>
+          <button type="button" data-project-example="travel">旅行打包助手</button>
+          <button type="button" data-project-example="study">学习计划助手</button>
+          <button type="button" data-project-example="pet">宠物健康记录</button>
+        </div>
+        <div class="new-project">
+          <div class="field">
+            <label for="newProjectTitle">项目点</label>
+            <input id="newProjectTitle" name="projectTitle" autocomplete="off" placeholder="例如：线上衣橱…">
+          </div>
+          <div class="field">
+            <label for="newProjectSeed">真实场景</label>
+            <textarea id="newProjectSeed" name="projectScenario" autocomplete="off" placeholder="例如：把衣服拍照录入后，帮我搭配、整理、发布穿搭…"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="creation-hint" aria-label="创建后流程">
+        <div><b>中心节点</b><span>项目点会成为功能图中心。</span></div>
+        <div><b>具体分支</b><span>真实场景会约束 AI 输出。</span></div>
+        <div><b>先看一个</b><span>进入后先推荐一个可探索方向。</span></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="secondary" id="cancelProjectBtn">取消</button>
+      <button class="primary" id="createProjectBtn">创建功能图</button>
     </div>
   </div>
+</section>
 
-</div>
+<section class="modal-backdrop hidden" id="nodeModal" aria-modal="true" role="dialog" aria-labelledby="nodeModalTitle">
+  <div class="project-modal">
+    <div class="modal-head">
+      <div>
+        <h2 id="nodeModalTitle">编辑功能点</h2>
+        <p id="nodeModalDesc">修改当前功能点，或手动补一个新的点子。</p>
+      </div>
+      <button class="icon-btn" id="closeNodeModal" aria-label="关闭">×</button>
+    </div>
+    <div class="modal-grid">
+      <div class="modal-form">
+        <div class="new-project">
+          <div class="field">
+            <label for="nodeTitleInput">功能名</label>
+            <input id="nodeTitleInput" name="nodeTitle" autocomplete="off" placeholder="例如：一键穿搭">
+          </div>
+          <div class="field">
+            <label for="nodeTypeInput">类型</label>
+            <input id="nodeTypeInput" name="nodeType" autocomplete="off" placeholder="例如：核心功能 / 体验功能 / 增长功能">
+          </div>
+          <div class="field">
+            <label for="nodeDescInput">说明</label>
+            <textarea id="nodeDescInput" name="nodeDesc" autocomplete="off" placeholder="这个功能具体做什么"></textarea>
+          </div>
+          <div class="field">
+            <label for="nodePainInput">痛点</label>
+            <textarea id="nodePainInput" name="nodePain" autocomplete="off" placeholder="用户为什么需要它"></textarea>
+          </div>
+          <div class="field">
+            <label for="nodeValidationInput">验证</label>
+            <textarea id="nodeValidationInput" name="nodeValidation" autocomplete="off" placeholder="用什么最小动作验证它是否有用"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="creation-hint" aria-label="功能点编辑说明">
+        <div><b>编辑</b><span>改清楚标题、说明和真实痛点。</span></div>
+        <div><b>手动加点子</b><span>不用等 AI，也能自己补功能。</span></div>
+        <div><b>会保存</b><span>保存后进入当前项目记录。</span></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="secondary" id="cancelNodeBtn">取消</button>
+      <button class="primary" id="saveNodeBtn">保存</button>
+    </div>
+  </div>
+</section>
 
 <div class="toast" id="toast"></div>
-<div class="ctx-menu" id="ctxMenu" style="display:none"></div>
 
 <script>
-// ============ 存储层 ============
-const SESSIONS_KEY='cs_sessions', ACTIVE_KEY='cs_active', API_KEY_KEY='cs_apikey';
-const MID=6000;
-
-function loadSessions(){try{return JSON.parse(localStorage.getItem(SESSIONS_KEY)||'[]')}catch(e){return[]}}
-function saveSessions(s){localStorage.setItem(SESSIONS_KEY,JSON.stringify(s))}
-function getActiveId(){return localStorage.getItem(ACTIVE_KEY)}
-function setActiveId(id){localStorage.setItem(ACTIVE_KEY,id)}
-
-// ============ 运行时状态 ============
-let currentSession=null, selectedId=null;
-let zoom=1, panX=0, panY=0;
-const MAX_UNDO=50;
-let undoStack=[];
-
-// DOM
-const canvasContainer=document.getElementById('canvasContainer');
-const canvasLayer=document.getElementById('canvasLayer');
-const edgesSvg=document.getElementById('edgesSvg');
-const zoomInfo=document.getElementById('zoomInfo');
-const entryOverlay=document.getElementById('entryOverlay');
-const ctxMenu=document.getElementById('ctxMenu');
-const btnUndo=document.getElementById('btnUndo');
-
-// ============ 撤回系统 ============
-function pushUndo() {
-  if(!currentSession) return;
-  undoStack.push({
-    nodes: JSON.parse(JSON.stringify(currentSession.nodes)),
-    edges: JSON.parse(JSON.stringify(currentSession.edges)),
-    nextId: currentSession.nextId,
+const LOCAL_APP_URL='http://127.0.0.1:3000/';
+if(location.protocol==='file:'){
+  window.__FILE_MODE=true;
+  document.addEventListener('DOMContentLoaded',()=>{
+    document.body.innerHTML=`<div class="file-mode"><div class="file-mode-card">
+      <h1>CanvasStorm 需要通过本地服务打开</h1>
+      <p>你现在打开的是本地文件，AI、用户项目记录和接口状态都不会正常工作。正在尝试跳转到本地服务入口。</p>
+      <button class="primary" onclick="location.href='${LOCAL_APP_URL}'">打开本地服务</button>
+    </div></div>`;
+    setTimeout(()=>{location.href=LOCAL_APP_URL},800);
   });
-  if(undoStack.length>MAX_UNDO) undoStack.shift();
-  updateUndoButton();
 }
-function undo() {
-  if(undoStack.length===0) return;
-  const snap=undoStack.pop();
-  currentSession.nodes=snap.nodes;
-  currentSession.edges=snap.edges;
-  currentSession.nextId=snap.nextId;
-  selectedId=null;
-  saveCurrentSession();
-  renderAll();
-  closeContextMenu();
-  updateUndoButton();
-  showToast('已撤回');
-}
-function updateUndoButton(){btnUndo.disabled=undoStack.length===0}
 
-// ============ 会话管理 ============
-function createNewSession(){
-  const name=prompt('输入会话名称：');
-  if(!name||!name.trim())return;
-  const sessions=loadSessions();
-  const id='cs_'+Date.now();
-  sessions.unshift({id,name:name.trim(),nodes:[],edges:[],nextId:1,createdAt:new Date().toISOString()});
-  saveSessions(sessions);
-  switchToSession(id);
-  // 空会话 → 显示输入引导
-  entryOverlay.classList.remove('hidden');
-  document.getElementById('projectInput').value='';
-  document.getElementById('projectInput').focus();
-  showToast('请输入项目想法，然后点击「开始发散」');
-}
-function switchToSession(id){
-  const sessions=loadSessions();
-  const session=sessions.find(s=>s.id===id);
-  if(!session)return;
-  setActiveId(id);
-  currentSession=JSON.parse(JSON.stringify(session));
-  selectedId=null;undoStack=[];
-  const hasNodes=currentSession.nodes&&currentSession.nodes.length>0;
-  if(hasNodes){
-    entryOverlay.classList.add('hidden');
-  } else {
-    entryOverlay.classList.remove('hidden');
-    document.getElementById('projectInput').focus();
+const API_BASE=(()=>{
+  if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return `${location.origin}/api`;
+  return '/api';
+})();
+const USER_KEY='cs_graph_user';
+const USERS_KEY='cs_graph_users';
+const PROJECT_PREFIX='cs_graph_projects_';
+const PROJECT_SCHEMA_VERSION=2;
+let activeUser='';
+let projects=[];
+let activeProjectId='';
+let activeNodeId='';
+let aiStatus={configured:false,model:'deepseek-chat'};
+let appVersion=null;
+let projectSyncReady=false;
+let projectSyncTimer=null;
+let nodeModalState={mode:'edit',nodeId:'',parentId:''};
+
+const templates={
+  travel:{
+    title:'AI 旅行打包助手',
+    seed:'出发前输入目的地、天数、天气和行程类型，帮用户生成可执行的行李清单，并提醒容易遗漏的物品。',
+    nodes:[
+      node('root','AI 旅行打包助手','根据目的地、天气和行程，生成一份能直接照着收拾的行李清单。',null,50,52,'中心想法','用户出发前总怕漏带东西，又不想自己从空白清单开始想。','找 5 个近期出行用户，用手工清单验证是否真的减少遗漏和焦虑。','keep'),
+      node('packing','智能行李清单','按天数、天气和活动类型生成可勾选清单。','root',17,30,'核心功能','用户最先需要的是一份能直接照着收拾的清单。','用 3 种真实行程手工生成清单，看用户是否愿意照着打包。','keep'),
+      node('weather','天气衣物建议','把温度、降雨和昼夜温差转成具体衣物建议。','root',83,30,'体验功能','天气 App 给的是数字，用户仍要自己换算带什么衣服。','让用户对比天气数字和衣物建议，记录哪个更能减少决策时间。','maybe'),
+      node('missing','遗漏风险提醒','根据目的地和交通方式提醒证件、充电器、药品等高风险遗漏项。','root',18,84,'验证功能','用户真正痛的是临出门才发现关键物品没带。','让用户在出发前勾选提醒，统计是否补充了原本没想到的物品。','maybe'),
+      node('share','同行共享清单','把清单分享给同行人一起补充和勾选。','root',82,84,'暂缓功能','多人旅行有价值，但会把早期范围扩大到协作。','先用截图或链接手工分享，确认多人协作是否高频再开发。','drop')
+    ]
+  },
+  wardrobe:{
+    title:'线上衣橱',
+    seed:'把我的衣服拍照录入，帮我管理衣橱、生成穿搭，并把喜欢的搭配发布到社交媒体。',
+    nodes:[
+      node('root','线上衣橱','拍照录入衣服，围绕搭配、整理和分享持续发散。',null,50,52,'中心想法','用户想少花时间思考穿什么。','先让 5 个用户录入 20 件衣服，看是否愿意第二天继续回来用。','keep'),
+      node('outfit','一键穿搭','根据天气、场景和已有衣服自动推荐今日穿搭。','root',17,30,'核心功能','用户每天出门前都要快速做搭配决策。','手工用 30 套衣服生成搭配，让用户评分是否愿意照穿。','keep'),
+      node('scan','拍照入库','拍照识别衣服类别、颜色、季节和风格标签。','root',83,30,'录入能力','录入成本太高会让衣橱工具失败。','先做半自动标签，测试 10 分钟内能否录入 20 件。','keep'),
+      node('social','一键发穿搭','把今日穿搭生成小红书/朋友圈风格的图片和文案。','root',18,84,'增长功能','用户愿意分享好看的搭配，但不想重新排版写文案。','生成 3 种分享卡片，看用户是否真的发布。','maybe'),
+      node('packing','旅行打包清单','按目的地天气和天数，自动列出要带的衣服组合。','root',50,84,'延展功能','出行前搭配决策更集中，需求更强。','让用户输入 3 天行程，看清单是否减少遗漏。','maybe')
+    ]
+  },
+  resume:{
+    title:'AI 简历优化助手',
+    seed:'帮助应届生把普通简历改成更匹配目标岗位的版本。',
+    nodes:[
+      node('root','AI 简历优化助手','输入简历和岗位 JD，生成更匹配岗位的修改建议。',null,50,52,'中心想法','用户不知道如何针对岗位改写经历。','找 10 个应届生做手工改写，观察是否愿意第二次使用。','keep'),
+      node('jd','岗位匹配改写','指出哪些经历该前置、删减或补充量化结果。','root',17,30,'核心功能','简历像流水账，不能对应岗位要求。','用 3 份 JD 对同一简历改写，统计保留建议比例。','keep'),
+      node('score','匹配度评分','给简历和岗位的匹配度打分，并解释扣分原因。','root',83,30,'反馈功能','用户需要知道为什么这份简历不够匹配。','让用户对评分解释做可信度评分。','maybe'),
+      node('cover','求职信生成','根据岗位和简历生成一版短求职信。','root',18,84,'暂缓功能','不是所有岗位都需要求职信，可能偏离核心。','先放进不做清单，等简历改写被验证后再考虑。','drop')
+    ]
   }
-  updateUndoButton();
-  renderAll();
-  renderSessionList();
-  if(hasNodes) fitView();
+};
+
+function node(id,title,desc,parentId,x,y,type,pain,validation,decision='maybe',role){
+  const nodeRole=role||(!parentId?'project':(parentId==='root'?'direction':'feature'));
+  return {id,title,desc,parentId,x,y,type,pain,validation,decision,role:nodeRole,childrenGenerated:false};
 }
-function saveCurrentSession(){
-  if(!currentSession)return;
-  const sessions=loadSessions();
-  const idx=sessions.findIndex(s=>s.id===currentSession.id);
-  if(idx!==-1)sessions[idx]={...sessions[idx],nodes:currentSession.nodes,edges:currentSession.edges,nextId:currentSession.nextId};
-  else sessions.unshift(currentSession);
-  saveSessions(sessions);
-  renderSessionList();
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function formatTime(value){
+  const date=value?new Date(value):new Date();
+  if(Number.isNaN(date.getTime()))return '';
+  return date.toLocaleString('zh-CN',{hour12:false});
 }
-function deleteSession(id,e){
-  e.stopPropagation();
-  if(!confirm('确定删除这个会话？'))return;
-  const sessions=loadSessions().filter(s=>s.id!==id);
-  saveSessions(sessions);
-  if(getActiveId()===id){
-    if(sessions.length>0)switchToSession(sessions[0].id);
-    else{currentSession=null;selectedId=null;renderAll();entryOverlay.classList.remove('hidden')}
+function uid(prefix='id'){return prefix+Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function storageKey(){return PROJECT_PREFIX+activeUser}
+function currentProject(){return projects.find(p=>p.id===activeProjectId)||projects[0]||null}
+function currentNode(){const p=currentProject();return p?.nodes.find(n=>n.id===activeNodeId)||p?.nodes[0]||null}
+function rootNodeId(project){return project?.nodes.find(n=>!n.parentId)?.id||project?.nodes[0]?.id||''}
+function featureMetaFor(item={}){
+  const text=`${item.title||''} ${item.desc||''} ${item.type||''} ${item.pain||''}`.toLowerCase();
+  const type=item.type||'';
+  let difficulty='中';
+  let estimate='3-5 天';
+  let innovation='把真实使用场景里的阻塞点变成一个可执行入口。';
+  if(/暂缓|协作|分享|社交|多人|权限|同步/.test(type+text)){
+    difficulty='高';
+    estimate='1-2 周';
+    innovation='把多人责任和传播动作放进功能流，但需要等核心体验成立后再做。';
+  }else if(/录入|模板|清单|提醒|记录|入口|导出/.test(type+text)){
+    difficulty='低';
+    estimate='2-3 天';
+    innovation='降低第一次使用门槛，让用户更快完成一次有效结果。';
+  }else if(/天气|风险|匹配|推荐|识别|生成|解释|摘要/.test(type+text)){
+    difficulty='中';
+    estimate='3-5 天';
+    innovation='不是展示信息，而是把信息翻译成用户下一步能直接照做的判断。';
   }
-  renderSessionList();
+  if(/风险|遗漏|证件|充电器|异常|冲突/.test(text))innovation='做风险缺口扫描，提前发现用户临到行动才会想起的问题。';
+  if(/天气|衣物|穿搭|打包/.test(text))innovation='把天气、场景和已有物品翻译成“今天该带什么/穿什么”。';
+  if(/模板|复用|历史|常旅客/.test(text))innovation='把用户真实完成过的结果沉淀成个人记忆，提升第二次使用效率。';
+  if(/分享|同行|协作|成员/.test(text))innovation='把“谁负责什么”明确到任务层，减少多人协作里的漏项。';
+  return {
+    difficulty:item.difficulty||item.effort||difficulty,
+    estimate:item.estimate||item.time||estimate,
+    innovation:item.innovation||item.novelty||innovation,
+    validation:item.validation||'找 3 个目标用户做一次开发前验证。'
+  };
 }
-function renderSessionList(){
-  const sessions=loadSessions();
-  const list=document.getElementById('sessionList');
-  const activeId=currentSession?.id;
-  list.innerHTML=sessions.map(s=>`
-    <div class="session-item${s.id===activeId?' active':''}" onclick="switchToSession('${s.id}')">
-      <span class="s-dot"></span>
-      <div class="s-info">
-        <div class="s-name">${escHtml(s.name)}</div>
-        <div class="s-meta">${(s.nodes||[]).length} 节点 · ${fmtDate(s.createdAt)}</div>
-      </div>
-      <button class="s-del" onclick="deleteSession('${s.id}',event)">×</button>
-    </div>`).join('');
+function agentBriefFor(item={},project=currentProject()){
+  const meta=featureMetaFor(item);
+  const title=item.title||'当前功能';
+  return `实现“${title}”：输入项目背景、用户场景和必要参数，输出可直接使用的结果；验收标准是用户能在一次真实场景中完成任务，并能解释为什么这个功能解决了痛点。预计 ${meta.estimate}，难度 ${meta.difficulty}。`;
 }
-function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
-function fmtDate(iso){if(!iso)return'';const d=new Date(iso);return`${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`}
-function toggleSessionPanel(){document.getElementById('sessionPanel').classList.toggle('collapsed')}
-
-// ============ 节点布局算法（扇形辐射，动态防重叠） ============
-function layoutChildren(parentId) {
-  if(!currentSession) return;
-  const children = currentSession.nodes.filter(n => n.parentId === parentId);
-  if(children.length === 0) return;
-  const parent = currentSession.nodes.find(n => n.id === parentId);
-  if(!parent) return;
-
-  const isRoot = parent.parentId === null;
-  const pW = isRoot ? 380 : 240;
-  const pH = isRoot ? 200 : 160;
-  const cW = 240, cH = 160;
-  const gap = 24; // 节点间最小间距
-
-  const cx = parent.x + pW/2;
-  const cy = parent.y + pH/2;
-
-  // 按创新度排序（低→高，从左下到右上）
-  children.sort((a,b) => (a.innovation||0)-(b.innovation||0));
-
-  if(children.length === 1){
-    children[0].x = cx + 200 - cW/2;
-    children[0].y = cy - cH/2;
+function saveUsers(){
+  const users=JSON.parse(localStorage.getItem(USERS_KEY)||'[]');
+  if(activeUser) {
+    localStorage.setItem(USERS_KEY,JSON.stringify([...users.filter(u=>u!==activeUser),activeUser]));
+  }
+}
+function savedUsers(){
+  try{return JSON.parse(localStorage.getItem(USERS_KEY)||'[]')}catch(e){return []}
+}
+function projectsForUser(name){
+  try{return JSON.parse(localStorage.getItem(PROJECT_PREFIX+name)||'[]')}catch(e){return []}
+}
+function renderRecentSpaces(){
+  const holder=document.getElementById('recentSpaces');
+  if(!holder)return;
+  const users=savedUsers().filter(Boolean).slice(-4).reverse();
+  if(!users.length){
+    holder.innerHTML='<div class="recent-empty">还没有项目记录。输入名字进入后，这里会出现你的功能图空间。</div>';
     return;
   }
-
-  // 动态计算：确保相邻节点不重叠
-  const arcSpan = isRoot ? 150 : 100;          // 扇形展开角度
-  const maxRadius = isRoot ? 700 : 550;         // 最大半径上限
-  const minRadius = isRoot ? 300 : 220;         // 最小半径
-
-  // 相邻节点角度间隔
-  const stepDeg = arcSpan / (children.length - 1);
-  const stepRad = stepDeg * Math.PI / 180;
-
-  // 不重叠所需最小半径：弦长 ≥ cW + gap
-  const needRadius = (cW + gap) / (2 * Math.sin(stepRad / 2));
-  const radius = Math.min(maxRadius, Math.max(minRadius, needRadius));
-
-  const startDeg = -arcSpan / 2;
-
-  children.forEach((child, i) => {
-    const angle = (startDeg + i * stepDeg) * Math.PI / 180;
-    child.x = cx + radius * Math.cos(angle) - cW/2;
-    child.y = cy + radius * Math.sin(angle) - cH/2;
-  });
+  holder.innerHTML=users.map(name=>{
+    const userProjects=projectsForUser(name);
+    const activeId=localStorage.getItem(PROJECT_PREFIX+name+':active');
+    const activeProject=userProjects.find(p=>p.id===activeId)||userProjects[0];
+    const title=activeProject?.title||'新项目空间';
+    return `<button class="space-card" data-login="${esc(name)}">
+      <span><b>${esc(name)}</b><span>${userProjects.length||0} 个项目 · 最近：${esc(title)}</span></span>
+      <small>继续</small>
+    </button>`;
+  }).join('');
+  holder.querySelectorAll('[data-login]').forEach(btn=>btn.onclick=()=>login(btn.dataset.login));
 }
-
-// 整理所有节点布局
-function tidyLayout(){
-  if(!currentSession) return;
-  pushUndo();
-  // 收集所有有子节点的节点，从根开始递归整理
-  function tidyChildren(pid){
-    layoutChildren(pid);
-    const kids = currentSession.nodes.filter(n => n.parentId === pid);
-    kids.forEach(k => tidyChildren(k.id));
-  }
-  tidyChildren('root');
-  saveCurrentSession();
-  renderAll();
-  showToast('布局已整理');
+function loadLocalProjects(){
+  try{projects=JSON.parse(localStorage.getItem(storageKey())||'[]')}catch(e){projects=[]}
 }
-
-function getDepth(nodeId) {
-  let d = 0;
-  let cur = nodeId;
-  while(cur) {
-    const node = currentSession.nodes.find(n=>n.id===cur);
-    if(!node || node.parentId===null) break;
-    cur = node.parentId;
-    d++;
-  }
-  return d;
-}
-
-// ============ 启动会话 ============
-async function launchSession(){
-  const input=document.getElementById('projectInput').value.trim();
-  if(!input){showToast('请输入项目想法');return}
-  const btn=document.getElementById('btnLaunch');
-  btn.classList.add('loading');
-  btn.innerHTML='<span class="spinner"></span> AI 发散中...';
-
-  const name=input.length>20?input.substring(0,20)+'...':input;
-  let session;
-
-  // 如果当前已有空会话，复用；否则新建
-  if(currentSession && currentSession.nodes && currentSession.nodes.length===0){
-    session = {
-      ...currentSession,
-      name,
-      nodes:[{id:'root',parentId:null,name:name,desc:input,x:MID,y:MID,thinking:true}],
-      nextId:1,
-    };
-    // 更新存储
-    const sessions=loadSessions();
-    const idx=sessions.findIndex(s=>s.id===currentSession.id);
-    if(idx!==-1) sessions[idx] = session;
-    saveSessions(sessions);
-  } else {
-    const id='cs_'+Date.now();
-    session={id,name,nodes:[{id:'root',parentId:null,name:name,desc:input,x:MID,y:MID,thinking:true}],edges:[],nextId:1,createdAt:new Date().toISOString()};
-    const sessions=loadSessions();
-    sessions.unshift(session);
-    saveSessions(sessions);
-  }
-
-  currentSession=JSON.parse(JSON.stringify(session));
-  selectedId=null;undoStack=[];
-  entryOverlay.classList.add('hidden');
-  renderAll();renderSessionList();
-  pushUndo();saveCurrentSession();
-
-  document.getElementById('projectInput').value='';
-
-  await divergeNodeAPI('root');
-  btn.classList.remove('loading');
-  btn.innerHTML='&#x2728; 开始发散';
-  fitView();
-}
-
-// ============ DeepSeek API ============
-function getApiKey(){return localStorage.getItem(API_KEY_KEY)||''}
-function saveApiKey(){const k=document.getElementById('apiKeyInput').value.trim();if(k){localStorage.setItem(API_KEY_KEY,k);showToast('API Key 已保存')}}
-
-function buildSystemPrompt(style){
-  const styleMap={
-    balanced:'发散时难度、创新、实用各维度均匀分布。',
-    bold:'优先产出高创新度(≥7分)的功能点。不少于一半的创新度≥7。',
-    practical:'优先产出高实用(≥7分)+低难度(≤5分)的功能点。',
-  };
-  return `你是顶级产品策略顾问，专门做"扎根式功能发散"。
-
-## 核心规则
-1. 只能围绕用户描述的项目领域延伸，不得偏离核心场景。
-2. 批内功能点必须差异化，本质相同的只保留更好的。
-
-## 评分标准
-创新度 1-10：1-3=市场标配，4-6=少量竞品有，7-8=鲜有同类，9-10=开创性。
-难度 1-10：1-3=几小时纯前端，4-6=1-2周需后端，7-8=1-2月复杂系统，9-10=自研模型/硬件。
-实用度 1-10：1-3=少数人偶尔用，4-6=部分用户需要，7-8=多数目标用户需要，9-10=核心刚需。
-
-## 输出格式
-只输出纯JSON数组，无markdown包裹。每个元素：
-{"name":"≤10字","desc":"25-50字","difficulty":整数,"innovation":一位小数,"practicality":一位小数,"category":"AI/ML|交互体验|效率工具|协作社交|数据分析|增长留存","impl_note":"15-30字技术方案"}
-
-风格：${styleMap[style]||styleMap.balanced}`;
-}
-
-function buildUserPrompt(userInput,count,depthContext){
-  return `项目：${userInput}\n\n生成 ${count} 个功能点。${depthContext||''}`;
-}
-
-async function callDeepSeek(systemPrompt,userPrompt){
-  const apiKey=getApiKey();
-  if(!apiKey)throw new Error('请先设置 DeepSeek API Key');
-  const resp=await fetch('https://api.deepseek.com/chat/completions',{
-    method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},
-    body:JSON.stringify({model:'deepseek-chat',messages:[{role:'system',content:systemPrompt},{role:'user',content:userPrompt}],temperature:0.8,max_tokens:4096})
-  });
-  if(!resp.ok){const err=await resp.text();throw new Error(`API ${resp.status}: ${err}`)}
-  return (await resp.json()).choices?.[0]?.message?.content||'';
-}
-
-function parseIdeasFromResponse(content){
-  let json=content.trim();
-  const match=json.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if(match)json=match[1].trim();
-  try{const ideas=JSON.parse(json);if(Array.isArray(ideas))return ideas}catch(e){}
-  const arrMatch=json.match(/\[[\s\S]*\]/);
-  if(arrMatch)try{return JSON.parse(arrMatch[0])}catch(e2){}
-  throw new Error('无法解析AI返回的数据');
-}
-
-// ============ 发散（API） ============
-async function divergeNodeAPI(nodeId){
-  if(!currentSession)return;
-  const node=currentSession.nodes.find(n=>n.id===nodeId);
-  if(!node)return;
-  const count=parseInt(document.getElementById('countInput').value);
-  const style=document.getElementById('styleSelect').value;
-  const isRoot=node.parentId===null;
-
+async function loadProjects(){
+  projectSyncReady=false;
+  loadLocalProjects();
   try{
-    const systemPrompt=buildSystemPrompt(style);
-    const depthContext=isRoot?'':`基于"${node.name}"做深度延伸子功能。`;
-    const userPrompt=buildUserPrompt(isRoot?node.desc:node.name,count,depthContext);
-    const content=await callDeepSeek(systemPrompt,userPrompt);
-    const ideas=parseIdeasFromResponse(content);
-    addChildren(nodeId,ideas);
-    return true;
-  }catch(err){
-    console.error(err);
-    showToast('API调用失败：'+err.message+'，使用本地备用数据');
-    addChildrenMock(nodeId);
-    return false;
-  }
-}
-
-function addChildren(nodeId,ideas){
-  if(!currentSession)return;
-  pushUndo();
-
-  // 清除 thinking 标记
-  const parentNode=currentSession.nodes.find(n=>n.id===nodeId);
-  if(parentNode) delete parentNode.thinking;
-
-  ideas.forEach((idea,i)=>{
-    const child={
-      id:'n'+(currentSession.nextId++),parentId:nodeId,
-      name:idea.name||'未命名',desc:idea.desc||'',
-      difficulty:Math.max(1,Math.min(10,Math.round(idea.difficulty||5))),
-      innovation:Math.max(1,Math.min(10,parseFloat((idea.innovation||5).toFixed(1)))),
-      practicality:Math.max(1,Math.min(10,parseFloat((idea.practicality||5).toFixed(1)))),
-      category:idea.category||'效率工具',impl_note:idea.impl_note||'',
-      x:0,y:0,
-    };
-    currentSession.nodes.push(child);
-    currentSession.edges.push({from:nodeId,to:child.id});
-  });
-
-  // 布局
-  layoutChildren(nodeId);
-
-  saveCurrentSession();
-  renderAll();
-
-  // 渐入动画
-  ideas.forEach((_,i)=>{
-    const childId='n'+(currentSession.nextId-ideas.length+i);
-    setTimeout(()=>{
-      const el=document.getElementById(childId);
-      if(el)el.classList.add('new');
-    },i*60);
-  });
-
-  updateUndoButton();
-  showToast(`已发散 ${ideas.length} 个功能点`);
-}
-
-// ============ Mock 降级 ============
-const MOCK_POOL=[
-  {name:'AI精力曲线学习',desc:'分析历史数据自动学习高效时段动态调整任务排期',difficulty:6,innovation:8.5,practicality:9.2,category:'AI/ML',impl_note:'滑动窗口统计+本地ONNX推理'},
-  {name:'语音快速建任务',desc:'自然语言语音转结构化任务自动识别日期和优先级',difficulty:3,innovation:6.5,practicality:8.0,category:'交互体验',impl_note:'SpeechRecognition API+正则提取'},
-  {name:'虚拟Coworking房间',desc:'多人同时静音在线工作集成番茄钟同步',difficulty:8,innovation:9.0,practicality:6.5,category:'协作社交',impl_note:'WebRTC P2P同步'},
-  {name:'跨时区协作感知',desc:'自动检测双方时区推荐最佳会议时间',difficulty:2,innovation:5.0,practicality:8.5,category:'效率工具',impl_note:'Intl.DateTimeFormat API'},
-  {name:'智能提醒引擎',desc:'结合紧急度和用户状态智能决定提醒时机',difficulty:5,innovation:7.5,practicality:9.0,category:'AI/ML',impl_note:'多因子加权模型'},
-  {name:'习惯养成追踪',desc:'重复任务转习惯计划可视化连续天数',difficulty:3,innovation:6.0,practicality:8.8,category:'增长留存',impl_note:'热力图+streak计数'},
-  {name:'多日历智能聚合',desc:'聚合多日历源语义去重合并相似事件',difficulty:4,innovation:6.5,practicality:8.5,category:'效率工具',impl_note:'OAuth2+NLP相似度'},
-  {name:'任务依赖图谱',desc:'识别任务依赖关系高亮关键路径',difficulty:7,innovation:8.0,practicality:7.5,category:'数据分析',impl_note:'DAG+拓扑排序'},
-  {name:'情绪感知排程',desc:'心情打卡后动态调整任务难度分配',difficulty:5,innovation:8.5,practicality:7.0,category:'AI/ML',impl_note:'情绪向量→任务匹配'},
-  {name:'一键周报生成',desc:'日程数据自动生成结构化周报',difficulty:3,innovation:6.0,practicality:9.0,category:'效率工具',impl_note:'模板引擎+数据聚合'},
-  {name:'场景化工作模式',desc:'预设深度工作/会议日模式自动调整布局',difficulty:3,innovation:5.5,practicality:8.2,category:'交互体验',impl_note:'CSS切换+通知过滤'},
-  {name:'进度预测引擎',desc:'基于历史速度预测里程碑达成时间',difficulty:6,innovation:7.5,practicality:8.0,category:'AI/ML',impl_note:'蒙特卡洛模拟'},
-  {name:'协作冲突自动调解',desc:'多人日程冲突自动提议替代方案',difficulty:7,innovation:8.2,practicality:7.5,category:'协作社交',impl_note:'约束满足问题求解'},
-  {name:'自动化规则引擎',desc:'IFTTT式触发动作规则任务逾期自动重排',difficulty:4,innovation:5.5,practicality:8.5,category:'效率工具',impl_note:'事件驱动引擎'},
-  {name:'自然语言查询',desc:'对话式查询项目状态如本周哪些任务延期',difficulty:5,innovation:7.0,practicality:8.5,category:'AI/ML',impl_note:'LLM+结构化查询'},
-];
-
-function addChildrenMock(nodeId){
-  if(!currentSession)return;
-  const node=currentSession.nodes.find(n=>n.id===nodeId);
-  if(!node)return;
-  const count=parseInt(document.getElementById('countInput').value);
-  const style=document.getElementById('styleSelect').value;
-  let pool=[...MOCK_POOL].sort(()=>Math.random()-0.5);
-  if(style==='bold')pool.sort((a,b)=>b.innovation-a.innovation);
-  if(style==='practical')pool.sort((a,b)=>b.practicality-a.practicality);
-  const ideas=pool.slice(0,count);
-
-  // 清除 thinking 标记
-  const parentNode=currentSession.nodes.find(n=>n.id===nodeId);
-  if(parentNode) delete parentNode.thinking;
-
-  pushUndo();
-  ideas.forEach(idea=>{
-    const child={
-      id:'n'+(currentSession.nextId++),parentId:nodeId,
-      name:idea.name,desc:idea.desc,
-      difficulty:idea.difficulty,innovation:idea.innovation,
-      practicality:idea.practicality,category:idea.category,impl_note:idea.impl_note,
-      x:0,y:0,
-    };
-    currentSession.nodes.push(child);
-    currentSession.edges.push({from:nodeId,to:child.id});
-  });
-  layoutChildren(nodeId);
-  saveCurrentSession();
-  renderAll();
-  ideas.forEach((_,i)=>{
-    const childId='n'+(currentSession.nextId-ideas.length+i);
-    setTimeout(()=>{const el=document.getElementById(childId);if(el)el.classList.add('new')},i*60);
-  });
-  updateUndoButton();
-}
-
-// ============ 渲染 ============
-function renderAll(){
-  renderNodes();renderEdges();
-  // 更新全局思考状态栏
-  const thinkingBar=document.getElementById('thinkingBar');
-  const hasThinking=currentSession?.nodes?.some(n=>n.thinking);
-  thinkingBar.style.display=hasThinking?'block':'none';
-}
-
-function renderNodes(){
-  canvasLayer.querySelectorAll('.node').forEach(el=>el.remove());
-  if(!currentSession)return;
-  currentSession.nodes.forEach(node=>{
-    const el=document.createElement('div');
-    const isRoot=node.parentId===null;
-    const isThinking=!!node.thinking;
-    el.className='node'+(isRoot?' root':'')+(selectedId===node.id?' selected':'')+(isThinking?' thinking':'');
-    el.id=node.id;
-    el.style.left=node.x+'px';
-    el.style.top=node.y+'px';
-    el.dataset.nodeId=node.id;
-
-    let statusHTML;
-    if(isThinking){
-      statusHTML=`
-      <div class="thinking-badge">
-        <div class="thinking-dots"><span></span><span></span><span></span></div>
-        大模型思考中...
-      </div>`;
-    } else if(isRoot){
-      statusHTML=''; // 根节点不发散时不显示评分
-    } else {
-      statusHTML=`
-      <div class="scores">
-        <div class="score-row"><span class="score-label">难度</span><div class="score-track"><div class="score-fill diff" style="width:${node.difficulty*10}%"></div></div><span class="score-val">${node.difficulty}/10</span></div>
-        <div class="score-row"><span class="score-label">创新</span><div class="score-track"><div class="score-fill inno" style="width:${node.innovation*10}%"></div></div><span class="score-val">${node.innovation}</span></div>
-        <div class="score-row"><span class="score-label">实用</span><div class="score-track"><div class="score-fill prac" style="width:${node.practicality*10}%"></div></div><span class="score-val">${node.practicality}</span></div>
-      </div>`;
+    const resp=await apiFetch('GET',`/users/${encodeURIComponent(activeUser)}/projects`);
+    const remoteProjects=resp.data?.projects;
+    if(Array.isArray(remoteProjects)&&remoteProjects.length){
+      projects=remoteProjects;
     }
-
-    el.innerHTML=`
-      <div class="node-title"><span class="icon">${isRoot?'🎯':'💡'}</span>${escHtml(node.name)}</div>
-      <div class="node-desc">${escHtml(node.desc)}</div>
-      ${statusHTML}
-      ${node.category?`<div class="category-tag">${escHtml(node.category)}</div>`:''}`;
-
-    // 点击节点 → 弹出上下文菜单
-    el.addEventListener('click',(e)=>{
-      e.stopPropagation();
-      selectNode(node.id);
-      if(isRoot) return; // 根节点不弹菜单
-      showContextMenu(e.clientX,e.clientY,node);
-    });
-
-    // 双击节点 → 直接发散
-    el.addEventListener('dblclick',(e)=>{
-      e.stopPropagation();
-      closeContextMenu();
-      divergeNode(node.id);
-    });
-
-    // 拖拽
-    el.addEventListener('mousedown',(e)=>{
-      if(e.button!==0)return;
-      closeContextMenu();
-      startNodeDrag(e,node);
-    });
-
-    canvasLayer.appendChild(el);
-  });
+  }catch(e){}
+  if(!projects.length)projects=[createProject('wardrobe'),createProject('travel'),createProject('resume')];
+  ensureStarterProject('wardrobe');
+  projects.forEach(normalizeProject);
+  activeProjectId=localStorage.getItem(storageKey()+':active')||projects[0]?.id||'';
+  if(!projects.some(p=>p.id===activeProjectId))activeProjectId=projects[0]?.id||'';
+  activeNodeId=rootNodeId(currentProject());
+  projectSyncReady=true;
+  saveProjects();
 }
-
-function renderEdges(){
-  if(!currentSession){edgesSvg.innerHTML='';return}
-  let svg='';
-  currentSession.edges.forEach(e=>{
-    const fn=currentSession.nodes.find(n=>n.id===e.from);
-    const tn=currentSession.nodes.find(n=>n.id===e.to);
-    if(!fn||!tn)return;
-    const fromRoot=fn.parentId===null;
-    const toRoot=tn.parentId===null;
-    const fx=fn.x+(fromRoot?190:120), fy=fn.y+(fromRoot?100:80);
-    const tx=tn.x+(toRoot?190:120), ty=tn.y+(toRoot?100:80);
-    const cx1=fx+(tx-fx)*0.45, cy1=fy;
-    const cx2=tx-(tx-fx)*0.45, cy2=ty;
-    svg+=`<path d="M${fx},${fy} C${cx1},${cy1} ${cx2},${cy2} ${tx},${ty}" stroke="#bcc3ce" stroke-width="1.5" fill="none" stroke-dasharray="6,4" opacity="0.5"/>`;
-  });
-  edgesSvg.innerHTML=svg;
+function ensureStarterProject(templateId){
+  const template=templates[templateId];
+  if(!template)return;
+  const exists=projects.some(p=>p.templateId===templateId||p.title===template.title);
+  if(!exists)projects.unshift(createProject(templateId));
 }
-
-// ============ 上下文菜单 ============
-function showContextMenu(x,y,node){
-  const canDiverge=!node.thinking && currentSession;
-  ctxMenu.innerHTML=`
-    <div class="ctx-menu-item${canDiverge?'':' disabled'}" ${canDiverge?`onclick="closeContextMenu();divergeNode('${node.id}')"`:`onclick="closeContextMenu()"`}>
-      <span class="mi-icon">↻</span><span class="mi-label">发散子功能</span><span class="mi-short">${node.thinking?'思考中...':'双击'}</span>
-    </div>
-    <div class="ctx-menu-sep"></div>
-    <div class="ctx-menu-item delete" onclick="closeContextMenu();deleteNode('${node.id}')">
-      <span class="mi-icon">×</span><span class="mi-label">删除节点</span><span class="mi-short">Del</span>
-    </div>`;
-  ctxMenu.style.display='block';
-  // 确保菜单在视口内
-  const mw=ctxMenu.offsetWidth||150, mh=ctxMenu.offsetHeight||100;
-  let lx=x, ly=y;
-  if(x+mw>window.innerWidth)lx=window.innerWidth-mw-8;
-  if(y+mh>window.innerHeight)ly=window.innerHeight-mh-8;
-  ctxMenu.style.left=lx+'px';
-  ctxMenu.style.top=ly+'px';
+function saveProjects(){
+  projects.forEach(normalizeProject);
+  localStorage.setItem(storageKey(),JSON.stringify(projects));
+  localStorage.setItem(storageKey()+':active',activeProjectId);
+  scheduleProjectSync();
 }
-
-function closeContextMenu(){ctxMenu.style.display='none'}
-document.addEventListener('click',(e)=>{
-  if(!ctxMenu.contains(e.target)&&!e.target.closest('.node'))closeContextMenu();
-});
-
-// ============ 节点操作 ============
-function divergeNode(nodeId){
-  if(!currentSession)return;
-  const node=currentSession.nodes.find(n=>n.id===nodeId);
-  if(!node)return;
-  // 设置思考中标记
-  node.thinking=true;
-  saveCurrentSession();
-  renderAll();
-  divergeNodeAPI(nodeId);
+function scheduleProjectSync(){
+  if(!projectSyncReady||!activeUser)return;
+  clearTimeout(projectSyncTimer);
+  projectSyncTimer=setTimeout(syncProjectsToBackend,350);
 }
-
-function deleteNode(nodeId){
-  if(!currentSession)return;
-  const node=currentSession.nodes.find(n=>n.id===nodeId);
-  if(!node||node.parentId===null)return; // 不能删根节点
-
-  pushUndo();
-
-  // 递归删除子节点
-  const delRecursive=(id)=>{
-    currentSession.nodes.filter(n=>n.parentId===id).forEach(c=>{
-      delRecursive(c.id);
-      currentSession.nodes=currentSession.nodes.filter(n=>n.id!==c.id);
-      currentSession.edges=currentSession.edges.filter(e=>e.to!==c.id);
-    });
+async function syncProjectsToBackend(){
+  if(!activeUser||!projects.length)return;
+  try{
+    await apiFetch('PUT',`/users/${encodeURIComponent(activeUser)}/projects`,{projects});
+  }catch(e){}
+}
+function createProject(templateId,title,seed){
+  const template=templates[templateId];
+  const project={
+    id:uid('project_'),
+    templateId:templateId||null,
+    title:title||template?.title||'新的项目',
+    seed:seed||template?.seed||'',
+    nodes:[],
+    createdAt:new Date().toISOString(),
+    updatedAt:new Date().toISOString(),
+    activeNodeId:''
   };
-  delRecursive(nodeId);
-  currentSession.nodes=currentSession.nodes.filter(n=>n.id!==nodeId);
-  currentSession.edges=currentSession.edges.filter(e=>e.from!==nodeId&&e.to!==nodeId);
-
-  if(selectedId===nodeId)selectedId=null;
-  renderAll();
-  saveCurrentSession();
-  updateUndoButton();
-  showToast('已删除节点');
-}
-
-function selectNode(id){
-  selectedId=id;
-  document.querySelectorAll('.node').forEach(el=>el.classList.toggle('selected',el.dataset.nodeId===id));
-}
-
-// ============ 节点拖拽 ============
-let dragNode=null, dsx,dsy,nsx,nsy,wasDragged=false;
-function startNodeDrag(e,node){
-  dragNode=node;wasDragged=false;
-  dsx=e.clientX;dsy=e.clientY;nsx=node.x;nsy=node.y;
-  selectNode(node.id);
-}
-window.addEventListener('mousemove',(e)=>{
-  if(!dragNode)return;
-  const dx=(e.clientX-dsx)/zoom, dy=(e.clientY-dsy)/zoom;
-  if(Math.abs(dx)>2||Math.abs(dy)>2)wasDragged=true;
-  dragNode.x=nsx+dx;dragNode.y=nsy+dy;
-  const el=document.getElementById(dragNode.id);
-  if(el){el.style.left=dragNode.x+'px';el.style.top=dragNode.y+'px'}
-  renderEdges();
-});
-window.addEventListener('mouseup',()=>{
-  if(dragNode&&wasDragged){
-    pushUndo();
-    saveCurrentSession();
-    updateUndoButton();
+  if(template){
+    const idMap={};
+    project.nodes=template.nodes.map(n=>{idMap[n.id]=uid('node_');return {...n,id:idMap[n.id]}});
+    project.nodes.forEach(n=>{if(n.parentId)n.parentId=idMap[n.parentId]});
+  }else{
+    project.nodes=[node(uid('node_'),title||'新的项目',seed||'描述你的项目想法',null,50,50,'中心想法','需要先明确真实用户和使用场景。','找 3 个目标用户描述这个想法，看他们是否能说出愿意使用的场景。','keep')];
   }
-  dragNode=null;
-});
-
-// ============ 画布平移/缩放 ============
-let isPanning=false, pStart, panOX, panOY;
-canvasContainer.addEventListener('mousedown',(e)=>{
-  if(e.target===canvasContainer||e.target.classList.contains('grid-bg')||e.target===canvasLayer||e.target===edgesSvg){
-    isPanning=true;canvasContainer.classList.add('panning');
-    pStart={x:e.clientX,y:e.clientY};panOX=panX;panOY=panY;
-  }
-});
-window.addEventListener('mousemove',(e)=>{
-  if(!isPanning)return;
-  panX=panOX+(e.clientX-pStart.x);panY=panOY+(e.clientY-pStart.y);
-  applyTransform();
-});
-window.addEventListener('mouseup',()=>{isPanning=false;canvasContainer.classList.remove('panning')});
-canvasContainer.addEventListener('wheel',(e)=>{
-  e.preventDefault();
-  const rect=canvasContainer.getBoundingClientRect();
-  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
-  const oldZ=zoom;
-  const newZ=Math.max(0.12,Math.min(3,oldZ*(1-e.deltaY*0.001)));
-  panX=mx-(mx-panX)*(newZ/oldZ);
-  panY=my-(my-panY)*(newZ/oldZ);
-  zoom=newZ;applyTransform();
-});
-function applyTransform(){
-  canvasLayer.style.transform=`translate(${panX}px,${panY}px) scale(${zoom})`;
-  zoomInfo.textContent=Math.round(zoom*100)+'%';
+  project.layoutVersion=4;
+  project.activeNodeId=project.nodes[0]?.id||'';
+  return normalizeProject(project);
 }
-
-// ============ 视图 ============
-function fitView(){
-  if(!currentSession||currentSession.nodes.length===0)return;
-  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
-  currentSession.nodes.forEach(n=>{
-    const w=n.parentId===null?300:240;
-    if(n.x<minX)minX=n.x;if(n.y<minY)minY=n.y;
-    if(n.x+w>maxX)maxX=n.x+w;if(n.y+200>maxY)maxY=n.y+200;
+function normalizeProject(project){
+  normalizeProjectLayout(project);
+  return syncProjectModel(project);
+}
+function normalizeProjectLayout(project){
+  if(project.layoutVersion>=4)return project;
+  const byTitle=(text)=>project.nodes.find(n=>n.title===text);
+  const root=project.nodes.find(n=>!n.parentId)||project.nodes[0];
+  if(root){root.x=50;root.y=52}
+  const wardrobe=project.title.includes('衣橱')||project.seed?.includes('衣橱');
+  const resume=project.title.includes('简历')||project.seed?.includes('简历');
+  if(wardrobe){
+    const positions={
+      '一键穿搭':[17,30],
+      '拍照入库':[83,30],
+      '一键发穿搭':[18,84],
+      '旅行打包清单':[50,84]
+    };
+    Object.entries(positions).forEach(([title,[x,y]])=>{const n=byTitle(title);if(n){n.x=x;n.y=y}});
+  }else if(resume){
+    const positions={
+      '岗位匹配改写':[17,30],
+      '匹配度评分':[83,30],
+      '求职信生成':[18,84]
+    };
+    Object.entries(positions).forEach(([title,[x,y]])=>{const n=byTitle(title);if(n){n.x=x;n.y=y}});
+  }
+  project.layoutVersion=4;
+  return project;
+}
+function syncProjectModel(project){
+  if(!project||!Array.isArray(project.nodes))return project;
+  const root=project.nodes.find(n=>!n.parentId)||project.nodes[0];
+  if(root){
+    root.role='project';
+    root.parentId=root.parentId||null;
+  }
+  const rootId=root?.id||'';
+  project.nodes.forEach(n=>{
+    if(n.id===rootId)n.role='project';
+    else if(n.parentId===rootId)n.role='direction';
+    else n.role='feature';
+    if(!n.decision)n.decision='maybe';
   });
-  const rect=canvasContainer.getBoundingClientRect();
-  const cw=maxX-minX+200,ch=maxY-minY+200;
-  const zx=rect.width/cw,zy=rect.height/ch;
-  zoom=Math.max(0.15,Math.min(zx,zy,1.2));
-  panX=rect.width/2-(minX+cw/2)*zoom;
-  panY=rect.height/2-(minY+ch/2)*zoom;
-  applyTransform();
+  const directChildren=project.nodes.filter(n=>n.parentId===rootId);
+  const mustHave=rankRecommendationNodes(directChildren)
+    .filter(n=>n.decision!=='drop')
+    .slice(0,3)
+    .map(n=>({
+      nodeId:n.id,
+      title:n.title,
+      reason:n.pain||n.desc||'直接影响用户第一次有效使用。',
+      validation:n.validation||'找 3 个目标用户做一次手工验证。'
+    }));
+  const existingMvp=project.mvp&&typeof project.mvp==='object'?project.mvp:{};
+  const existingMustHave=Array.isArray(existingMvp.mustHaveFeatures)?existingMvp.mustHaveFeatures:[];
+  const stableMustHave=(existingMustHave.length?existingMustHave:mustHave).slice(0,3).map((item,idx)=>{
+    const node=item.nodeId?project.nodes.find(n=>n.id===item.nodeId):project.nodes.find(n=>n.title===item.title);
+    const fallback=mustHave[idx]||{};
+    return {
+      nodeId:item.nodeId||node?.id||fallback.nodeId||'',
+      title:item.title||node?.title||fallback.title||`必做项 ${idx+1}`,
+      reason:item.reason||node?.pain||node?.desc||fallback.reason||'直接影响用户第一次有效使用。',
+      validation:item.validation||node?.validation||fallback.validation||'找 3 个目标用户做一次手工验证。'
+    };
+  });
+  project.schemaVersion=PROJECT_SCHEMA_VERSION;
+  project.mvp={
+    goal:existingMvp.goal||root?.desc||project.seed||project.title,
+    rootNodeId:existingMvp.rootNodeId||rootId,
+    mustHaveFeatures:stableMustHave,
+    validation:existingMvp.validation||root?.validation||stableMustHave[0]?.validation||'找 3 个目标用户做一次手工验证。',
+    updatedAt:existingMvp.updatedAt||project.updatedAt||new Date().toISOString()
+  };
+  project.directions=directChildren.map(n=>{
+    const meta=featureMetaFor(n);
+    return {
+      id:n.id,
+      nodeId:n.id,
+      title:n.title,
+      desc:n.desc,
+      reason:n.pain||n.desc,
+      validation:n.validation,
+      decision:n.decision||'maybe',
+      difficulty:meta.difficulty,
+      estimate:meta.estimate,
+      innovation:meta.innovation
+    };
+  });
+  project.decisions={
+    ideaPool:project.nodes.filter(n=>n.parentId&&n.decision==='keep').map(n=>n.id),
+    later:project.nodes.filter(n=>n.parentId&&n.decision==='drop').map(n=>n.id)
+  };
+  return project;
 }
-function resetZoom(){zoom=1;panX=0;panY=0;applyTransform()}
+async function login(name){
+  activeUser=(name||'我的空间').trim();
+  localStorage.setItem(USER_KEY,activeUser);
+  saveUsers();
+  await loadProjects();
+  showApp();
+}
+function logout(){
+  localStorage.removeItem(USER_KEY);
+  activeUser='';
+  projects=[];
+  projectSyncReady=false;
+  clearTimeout(projectSyncTimer);
+  document.getElementById('authView').classList.remove('hidden');
+  document.getElementById('appView').classList.add('hidden');
+  renderRecentSpaces();
+}
+async function apiFetch(method,path,body){
+  const opts={method,headers:{'Content-Type':'application/json'}};
+  if(body)opts.body=JSON.stringify(body);
+  const resp=await fetch(API_BASE+path,opts);
+  if(!resp.ok)throw new Error('HTTP '+resp.status);
+  return resp.json();
+}
+async function checkAiStatus(){
+  try{
+    const resp=await apiFetch('GET','/storm/status');
+    if(resp.code===200&&resp.data)aiStatus=resp.data;
+  }catch(e){aiStatus={configured:false,model:'deepseek-chat'}}
+  renderAiStatus();
+}
+async function readAppVersion(){
+  try{return (await apiFetch('GET','/app-version')).data?.version||null}catch(e){return null}
+}
+function startAppVersionWatcher(){
+  if(!['localhost','127.0.0.1'].includes(location.hostname))return;
+  setInterval(async()=>{
+    if(document.visibilityState==='hidden')return;
+    const next=await readAppVersion();
+    if(!next)return;
+    if(!appVersion){appVersion=next;return}
+    if(next!==appVersion)location.reload();
+  },2500);
+}
+function renderAiStatus(){
+  const el=document.getElementById('aiStatus');
+  if(!el)return;
+  el.classList.toggle('ready',!!aiStatus.configured);
+  el.textContent=aiStatus.configured?'AI 可用':'本地示例';
+}
+function showApp(){
+  document.getElementById('authView').classList.add('hidden');
+  document.getElementById('appView').classList.remove('hidden');
+  document.documentElement.scrollTop=0;
+  document.body.scrollTop=0;
+  if(!navigator.userAgent.includes('jsdom'))window.scrollTo(0,0);
+  document.getElementById('userName').textContent=activeUser;
+  document.getElementById('userAvatar').textContent=activeUser.slice(0,1).toUpperCase();
+  render();
+  checkAiStatus();
+}
+function render(){
+  const project=currentProject();
+  if(!project)return;
+  project.activeNodeId=activeNodeId||project.nodes[0]?.id;
+  const active=currentNode();
+  const children=project.nodes.filter(n=>n.parentId===active?.id);
+  const stage=workStage(project,active);
+  document.getElementById('appView').dataset.stage=String(stage.step);
+  document.getElementById('topProjectTitle').textContent=project.title;
+  document.getElementById('projectTitle').textContent=stage.title;
+  document.getElementById('projectDesc').textContent=stage.hint;
+  document.getElementById('projectKicker').textContent=stage.actionTitle;
+  document.getElementById('topProjectHint').textContent=stage.shortHint||stage.canvas;
+  document.getElementById('seedInput').value=active?.title||project.seed||'';
+  document.getElementById('flowProject').textContent=`项目 · ${project.title}`;
+  document.getElementById('flowNode').textContent=`当前方向 · ${active?.title||'中心想法'}`;
+  document.getElementById('canvasStepBadge').textContent=`第 ${stage.step} 步`;
+  document.getElementById('canvasActionTitle').textContent=stage.actionTitle;
+  document.getElementById('canvasActionHint').textContent=stage.canvas;
+  setStepState('flowDirectionStep',stage.step>=2,stage.step===2);
+  setStepState('flowExpandStep',stage.step>=3,stage.step===3);
+  setStepState('flowDecisionStep',stage.step>=4,stage.step===4);
+  renderProjects();
+  renderMvpOverview(project,active);
+  renderGraph();
+  renderInspector();
+  renderActionDock(project,active,stage);
+  saveProjects();
+  updateDockVisibility();
+}
+function renderMvpOverview(project,active){
+  const holder=document.getElementById('mvpOverview');
+  if(!holder||!project)return;
+  const mvp=project.mvp||{};
+  const root=project.nodes.find(n=>!n.parentId)||project.nodes[0];
+  const directions=project.directions?.length
+    ? project.directions
+    : project.nodes.filter(n=>n.parentId===root?.id).map(n=>({nodeId:n.id,title:n.title,desc:n.desc,reason:n.pain,validation:n.validation}));
+  const mustHave=(mvp.mustHaveFeatures||[]).slice(0,3);
+  holder.innerHTML=`
+    <section class="mvp-panel">
+      <small>核心 MVP</small>
+      <b>${esc(mvp.goal||root?.desc||project.seed||project.title)}</b>
+      <div class="mvp-list">
+        ${(mustHave.length?mustHave:directions.slice(0,2)).map(item=>`<span>${esc(item.title||'必做项')}</span>`).join('')}
+      </div>
+      <span><strong>开发前验证：</strong>${esc(mvp.validation||root?.validation||'找 3 个目标用户做一次手工验证。')}</span>
+      <div class="mvp-note">MVP 只保留证明核心痛点成立的最薄一层。社交、模板市场、复杂账号体系先不做。</div>
+    </section>
+    <section class="direction-panel">
+      <small>发散方向</small>
+      <div class="direction-rail">
+        ${directions.slice(0,5).map(direction=>{
+          const nodeId=direction.nodeId||direction.id;
+          const isActive=nodeId===active?.id;
+          const meta=featureMetaFor(direction);
+          return `<button class="direction-pill ${isActive?'active':''}" data-focus-direction="${esc(nodeId)}">
+            <b>${esc(direction.title)}</b>
+            <span>${esc(direction.reason||direction.desc||direction.validation||'继续展开这个方向')}</span>
+            <div class="direction-meta"><i>难度 ${esc(meta.difficulty)}</i><i>${esc(meta.estimate)}</i></div>
+            <em>${isActive?'当前方向':'进入下一层'}</em>
+          </button>`;
+        }).join('')}
+      </div>
+    </section>
+  `;
+  holder.querySelectorAll('[data-focus-direction]').forEach(btn=>btn.onclick=()=>{
+    const id=btn.dataset.focusDirection;
+    if(!id)return;
+    activeNodeId=id;
+    project.activeNodeId=id;
+    render();
+  });
+}
+function workStage(project,active){
+  const primary=pickPrimaryRecommendation(project,active);
+  if(active?.parentId&&(nodeDepth(project,active)>1||active.decisionChangedAt)&&active.decision==='keep'){
+    return {
+      step:4,
+      title:`已把“${active.title}”加入备选库`,
+      hint:'这个思路已经收藏。你可以回到上一层继续找别的点子，也可以之后再从它继续发散。',
+      shortHint:'已加入灵感备选库。',
+      actionTitle:'已收藏：继续找思路',
+      canvas:'这个功能已经进备选库。回到上一层继续看其他点子，慢慢积累你的功能思路。',
+      decisionDone:'keep'
+    };
+  }
+  if(active?.parentId&&(nodeDepth(project,active)>1||active.decisionChangedAt)&&active.decision==='drop'){
+    return {
+      step:4,
+      title:`已把“${active.title}”放到以后再看`,
+      hint:'这个点暂时不展开。回到上一层继续找更有启发的功能想法。',
+      shortHint:'已放到以后再看。',
+      actionTitle:'已暂缓：继续找思路',
+      canvas:'这个点先放下。回到上一层，继续收集更有价值的想法。',
+      decisionDone:'drop'
+    };
+  }
+  if(!active?.parentId){
+    const childCount=project.nodes.filter(n=>n.parentId===active?.id).length;
+    return {
+      step:2,
+      title:`“${project.title}”：选择发散方向`,
+      hint:childCount?'这是项目的第一层方向。点击方向卡片会进入它的下一层；底部按钮只补充这一层，不会跳层。':'先从项目想法生成第一层功能方向。',
+      shortHint:'当前层是功能方向。',
+      actionTitle:'当前层：功能方向',
+      canvas:childCount?'点方向卡片进入下一层；底部按钮只补充这一层方向。':'生成第一层方向，再选择一个继续往下拆。'
+    };
+  }
+  const children=project.nodes.filter(n=>n.parentId===active.id);
+  if(!children.length&&nodeDepth(project,active)<2){
+    return {
+      step:3,
+      title:`“${active.title}”：生成子功能`,
+      hint:'当前方向还没有子功能。生成后会固定展示在它下面，你再点击子功能进入更下一层。',
+      shortHint:'给当前节点生成子功能。',
+      actionTitle:'当前节点：生成子功能',
+      canvas:'底部按钮只作用于当前方向：为它生成下一层子功能。'
+    };
+  }
+  if(children.length){
+    return {
+      step:4,
+      title:`“${active.title}”：这一层子功能`,
+      hint:'这些都是当前节点的下一层。点击子功能卡片进入它自己的下一层；底部按钮只补充这一层子功能。',
+      shortHint:'当前层是它的子功能。',
+      actionTitle:'当前层：子功能',
+      canvas:'点子功能卡片进入下一层；底部按钮只补充当前这一层。'
+    };
+  }
+  return {
+    step:4,
+    title:`判断“${active.title}”值不值得收藏`,
+    hint:'这里不是终审。它有启发、能继续展开，就加入备选库；暂时没感觉，就放到以后再看。',
+    shortHint:'判断是否加入备选库。',
+    actionTitle:'当前任务：判断这个点子',
+    canvas:'看真实痛点和验证动作，然后选择加入备选库或以后再看。'
+  };
+}
+function nodeDepth(project,node){
+  let depth=0;
+  let cursor=node;
+  while(cursor?.parentId){
+    depth+=1;
+    cursor=project.nodes.find(n=>n.id===cursor.parentId);
+  }
+  return depth;
+}
+function setStepState(id,done,active){
+  const el=document.getElementById(id);
+  if(!el)return;
+  el.classList.toggle('done',done&&!active);
+  el.classList.toggle('active',active);
+}
+function renderProjects(){
+  document.getElementById('projectList').innerHTML=projects.map(p=>{
+    const kept=p.nodes.filter(n=>n.decision==='keep').length;
+    return `<button class="project-card ${p.id===activeProjectId?'active':''}" data-project="${p.id}" title="${esc(p.title)}" aria-label="打开项目：${esc(p.title)}">
+      <b>${esc(p.title)}</b><span>${p.nodes.length} 个功能点 · ${kept} 个备选</span>
+    </button>`;
+  }).join('');
+  document.querySelectorAll('[data-project]').forEach(btn=>btn.onclick=()=>{
+    activeProjectId=btn.dataset.project;
+    activeNodeId=rootNodeId(currentProject());
+    render();
+  });
+}
+function renderGraph(){
+  const project=currentProject();
+  const stage=document.getElementById('graphStage');
+  const svg=document.getElementById('graphSvg');
+  const empty=document.getElementById('emptyState');
+  const pathIds=currentPathIds(project,activeNodeId);
+  const positions=graphRenderPositions(project,pathIds);
+  const active=currentNode();
+  const visibleNodes=graphVisibleNodes(project,active);
+  const visibleIds=new Set(visibleNodes.map(n=>n.id));
+  const shouldDimOffPath=pathIds.size>1;
+  const graphStageInfo=workStage(project,active);
+  const recommended=pickStageRecommendation(project,active,graphStageInfo);
+  const recommendBadge=graphStageInfo.step===4?'建议先看':'建议先做';
+  const activeChildIds=new Set(project.nodes.filter(n=>n.parentId===active?.id).map(n=>n.id));
+  const rootChoiceStage=graphStageInfo.step===2&&active&&!active.parentId;
+  document.getElementById('mapNodeCount').textContent=project.nodes.length;
+  document.getElementById('mapKeepCount').textContent=project.nodes.filter(n=>n.decision==='keep').length;
+  document.getElementById('mapDropCount').textContent=project.nodes.filter(n=>n.decision==='drop').length;
+  if(!project.nodes.length){empty.classList.remove('hidden');stage.innerHTML='';svg.innerHTML='';return}
+  empty.classList.add('hidden');
+  svg.innerHTML=visibleNodes.filter(n=>n.parentId&&visibleIds.has(n.parentId)).map(n=>{
+    const parent=project.nodes.find(p=>p.id===n.parentId);
+    if(!parent)return '';
+    const parentPos=positions[parent.id]||parent;
+    const nodePos=positions[n.id]||n;
+    const inPath=pathIds.has(n.id)&&pathIds.has(parent.id);
+    const isRecommendedEdge=recommended?.id===n.id;
+    const stroke=isRecommendedEdge?'#6f8f5f':(inPath?'#171510':(n.decision==='keep'?'#8aa977':'#aaa59a'));
+    return `<path class="${isRecommendedEdge?'path-recommended ':''}${inPath?'path-active':'path-muted'}" d="M ${parentPos.x} ${parentPos.y} C ${(parentPos.x+nodePos.x)/2} ${parentPos.y}, ${(parentPos.x+nodePos.x)/2} ${nodePos.y}, ${nodePos.x} ${nodePos.y}" fill="none" stroke="${stroke}" stroke-width="${isRecommendedEdge?'1.2':(inPath?'.82':'.46')}" opacity="${isRecommendedEdge?'.9':(inPath?'.48':'.32')}" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-dasharray="${n.decision==='drop'?'1.5 1.8':'0'}"/>`;
+  }).join('');
+  stage.innerHTML=visibleNodes.map((n,idx)=>{
+    const isActive=n.id===activeNodeId;
+    const pos=positions[n.id]||n;
+    const pathClass=(pathIds.has(n.id)||activeChildIds.has(n.id))?'in-path':(shouldDimOffPath?'dimmed':'');
+    const recommendClass=recommended?.id===n.id&&n.id!==activeNodeId?'recommended':'';
+    const childChoiceStage=graphStageInfo.step===4&&n.parentId===active.id;
+    const choicePrimaryClass=(rootChoiceStage||childChoiceStage)&&recommended?.id===n.id?'choice-primary':'';
+    const currentFocusClass=graphStageInfo.step===3&&isActive&&n.parentId?'choice-primary current-focus':'';
+    const choiceAlternateClass=((rootChoiceStage&&n.parentId===active.id)||childChoiceStage)&&recommended?.id!==n.id?'choice-alternate':'';
+    const rootHubClass=rootChoiceStage&&!n.parentId?'root-hub':'';
+    const entryLabel=!n.parentId?'中心想法'
+      : n.id===activeNodeId
+        ? (n.parentId===rootNodeId(project)?'当前方向':'当前节点')
+        : ((rootChoiceStage&&n.parentId===active.id)||childChoiceStage)
+          ? (recommended?.id===n.id?'建议进入':'进入下一层')
+          : (n.parentId===rootNodeId(project)?'方向':'子功能');
+    return `
+    <article class="node ${!n.parentId?'root':''} ${rootHubClass} ${nodeTypeClass(n)} ${pathClass} ${recommendClass} ${choicePrimaryClass} ${currentFocusClass} ${choiceAlternateClass} ${isActive?'active':''} ${n.decision==='keep'?'kept':''} ${n.decision==='drop'?'dropped':''}" style="left:${pos.x}%;top:${pos.y}%;--node-order:${idx};" data-node="${n.id}" data-badge="${esc(recommendBadge)}" role="button" tabindex="0" aria-label="${esc(n.title)}">
+      <small>${esc(entryLabel)}</small>
+      <b>${esc(n.title)}</b>
+      <span>${esc(n.desc)}</span>
+    </article>
+  `}).join('');
+  document.querySelectorAll('[data-node]').forEach(el=>el.onclick=e=>{
+    activeNodeId=el.dataset.node;
+    currentProject().activeNodeId=activeNodeId;
+    render();
+  });
+  document.querySelectorAll('[data-node]').forEach(el=>el.onkeydown=e=>{
+    if(e.key!=='Enter'&&e.key!==' ')return;
+    e.preventDefault();
+    activeNodeId=el.dataset.node;
+    currentProject().activeNodeId=activeNodeId;
+    render();
+  });
+}
+function graphVisibleNodes(project,active){
+  const root=project.nodes.find(n=>!n.parentId)||project.nodes[0];
+  const ids=new Set();
+  const activeChildren=graphChildNodesForView(project,active);
+  currentPathNodes(project,active?.id).forEach(n=>ids.add(n.id));
+  if(root)ids.add(root.id);
+  activeChildren.forEach(n=>ids.add(n.id));
+  return project.nodes.filter(n=>ids.has(n.id));
+}
+function graphChildNodesForView(project,active){
+  if(!active)return [];
+  const children=project.nodes.filter(n=>n.parentId===active.id);
+  if(window.innerWidth<=760&&active.parentId&&children.length){
+    const pick=pickStageRecommendation(project,active,workStage(project,active))||children[0];
+    return children.filter(n=>n.id===pick.id).slice(0,1);
+  }
+  return children;
+}
+function graphRenderPositions(project,pathIds){
+  const positions={};
+  const pathNodes=currentPathNodes(project,activeNodeId);
+  const compactMap=window.innerWidth<=760;
+  const active=pathNodes[pathNodes.length-1]||project.nodes[0];
+  const children=graphChildNodesForView(project,active);
+  const compactChildPreview=compactMap&&active?.parentId&&children.length;
+  const childSlots=(count)=>{
+    if(compactMap){
+      if(compactChildPreview)return [{x:74,y:36}];
+      const xs=count===1?[50]:count===2?[28,72]:[28,72,28,72,50,28,72,50];
+      return xs.map((x,idx)=>({x,y:idx<2?58:idx<4?74:86}));
+    }
+    if(count<=1)return [{x:50,y:68}];
+    if(count===2)return [{x:34,y:68},{x:66,y:68}];
+    if(count===3)return [{x:22,y:68},{x:50,y:68},{x:78,y:68}];
+    if(count===4)return [{x:28,y:64},{x:72,y:64},{x:28,y:84},{x:72,y:84}];
+    const first=count===5?[22,50,78]:[18,50,82];
+    const second=count===5?[34,66]:[18,50,82];
+    return [
+      ...first.map(x=>({x,y:66})),
+      ...second.map(x=>({x,y:82}))
+    ];
+  };
+  if(active&&!active.parentId){
+    positions[active.id]=compactMap?{x:50,y:25}:{x:50,y:36};
+  }else if(active){
+    const ancestors=pathNodes.slice(0,-1);
+    const ancestorSlots=compactMap
+      ? [{x:24,y:16},{x:50,y:16},{x:76,y:16}]
+      : [{x:18,y:18},{x:34,y:18},{x:50,y:18},{x:66,y:18}];
+    ancestors.slice(-ancestorSlots.length).forEach((n,idx)=>{
+      positions[n.id]=ancestorSlots[idx];
+    });
+    positions[active.id]=compactChildPreview?{x:32,y:36}:(compactMap?{x:50,y:36}:{x:50,y:38});
+  }
+  childSlots(children.length).forEach((slot,idx)=>{
+    const n=children[idx];
+    if(n)positions[n.id]=slot;
+  });
+  const rank=(n)=>{
+    if(!n.parentId)return 0;
+    if(n.id===activeNodeId)return 1;
+    if(pathIds.has(n.id))return 2;
+    return 3;
+  };
+  const placementIds=new Set([
+    ...pathNodes.map(n=>n.id),
+    ...children.map(n=>n.id)
+  ]);
+  const ordered=project.nodes.filter(n=>placementIds.has(n.id)).sort((a,b)=>rank(a)-rank(b));
+  const placed=[];
+  ordered.forEach(n=>{
+    let x=positions[n.id]?.x??n.x;
+    let y=positions[n.id]?.y??n.y;
+    let attempts=0;
+    while(placed.some(p=>Math.abs(p.x-x)<14&&Math.abs(p.y-y)<12)&&attempts<8){
+      const parent=project.nodes.find(item=>item.id===n.parentId);
+      const away=parent&&parent.x<50?-1:1;
+      if(pathIds.has(n.id)){
+        y=Math.max(18,Math.min(86,y+(attempts%2?10:-10)));
+      }else{
+        y=Math.max(18,Math.min(86,y+10));
+        x=Math.max(14,Math.min(86,x+(attempts%2?away*8:0)));
+      }
+      attempts+=1;
+    }
+    positions[n.id]={x,y};
+    placed.push({id:n.id,x,y});
+  });
+  return positions;
+}
+function currentPathNodes(project,nodeId){
+  const nodes=[];
+  let node=project.nodes.find(n=>n.id===nodeId)||project.nodes.find(n=>!n.parentId)||project.nodes[0];
+  while(node){
+    nodes.unshift(node);
+    node=project.nodes.find(n=>n.id===node.parentId);
+  }
+  return nodes;
+}
+function currentPathIds(project,nodeId){
+  const ids=new Set();
+  let node=project.nodes.find(n=>n.id===nodeId)||project.nodes.find(n=>!n.parentId)||project.nodes[0];
+  while(node){
+    ids.add(node.id);
+    node=project.nodes.find(n=>n.id===node.parentId);
+  }
+  return ids;
+}
+function nodeTypeClass(n){
+  const text=(n.type||'').toLowerCase();
+  if(text.includes('增长')||text.includes('分享'))return 'type-growth';
+  if(text.includes('体验')||text.includes('录入'))return 'type-experience';
+  if(text.includes('验证'))return 'type-validate';
+  if(text.includes('暂缓'))return 'type-hold';
+  if(text.includes('核心')||text.includes('中心'))return 'type-core';
+  return '';
+}
+function renderInspector(){
+  const n=currentNode();
+  const project=currentProject();
+  const detail=document.getElementById('nodeDetail');
+  if(!n){detail.innerHTML='<h2>选择一个功能点</h2><p>点击图上的节点查看详情。</p>';return}
+  const rec=recommendationFor(n,project);
+  const childCount=project.nodes.filter(item=>item.parentId===n.id).length;
+  const step=workStage(project,n);
+  const selectingChild=childCount>0;
+  const stagePick=pickStageRecommendation(project,n,step);
+  const keepLabel='加入备选库';
+  const expandLabel=n.parentId
+    ? (childCount?'补充这一层':'生成子功能')
+    : (childCount?'补充这一层':'生成第一层方向');
+  const childChoiceHtml=selectingChild?renderChildChoices(project,n,stagePick):'';
+  const rowMode=n.parentId?'secondary-mode':'choice-mode';
+  const decisionDone=n.parentId&&(nodeDepth(project,n)>1||n.decisionChangedAt)&&(n.decision==='keep'||n.decision==='drop');
+  const meta=featureMetaFor(n);
+  const agentBrief=agentBriefFor(n,project);
+  if(decisionDone){
+    detail.innerHTML=`
+      <span class="detail-eyebrow">${n.decision==='keep'?'已加入备选':'已放到以后'} · 可以继续找思路</span>
+      <h2>${esc(n.title)}</h2>
+      <p>${esc(n.decision==='keep'?'这个点子已经收藏。接下来回到上一层继续看其他分支，也可以之后再从它继续发散。':'这个点子先放到以后。接下来回到上一层，继续收集更有启发的功能想法。')}</p>
+      <div class="feature-tags"><span>难度 ${esc(meta.difficulty)}</span><span>${esc(meta.estimate)}</span></div>
+      <div class="recommend-box">
+        <b>下一步</b>
+        <strong>回到上一层</strong>
+        <span>继续看同一层的其他点子。这个工具是帮你找思路，先把有价值的想法收起来。</span>
+      </div>
+      <div class="meta-grid">
+        <div class="meta-row"><b>为什么</b><span>${esc(n.pain||'需要继续验证真实痛点。')}</span></div>
+        <div class="meta-row"><b>创新切口</b><span>${esc(meta.innovation)}</span></div>
+        <div class="meta-row"><b>开发前验证</b><span>${esc(n.validation||'找 3 个目标用户验证这个功能是否有用。')}</span></div>
+      </div>
+      <div class="agent-brief"><b>交给 Agent 的开发 Brief</b><span>${esc(agentBrief)}</span></div>
+      <div class="decision-row choice-mode">
+        <button class="primary" id="expandSelected">回到上一层</button>
+      </div>
+      <div class="node-tools" aria-label="功能点工具">
+        <button type="button" id="detailEditNode">编辑</button>
+        <button type="button" id="detailAddChild">手动加点子</button>
+        <button type="button" class="danger" id="detailDeleteNode">删除</button>
+      </div>
+    `;
+    document.getElementById('expandSelected').onclick=()=>{
+      activeNodeId=n.parentId;
+      project.activeNodeId=n.parentId;
+      render();
+    };
+    bindDetailTools(n,project);
+    renderDecisionBoard(project);
+    return;
+  }
+  detail.innerHTML=`
+    <span class="detail-eyebrow">${esc(step.step===2?'第 2 步 · 选方向':step.step===3?'第 3 步 · 拆功能':'第 4 步 · 收点子')}</span>
+    <h2>${esc(n.title)}</h2>
+    <p>${esc(n.desc)}</p>
+    <div class="recommend-box">
+      <b>推荐动作</b>
+      <strong>${esc(rec.title)}</strong>
+      <span>${esc(rec.reason)}</span>
+    </div>
+    <div class="feature-tags"><span>难度 ${esc(meta.difficulty)}</span><span>${esc(meta.estimate)}</span></div>
+    <div class="meta-grid">
+      <div class="meta-row"><b>为什么</b><span>${esc(n.pain||'需要继续验证真实痛点。')}</span></div>
+      <div class="meta-row"><b>创新切口</b><span>${esc(meta.innovation)}</span></div>
+      <div class="meta-row"><b>开发前验证</b><span>${esc(n.validation||'找 3 个目标用户验证这个功能是否有用。')}</span></div>
+    </div>
+    <div class="agent-brief"><b>交给 Agent 的开发 Brief</b><span>${esc(agentBrief)}</span></div>
+    ${childChoiceHtml}
+    <div class="decision-row ${rowMode}">
+      <button class="primary" id="expandSelected">${esc(expandLabel)}</button>
+      ${n.parentId?`<button class="${n.decision==='drop'?'secondary':'keep'}" id="keepNode">${esc(keepLabel)}</button>
+      <button class="${n.decision==='drop'?'drop':'secondary'}" id="dropNode">以后再看</button>`:''}
+    </div>
+    <div class="node-tools" aria-label="功能点工具">
+      <button type="button" id="detailEditNode">编辑</button>
+      <button type="button" id="detailAddChild">手动加点子</button>
+      ${n.parentId?`<button type="button" class="danger" id="detailDeleteNode">删除</button>`:''}
+    </div>
+  `;
+  document.getElementById('expandSelected').onclick=async()=>{
+    const button=document.getElementById('expandSelected');
+    if(button){
+      button.disabled=true;
+      button.textContent='生成中...';
+    }
+    await generateFromNode(n.id);
+  };
+  detail.querySelectorAll('[data-focus-child]').forEach(btn=>btn.onclick=()=>{
+    activeNodeId=btn.dataset.focusChild;
+    project.activeNodeId=activeNodeId;
+    render();
+  });
+  const keepBtn=document.getElementById('keepNode');
+  const dropBtn=document.getElementById('dropNode');
+  if(keepBtn)keepBtn.onclick=()=>setDecision(n.id,'keep');
+  if(dropBtn)dropBtn.onclick=()=>setDecision(n.id,'drop');
+  bindDetailTools(n,project);
+  renderDecisionBoard(project);
+}
+function bindDetailTools(n,project){
+  document.getElementById('detailEditNode')?.addEventListener('click',()=>openNodeModal('edit',n.id,n.id));
+  document.getElementById('detailAddChild')?.addEventListener('click',()=>openNodeModal('create','',n.id));
+  document.getElementById('detailDeleteNode')?.addEventListener('click',()=>removeNode(n.id));
+  document.getElementById('detailExpandNode')?.addEventListener('click',()=>generateFromNode(n.id));
+}
+function renderActionDock(project,active,stage){
+  const dock=document.getElementById('actionDock');
+  if(!dock||!project||!active)return;
+  const childCount=project.nodes.filter(item=>item.parentId===active.id).length;
+  let eyebrow=`第 ${stage.step} 步`;
+  let title=stage.actionTitle;
+  let hint=stage.canvas;
+  let primaryLabel='继续';
+  let secondaryLabel='';
+  let primaryAction='generate';
+  let primaryTarget=active.id;
+  let secondaryAction='';
+  let proofNode=active;
 
-// ============ 导出 ============
-function exportMD(){
-  if(!currentSession||currentSession.nodes.length<=1){showToast('没有可导出的内容');return}
-  const root=currentSession.nodes.find(n=>n.parentId===null);
-  let md=`# ${root?.name||'头脑风暴'}\n\n> ${root?.desc||''}\n\n`;
-  function w(pid,d){
-    currentSession.nodes.filter(n=>n.parentId===pid).forEach(c=>{
-      md+=`${'#'.repeat(Math.min(d+2,4))} ${c.name}\n\n`;
-      md+=`- 分类: ${c.category}\n- 难度: ${c.difficulty}/10 · 创新: ${c.innovation}/10 · 实用: ${c.practicality}/10\n- ${c.desc}\n`;
-      if(c.impl_note)md+=`- 实现: ${c.impl_note}\n`;
-      md+='\n';w(c.id,d+1);
+  if(stage.decisionDone){
+    title=stage.decisionDone==='keep'?`已加入备选：“${active.title}”`:`已放到以后：“${active.title}”`;
+    hint=stage.decisionDone==='keep'
+      ? '它已经进灵感备选库。回到上一层继续看，继续收集有价值的想法。'
+      : '这个点先放到以后。回到上一层继续找更有启发的功能。';
+    primaryLabel='回到上一层';
+    primaryAction='parent';
+    primaryTarget=active.parentId||rootNodeId(project);
+    proofNode=active;
+  }else if(!active.parentId){
+    title=childCount?'补充这一层：功能方向':'生成第一层功能方向';
+    hint=childCount?'底部按钮只补充当前这一层方向；点方向卡片才进入它的下一层。':'先生成项目的第一层方向。';
+    primaryLabel=childCount?'补充这一层':'生成方向';
+    primaryAction='generate';
+    proofNode=active;
+  }else{
+    title=childCount?'补充这一层：子功能':'生成当前节点的子功能';
+    hint=childCount?'底部按钮只补充当前节点下面这一层；点子功能卡片才进入更下一层。':'底部按钮只作用于当前节点，会生成它的下一层子功能。';
+    primaryLabel=childCount?'补充这一层':'生成子功能';
+    primaryAction='generate';
+    proofNode=active;
+    secondaryLabel=active.decision==='keep'?'以后再看':'加入备选';
+    secondaryAction=active.decision==='keep'?'drop':'keep';
+  }
+  const showProof=stage.step===4&&!!proofNode;
+  dock.classList.toggle('show-proof',showProof);
+  const proofHtml=showProof?`
+    <div class="action-proof" aria-label="当前选择依据">
+      <span><b>痛点</b>${esc(proofNode.pain||'先确认用户是否真的需要。')}</span>
+      <span><b>开发前验证</b>${esc(proofNode.validation||'找 3 个目标用户试用或访谈。')}</span>
+    </div>
+  `:'';
+
+  dock.innerHTML=`
+    <div class="action-copy">
+      <small>${esc(eyebrow)} · 找思路</small>
+      <b>${esc(title)}</b>
+      <span>${esc(hint)}</span>
+      ${proofHtml}
+    </div>
+    <div class="action-buttons">
+      <button class="primary" id="dockPrimary">${esc(primaryLabel)}</button>
+      ${secondaryLabel?`<button class="secondary" id="dockSecondary">${esc(secondaryLabel)}</button>`:''}
+      <button class="tool" id="dockEditNode">编辑</button>
+      <button class="tool" id="dockAddChild">手动加点子</button>
+      ${active.parentId?`<button class="tool danger" id="dockDeleteNode">删除</button>`:''}
+    </div>
+  `;
+  document.getElementById('dockPrimary').onclick=async()=>{
+    const button=document.getElementById('dockPrimary');
+    if(primaryAction==='focus'){
+      activeNodeId=primaryTarget;
+      project.activeNodeId=primaryTarget;
+      render();
+      return;
+    }
+    if(primaryAction==='keep'){
+      setDecision(active.id,'keep');
+      return;
+    }
+    if(primaryAction==='parent'){
+      activeNodeId=primaryTarget;
+      project.activeNodeId=primaryTarget;
+      render();
+      return;
+    }
+    button.disabled=true;
+    button.textContent='生成中...';
+    await generateFromNode(primaryTarget);
+  };
+  const secondary=document.getElementById('dockSecondary');
+  if(secondary)secondary.onclick=()=>{
+    if(secondaryAction==='drop')setDecision(active.id,'drop');
+    if(secondaryAction==='keep')setDecision(active.id,'keep');
+  };
+  document.getElementById('dockEditNode')?.addEventListener('click',()=>openNodeModal('edit',active.id,active.id));
+  document.getElementById('dockAddChild')?.addEventListener('click',()=>openNodeModal('create','',active.id));
+  document.getElementById('dockDeleteNode')?.addEventListener('click',()=>removeNode(active.id));
+  document.getElementById('dockExpandActive')?.addEventListener('click',async()=>{
+    const button=document.getElementById('dockExpandActive');
+    if(button){
+      button.disabled=true;
+      button.textContent='发散中...';
+    }
+    await generateFromNode(active.id);
+  });
+}
+function renderChildChoices(project,parent,recommended){
+  const children=project.nodes.filter(n=>n.parentId===parent.id);
+  if(!children.length)return '';
+  const listLabel=parent.parentId?'子功能选择':'方向选择';
+  return `<div class="child-choice-list" aria-label="${esc(listLabel)}">
+    ${children.map(child=>{
+      const meta=featureMetaFor(child);
+      return `<button class="child-choice ${child.id===recommended?.id?'recommended-choice':''}" data-focus-child="${child.id}">
+      <small>${child.id===recommended?.id?'建议进入':'进入下一层'}</small>
+      <b>${esc(child.title)}</b>
+      <div class="direction-meta"><i>难度 ${esc(meta.difficulty)}</i><i>${esc(meta.estimate)}</i></div>
+      <span>${esc(child.validation||child.desc)}</span>
+    </button>`;
+    }).join('')}
+  </div>`;
+}
+function recommendationFor(n,project=currentProject()){
+  const type=n.type||'';
+  if(!n.parentId){
+    const primary=pickPrimaryRecommendation(project,n);
+    if(primary)return {
+      title:`推荐方向：“${primary.title}”`,
+      reason:'它更适合作为第一条深入分支。点击画布上的这个节点，才会进入它的下一层。'
+    };
+    return {
+      title:'先从中心点生成方向',
+      reason:'先生成第一层方向；继续发散会补充同层方向。'
+    };
+  };
+  if(n.decision==='drop'||type.includes('暂缓'))return {
+    title:'以后再看',
+    reason:'这个点容易扩大范围。先把它留在不做清单，等核心功能被用户验证后再回来判断。'
+  };
+  if(type.includes('增长')||type.includes('分享'))return {
+    title:'先手工验证，不急着开发',
+    reason:'增长和分享功能看起来很诱人，但它依赖核心体验成立。先用图片或人工流程验证用户是否真的愿意分享。'
+  };
+  if(type.includes('体验')||type.includes('延展'))return {
+    title:'第二批做，先验证必要性',
+    reason:'它能提升体验，但不一定是现在最有启发的点。先观察用户是否反复遇到这个痛点，再决定要不要展开。'
+  };
+  if(type.includes('录入')||type.includes('核心')||n.decision==='keep')return {
+    title:'值得加入备选库',
+    reason:'这个点直接影响用户能不能完成第一次有效使用，适合先收藏起来继续展开。'
+  };
+  return {
+    title:'先做一次小验证',
+    reason:'不要直接把它排进开发。先用访谈、手工演示或低保真流程确认用户真的需要。'
+  };
+}
+function renderDecisionBoard(project){
+  const featureNodes=project.nodes.filter(n=>n.parentId);
+  const active=project.nodes.find(n=>n.id===activeNodeId);
+  const activeChildren=active?project.nodes.filter(n=>n.parentId===active.id):[];
+  const scopeNodes=activeChildren.length?activeChildren:featureNodes;
+  const dropped=scopeNodes.filter(n=>n.decision==='drop');
+  const validating=scopeNodes.filter(n=>n.decision!=='keep'&&n.decision!=='drop');
+  const saved=scopeNodes.filter(n=>n.decision==='keep');
+  const savedFocus=[
+    ...saved.filter(n=>nodeDepth(project,n)>1),
+    ...saved.filter(n=>nodeDepth(project,n)<=1)
+  ];
+  const mvp=pickStageRecommendation(project,active,workStage(project,active))||pickPrimaryRecommendation(project,active);
+  const validateFocus=validating.find(n=>n.id===activeNodeId)||validating[0];
+  const dropFocus=dropped.find(n=>n.id===activeNodeId)||dropped[0];
+  const nextFocus=mvp?.validation||active?.validation||'找 3 个目标用户做一次手工验证。';
+  const savedNames=savedFocus.slice(0,4).map(n=>n.title).join('、')||'还没有收藏点子';
+  const board=document.getElementById('decisionBoard');
+  board.innerHTML=`
+    <div class="decision-compact">
+    <section class="decision-hero">
+      <small>灵感备选 · 建议先看这一项</small>
+      <b>${esc(mvp?.title||'先生成一个功能方向')}</b>
+      <p>${esc(mvp?.validation||'先围绕中心想法生成具体功能，再只挑一个最能证明价值的点。')}</p>
+    </section>
+      <div class="decision-stat"><b>已收藏 ${saved.length}</b><span>${esc(savedNames)}</span></div>
+      <div class="decision-stat"><b>待验证 ${validating.length}</b><span>${esc(validateFocus?.title||'暂无待验证功能')}</span></div>
+      <div class="decision-stat"><b>以后再看 ${dropped.length}</b><span>${esc(dropFocus?.title||'还没有暂缓项')}</span></div>
+      <div class="decision-stat"><b>开发前验证</b><span>${esc(nextFocus)}</span></div>
+      <div class="decision-stat"><b>原则</b><span>先找思路，再从备选里排优先级。</span></div>
+    </div>
+  `;
+  board.querySelectorAll('[data-jump]').forEach(btn=>btn.onclick=()=>{
+    const id=btn.dataset.jump;
+    if(!id)return;
+    activeNodeId=id;
+    project.activeNodeId=id;
+    render();
+  });
+}
+function pickStageRecommendation(project,active,stage=workStage(project,active)){
+  if(stage.step===4&&active){
+    const children=rankRecommendationNodes(project.nodes.filter(n=>n.parentId===active.id&&n.decision!=='drop'));
+    if(children[0])return children[0];
+    if(active.parentId&&active.decision!=='drop')return active;
+  }
+  if(stage.step===2)return pickPrimaryRecommendation(project,active);
+  return null;
+}
+function rankRecommendationNodes(nodes){
+  const score=(n)=>{
+    let value=0;
+    const type=n.type||'';
+    const text=`${n.title} ${n.desc} ${n.pain}`.toLowerCase();
+    if(n.decision==='keep')value+=80;
+    if(/核心|录入/.test(type))value+=60;
+    if(/验证/.test(type))value+=42;
+    if(/体验/.test(type))value+=34;
+    if(/增长|分享/.test(type))value+=34;
+    if(/延展/.test(type))value-=8;
+    if(/一键|生成|推荐|清单|发布|整理|入库|搭配|适配|提醒/.test(text))value+=18;
+    if(/评分|反馈|优化|微调|数据|分析|偏好学习|指标/.test(text))value-=54;
+    if(n.decision==='drop'||/暂缓/.test(type))value-=100;
+    return value;
+  };
+  return [...nodes].sort((a,b)=>score(b)-score(a));
+}
+function pickPrimaryRecommendation(project,active){
+  if(active?.parentId&&active.decision==='keep')return active;
+  const featureNodes=project.nodes.filter(n=>n.parentId&&n.decision!=='drop');
+  const kept=featureNodes.filter(n=>n.decision==='keep');
+  const core=featureNodes.filter(n=>/核心|录入/.test(n.type||''));
+  return kept[0]||core[0]||featureNodes[0]||null;
+}
+function setDecision(id,decision){
+  const n=currentProject().nodes.find(item=>item.id===id);
+  if(!n)return;
+  n.decision=decision;
+  n.decisionChangedAt=new Date().toISOString();
+  currentProject().updatedAt=new Date().toISOString();
+  showToast(decision==='keep'?`已把“${n.title}”加入备选库`:`已把“${n.title}”放到以后再看`);
+  render();
+}
+function editNode(id,patch){
+  const project=currentProject();
+  const n=project?.nodes.find(item=>item.id===id);
+  if(!n)return;
+  Object.assign(n,patch);
+  project.updatedAt=new Date().toISOString();
+  saveProjects();
+  render();
+}
+function createManualChild(parentId,data){
+  const project=currentProject();
+  const parent=project?.nodes.find(n=>n.id===parentId)||project?.nodes[0];
+  if(!project||!parent)return;
+  const id=`manual-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`;
+  const position=childPositions(parent,1,project)[0]||{x:Math.min(86,parent.x+18),y:Math.min(86,parent.y+16)};
+  const child=node(
+    id,
+    data.title,
+    data.desc||'手动补充的功能点。',
+    parent.id,
+    position.x,
+    position.y,
+    data.type||'手动补充',
+    data.pain||'需要继续补充真实痛点。',
+    data.validation||'找 3 个目标用户快速验证是否有用。',
+    'maybe',
+    parent.parentId?'feature':'direction'
+  );
+  project.nodes.push(child);
+  parent.childrenGenerated=true;
+  activeNodeId=id;
+  project.activeNodeId=id;
+  project.updatedAt=new Date().toISOString();
+  saveProjects();
+  showToast(`已添加“${child.title}”`);
+  render();
+}
+function removeNode(id){
+  const project=currentProject();
+  const target=project?.nodes.find(n=>n.id===id);
+  if(!project||!target||!target.parentId){
+    showToast('中心想法不能删除');
+    return;
+  }
+  const removeIds=new Set([id]);
+  let changed=true;
+  while(changed){
+    changed=false;
+    project.nodes.forEach(n=>{
+      if(n.parentId&&removeIds.has(n.parentId)&&!removeIds.has(n.id)){
+        removeIds.add(n.id);
+        changed=true;
+      }
     });
   }
-  if(root)w(root.id,0);
-  downloadFile('brainstorm_'+currentSession.name.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g,'_')+'.md',md);
-  showToast('已导出 Markdown');
+  project.nodes=project.nodes.filter(n=>!removeIds.has(n.id));
+  activeNodeId=target.parentId;
+  project.activeNodeId=target.parentId;
+  project.updatedAt=new Date().toISOString();
+  saveProjects();
+  showToast(`已删除“${target.title}”`);
+  render();
 }
-function downloadFile(fn,ct){const b=new Blob([ct],{type:'text/plain'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=fn;a.click();URL.revokeObjectURL(u)}
-
-// ============ Toast ============
-let tt;
-function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2200)}
-
-// ============ 键盘 ============
-window.addEventListener('keydown',(e)=>{
-  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;
-  if(e.key==='f'||e.key==='F')fitView();
-  if(e.key==='0')resetZoom();
-  if((e.key==='z'||e.key==='Z')&&(e.metaKey||e.ctrlKey)){e.preventDefault();undo();return}
-  if(e.key==='Delete'&&selectedId){
-    deleteNode(selectedId);
+function nodeFormData(){
+  return {
+    title:document.getElementById('nodeTitleInput').value.trim(),
+    type:document.getElementById('nodeTypeInput').value.trim(),
+    desc:document.getElementById('nodeDescInput').value.trim(),
+    pain:document.getElementById('nodePainInput').value.trim(),
+    validation:document.getElementById('nodeValidationInput').value.trim()
+  };
+}
+function fillNodeForm(data={}){
+  document.getElementById('nodeTitleInput').value=data.title||'';
+  document.getElementById('nodeTypeInput').value=data.type||'';
+  document.getElementById('nodeDescInput').value=data.desc||'';
+  document.getElementById('nodePainInput').value=data.pain||'';
+  document.getElementById('nodeValidationInput').value=data.validation||'';
+}
+function openNodeModal(mode='edit',nodeId=activeNodeId,parentId=activeNodeId){
+  const project=currentProject();
+  const modal=document.getElementById('nodeModal');
+  nodeModalState={mode,nodeId,parentId};
+  if(mode==='edit'){
+    const n=project?.nodes.find(item=>item.id===nodeId);
+    if(!n)return;
+    document.getElementById('nodeModalTitle').textContent='编辑功能点';
+    document.getElementById('nodeModalDesc').textContent='把标题、说明、痛点和验证方式改清楚。';
+    fillNodeForm(n);
+  }else{
+    const parent=project?.nodes.find(item=>item.id===parentId);
+    document.getElementById('nodeModalTitle').textContent='手动加点子';
+    document.getElementById('nodeModalDesc').textContent=parent?`在“${parent.title}”下面补一个新功能点。`:'补一个新功能点。';
+    fillNodeForm({type:'手动补充'});
   }
-  if(e.key==='Escape')closeContextMenu();
+  modal.classList.remove('hidden');
+  document.body.classList.add('modal-open');
+  setTimeout(()=>document.getElementById('nodeTitleInput').focus(),0);
+}
+function closeNodeModal(){
+  document.getElementById('nodeModal').classList.add('hidden');
+  document.body.classList.remove('modal-open');
+}
+function saveNodeModal(){
+  const data=nodeFormData();
+  if(!data.title){
+    showToast('先写一个功能名');
+    document.getElementById('nodeTitleInput').focus();
+    return;
+  }
+  if(nodeModalState.mode==='edit'){
+    editNode(nodeModalState.nodeId,data);
+    showToast(`已更新“${data.title}”`);
+  }else{
+    createManualChild(nodeModalState.parentId,data);
+  }
+  closeNodeModal();
+}
+function projectMarkdown(project=currentProject()){
+  if(!project)return '';
+  const root=project.nodes.find(n=>!n.parentId)||project.nodes[0];
+  const childrenOf=id=>project.nodes.filter(n=>n.parentId===id);
+  const mvp=project.mvp||{};
+  const mustHave=Array.isArray(mvp.mustHaveFeatures)?mvp.mustHaveFeatures:[];
+  const directions=Array.isArray(project.directions)&&project.directions.length
+    ? project.directions
+    : childrenOf(root?.id).map(n=>({title:n.title,reason:n.pain||n.desc,validation:n.validation,decision:n.decision}));
+  const lineFor=(n,level=0)=>{
+    const prefix='  '.repeat(level);
+    const decision=n.decision==='keep'?'已收藏':n.decision==='drop'?'以后再看':'待验证';
+    const meta=featureMetaFor(n);
+    const parts=[
+      `${prefix}- ${n.title}（${n.type||'功能点'} · ${decision}）`,
+      n.desc?`${prefix}  - 说明：${n.desc}`:'',
+      n.pain?`${prefix}  - 痛点：${n.pain}`:'',
+      `${prefix}  - 难度/时间：${meta.difficulty} · ${meta.estimate}`,
+      `${prefix}  - 创新切口：${meta.innovation}`,
+      n.validation?`${prefix}  - 开发前验证：${n.validation}`:''
+    ].filter(Boolean);
+    childrenOf(n.id).forEach(child=>parts.push(lineFor(child,level+1)));
+    return parts.join('\n');
+  };
+  const saved=project.nodes.filter(n=>n.parentId&&n.decision==='keep');
+  const later=project.nodes.filter(n=>n.parentId&&n.decision==='drop');
+  const current=currentNode()||root;
+  const currentMeta=featureMetaFor(current||{});
+  const directionLines=directions.length?directions.map(item=>{
+    const meta=featureMetaFor(item);
+    return `- ${item.title}：${item.reason||item.desc||'待补充说明'}\n  - 实现难度：${meta.difficulty}\n  - 预计时间：${meta.estimate}\n  - 创新切口：${meta.innovation}\n  - 开发前验证：${item.validation||meta.validation}\n  - 状态：${item.decision==='keep'?'已收藏':item.decision==='drop'?'以后再看':'待验证'}`;
+  }).join('\n'):'- 暂无方向';
+  return [
+    `# ${project.title}`,
+    '',
+    `CanvasStorm Agent 开发 Brief`,
+    '',
+    project.seed,
+    '',
+    `更新时间：${formatTime(project.updatedAt)}`,
+    '',
+    `## 1. 市场痛点`,
+    root?.pain||project.seed||'- 暂无市场痛点',
+    '',
+    `## 核心 MVP`,
+    mvp.goal||root?.desc||project.seed||'- 暂无 MVP 目标',
+    '',
+    `### 必做项`,
+    mustHave.length?mustHave.map(item=>`- ${item.title}：${item.reason||item.validation||'待补充原因'}`).join('\n'):'- 暂无必做项',
+    '',
+    `### MVP 暂不做`,
+    '- 社交协作',
+    '- 模板市场',
+    '- 复杂账号体系',
+    '',
+    `### 开发前验证`,
+    mvp.validation||root?.validation||'- 暂无验证动作',
+    '',
+    `## 发散方向`,
+    directionLines,
+    '',
+    `## 当前选中功能实现 Brief`,
+    current?[
+      `- 功能：${current.title}`,
+      `- 推荐判断：${current.pain||current.desc||'待补充推荐理由'}`,
+      `- 实现难度：${currentMeta.difficulty}`,
+      `- 预计时间：${currentMeta.estimate}`,
+      `- 创新切口：${currentMeta.innovation}`,
+      `- 开发前验证：${current.validation||currentMeta.validation}`,
+      `- Agent 任务：${agentBriefFor(current,project)}`
+    ].join('\n'):'- 暂无当前功能',
+    '',
+    `## 灵感备选库`,
+    saved.length?saved.map(n=>`- ${n.title}：${n.validation||n.desc}`).join('\n'):'- 暂无收藏',
+    '',
+    `## 以后再看`,
+    later.length?later.map(n=>`- ${n.title}：${n.pain||n.desc}`).join('\n'):'- 暂无',
+    '',
+    `## 功能图`,
+    root?lineFor(root):'- 暂无节点'
+  ].join('\n');
+}
+async function exportProject(mode='copy'){
+  const project=currentProject();
+  const text=projectMarkdown(project);
+  if(!project||!text)return;
+  if(mode==='copy'){
+    try{
+      if(navigator.clipboard?.writeText){
+        await navigator.clipboard.writeText(text);
+        showToast('已复制 Agent 开发 Brief');
+        return;
+      }
+    }catch(e){}
+  }
+  const blob=new Blob([text],{type:'text/markdown;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`${project.title||'canvasstorm'}-Agent开发Brief.md`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  showToast(mode==='copy'?'剪贴板不可用，已下载 Markdown 文件':'已下载 Markdown 文件');
+}
+function childPositions(parent,count,project=currentProject()){
+  if(!parent.parentId){
+    const existing=(project?.nodes||[]).filter(n=>n.parentId===parent.id).length;
+    if(existing===0){
+      const base=count===4
+        ? [{x:22,y:24},{x:78,y:24},{x:22,y:76},{x:78,y:76}]
+        : count===3
+          ? [{x:24,y:26},{x:76,y:26},{x:50,y:78}]
+          : [{x:28,y:30},{x:72,y:76}];
+      return base.slice(0,count);
+    }
+    if(existing>0){
+      if(count===2)return [{x:84,y:54},{x:84,y:83}];
+      if(count===3)return [{x:84,y:45},{x:84,y:66},{x:84,y:87}];
+      return [{x:32,y:84},{x:50,y:84},{x:68,y:84},{x:86,y:84}].slice(0,count);
+    }
+  }
+  const direction=parent.x<50?-1:1;
+  const nearEdge=parent.x<28||parent.x>72;
+  const edgeDown=parent.y<55;
+  const spread=nearEdge
+    ? (edgeDown
+      ? (count===3?[20,40,56]:[18,34,50,62])
+      : (count===3?[-56,-40,-20]:[-62,-50,-34,-18]))
+    : (count===3?[-10,14,38]:[-18,2,22,42]);
+  return spread.map((dy,idx)=>({
+    x:Math.max(14,Math.min(86,nearEdge?(parent.x<28?22+(idx%2)*16:78-(idx%2)*16):parent.x+direction*(24+(idx%2)*3))),
+    y:Math.max(18,Math.min(86,parent.y+dy))
+  }));
+}
+async function generateFromNode(nodeId){
+  const project=currentProject();
+  const parent=project.nodes.find(n=>n.id===nodeId)||project.nodes[0];
+  activeNodeId=parent.id;
+  const existingChildren=project.nodes.filter(n=>n.parentId===parent.id).length;
+  const targetCount=parent.parentId?3:(existingChildren>0?2:4);
+  const legacyGenerate=document.getElementById('generateBtn');
+  if(legacyGenerate){
+    legacyGenerate.disabled=true;
+    legacyGenerate.textContent='生成中...';
+  }
+  try{
+    const ideas=aiStatus.configured?await aiGenerate(project,parent,targetCount):fallbackGenerate(project,parent,targetCount);
+    addChildren(project,parent,ideas);
+    showToast(`已围绕“${parent.title}”继续发散`);
+  }catch(e){
+    addChildren(project,parent,fallbackGenerate(project,parent,targetCount));
+    showToast('AI 暂不可用，已生成本地示例');
+  }finally{
+    if(legacyGenerate){
+      legacyGenerate.disabled=false;
+      legacyGenerate.textContent='生成下一层功能';
+    }
+    render();
+  }
+}
+async function aiGenerate(project,parent,count){
+  const isRoot=!parent.parentId;
+  const prompt={
+    systemPrompt:'你是面向独立开发者的产品功能发散顾问。先判断最小可做 MVP，再给功能方向；深入某个方向时，只生成这个方向下面的一层子功能。',
+    userPrompt:isRoot
+      ? `项目：${project.title}\n项目描述：${project.seed}\n中心想法：${parent.title} - ${parent.desc}\n\n请生成 MVP-first 结构。要求：\n1. 先给出这个项目最小能成立的 MVP 主线，不要把所有功能都当成必做。\n2. 再给出 ${count} 个功能发散方向，方向必须像用户能理解的产品入口，例如“一键生成穿搭”“社交发布卡片”“旅行衣物清单”。\n3. 每个方向要包含真实痛点、开发前验证、实现难度、预计时间和创新切口。\n4. 避免泛泛的评分、反馈、优化、数据分析、策略体系。\n5. 只输出 JSON 对象，格式：{"mvp":{"goal":"最小 MVP 目标","mustHaveFeatures":[{"title":"必做项","reason":"为什么必做","validation":"开发前验证"}],"validation":"整体验证动作"},"directions":[{"title":"方向名","desc":"一句话说明","type":"核心功能|体验功能|增长功能|验证功能|暂缓功能","pain":"真实痛点","validation":"开发前验证","difficulty":"低|中|高","estimate":"2-3 天|3-5 天|1-2 周","innovation":"创新切口"}]}`
+      : `项目：${project.title}\n项目描述：${project.seed}\n当前功能点：${parent.title} - ${parent.desc}\n\n生成 ${count} 个当前功能点的下一层子功能。要求：\n1. 只沿当前功能继续发散，不要跳到同级方向、商业、运营、后台、技术实现或泛泛用户研究。\n2. 每个标题必须像真实产品里的功能入口，例如“一键生成穿搭”“社交发布卡片”“旅行衣物清单”。\n3. 至少 1 个是最小可做的核心功能，至少 1 个是明显可以暂缓或只手工验证的扩展功能。\n4. 每个功能点要包含真实痛点、开发前验证、实现难度、预计时间和创新切口。\n5. 只输出 JSON 对象，格式：{"children":[{"title":"功能名","desc":"一句话说明","type":"核心功能|体验功能|增长功能|验证功能|暂缓功能","pain":"真实痛点","validation":"开发前验证","difficulty":"低|中|高","estimate":"2-3 天|3-5 天|1-2 周","innovation":"创新切口"}]}`,
+    temperature:.72,
+    max_tokens:2048
+  };
+  const resp=await apiFetch('POST','/storm',prompt);
+  const content=resp.data?.choices?.[0]?.message?.content||'';
+  const parsed=parseGenerationPayload(content);
+  return normalizeGenerationPayload(parsed,project,parent,count);
+}
+function parseIdeaArray(content){
+  const parsed=parseGenerationPayload(content);
+  if(Array.isArray(parsed))return parsed;
+  if(Array.isArray(parsed.children))return parsed.children;
+  if(Array.isArray(parsed.directions))return parsed.directions;
+  throw new Error('AI 返回不是数组');
+}
+function parseGenerationPayload(content){
+  let json=String(content||'').trim();
+  const block=json.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if(block)json=block[1].trim();
+  json=json.match(/(\{[\s\S]*\}|\[[\s\S]*\])/)?.[0]||json;
+  const parsed=JSON.parse(json);
+  return parsed;
+}
+function normalizeIdea(idea,index=0){
+  const meta=featureMetaFor(idea||{});
+  return {
+    title:String(idea?.title||`新功能 ${index+1}`).slice(0,24),
+    desc:String(idea?.desc||idea?.reason||'围绕当前节点生成的功能点。').slice(0,120),
+    type:idea?.type||'功能点',
+    pain:idea?.pain||idea?.reason||'需要进一步确认真实痛点。',
+    validation:idea?.validation||'找 3 个目标用户做一次手工验证。',
+    difficulty:idea?.difficulty||meta.difficulty,
+    estimate:idea?.estimate||meta.estimate,
+    innovation:idea?.innovation||meta.innovation
+  };
+}
+function normalizeGenerationPayload(payload,project,parent,count=4){
+  const isRoot=!parent.parentId;
+  const source=Array.isArray(payload)
+    ? payload
+    : (isRoot
+      ? (Array.isArray(payload?.directions)?payload.directions:payload?.children)
+      : (Array.isArray(payload?.children)?payload.children:payload?.directions));
+  const items=Array.isArray(source)?source:[];
+  if(isRoot&&payload?.mvp)project.pendingGeneratedMvp=payload.mvp;
+  return items.slice(0,count).map(normalizeIdea);
+}
+function fallbackGenerate(project,parent,count=4){
+  const children=fallbackIdeas(project,parent,count);
+  if(parent.parentId)return normalizeGenerationPayload({children},project,parent,count);
+  const mvp={
+    goal:parent.desc||project.seed||project.title,
+    mustHaveFeatures:children
+      .filter(item=>item.type!=='暂缓功能')
+      .slice(0,3)
+      .map(item=>({title:item.title,reason:item.pain||item.desc,validation:item.validation})),
+    validation:parent.validation||children[0]?.validation||'找 3 个目标用户做一次手工验证。'
+  };
+  return normalizeGenerationPayload({mvp,directions:children},project,parent,count);
+}
+function fallbackIdeas(project,parent,count=4){
+  const text=(project.title+' '+project.seed+' '+parent.title).toLowerCase();
+  if(text.includes('旅行')||text.includes('打包')||text.includes('行李')||text.includes('天气')){
+    return [
+      {title:'按行程分组清单',desc:'把物品按通勤、住宿、活动、应急分组，用户可以逐组检查。',type:'核心功能',pain:'一长串清单很容易漏看，用户需要按真实打包顺序检查。',validation:'让 5 个用户按分组清单打包，记录是否比普通清单少漏项。'},
+      {title:'目的地天气换算',desc:'把温度、降雨和昼夜温差转成外套、鞋子、雨具等具体建议。',type:'体验功能',pain:'用户看得懂天气数字，但不知道该带几件衣服。',validation:'给同一目的地生成两版建议，比较用户选择耗时和信任度。'},
+      {title:'证件充电器提醒',desc:'按交通方式和目的地提醒身份证、护照、转换头、充电器等高风险物品。',type:'验证功能',pain:'用户最怕漏掉无法临时购买或会耽误行程的关键物品。',validation:'让用户先自己列清单，再看提醒是否补充关键物品。'},
+      {title:'一键分享同行人',desc:'把清单发给同行人一起补充和勾选。',type:'暂缓功能',pain:'多人旅行可能需要协作，但早期会增加账号和同步复杂度。',validation:'先用截图分享验证同行人是否真的会参与补充。'}
+    ].slice(0,count);
+  }
+  if(text.includes('衣橱')||text.includes('衣服')||text.includes('穿搭')){
+    return [
+      {title:'天气穿搭推荐',desc:'结合天气、温度和当天行程推荐可直接穿的一套。',type:'核心功能',pain:'每天出门前不知道怎么兼顾天气和场合。',validation:'让用户连续 3 天选择推荐穿搭，记录采纳率。'},
+      {title:'重复率提醒',desc:'提醒最近常穿的衣服，帮助用户换搭配或发现闲置衣物。',type:'体验功能',pain:'用户不知道自己哪些衣服穿太多或闲置太久。',validation:'展示近 14 天穿搭记录，看用户是否调整选择。'},
+      {title:'社交图片生成',desc:'把穿搭生成适合小红书或朋友圈发布的图片和文案。',type:'增长功能',pain:'用户想分享穿搭，但排版和文案成本高。',validation:'生成 3 张卡片，观察用户是否愿意真实发布。'},
+      {title:'购买前搭配检查',desc:'买新衣服前判断能和衣橱里哪些单品搭配。',type:'验证功能',pain:'用户买完才发现不好搭，导致衣服闲置。',validation:'让用户输入 5 件想买单品，评估建议是否影响购买决策。'}
+    ].slice(0,count);
+  }
+  if(text.includes('菜谱')||text.includes('食材')||text.includes('冰箱')||text.includes('晚饭')||text.includes('做饭')){
+    return [
+      {title:'今晚能做什么',desc:'输入现有食材后，直接给出 2-3 个今晚能立刻做的菜。',type:'核心功能',pain:'用户打开冰箱后不知道现有食材能组合成什么晚饭。',validation:'让 5 个用户输入真实冰箱食材，观察是否能在 3 分钟内选定一道菜。'},
+      {title:'缺少调料替代',desc:'发现缺少调料时，给出家里常见替代方案或可跳过步骤。',type:'体验功能',pain:'用户常常因为缺一味调料就放弃做饭。',validation:'拿 10 道家常菜测试替代建议，看用户是否愿意继续做。'},
+      {title:'一键购物清单',desc:'把缺少食材整理成超市清单，优先列出完成今晚菜谱必须买的东西。',type:'验证功能',pain:'用户不想为了一个菜谱临时重新规划采购。',validation:'让用户对比普通菜谱和购物清单，记录是否减少漏买。'},
+      {title:'晒晚饭卡片',desc:'把做完的菜生成可分享图片和一句文案。',type:'暂缓功能',pain:'分享有传播价值，但不是验证做饭助手成立的第一步。',validation:'先用截图模板手工生成，观察用户是否真的分享。'}
+    ].slice(0,count);
+  }
+  if(text.includes('知识库')||text.includes('笔记')||text.includes('收藏')||text.includes('灵感')||text.includes('写作')){
+    return [
+      {title:'收藏自动归类',desc:'把链接、笔记和灵感按主题自动归到可继续查找的分类里。',type:'核心功能',pain:'用户收藏很多内容，但真正要用时找不到。',validation:'导入 30 条真实收藏，让用户判断分类是否能帮助找回。'},
+      {title:'写作选题发散',desc:'从一条笔记继续发散成可写的标题、角度和论点。',type:'体验功能',pain:'灵感只是碎片，用户很难把它变成可执行选题。',validation:'让用户从 5 条笔记里选择是否愿意继续写。'},
+      {title:'重复内容合并',desc:'发现相似收藏和笔记，合并成一张更清晰的主题卡。',type:'验证功能',pain:'知识库越用越乱，重复信息会降低信任。',validation:'给用户展示合并前后结果，记录是否减少翻找时间。'},
+      {title:'公开分享页',desc:'把整理好的主题卡生成可分享页面。',type:'暂缓功能',pain:'分享看起来有吸引力，但会提前扩大到发布和权限。',validation:'先导出静态图，观察用户是否愿意发给别人。'}
+    ].slice(0,count);
+  }
+  if(text.includes('宠物')||text.includes('猫')||text.includes('狗')||text.includes('健康')||text.includes('疫苗')){
+    return [
+      {title:'异常记录入口',desc:'快速记录食欲、精神、排便、呕吐等异常状态。',type:'核心功能',pain:'宠物不舒服时，主人很难准确回忆异常从什么时候开始。',validation:'让 5 位宠物主人连续 7 天记录，看是否愿意持续使用。'},
+      {title:'就医摘要生成',desc:'把最近异常、饮食和用药整理成给兽医看的摘要。',type:'体验功能',pain:'看诊时信息零散，主人容易漏说关键变化。',validation:'模拟一次问诊，让用户判断摘要是否节省沟通时间。'},
+      {title:'疫苗驱虫提醒',desc:'按宠物年龄和上次时间提醒疫苗、驱虫和体检。',type:'验证功能',pain:'周期性健康事项容易忘，错过后补救麻烦。',validation:'让用户录入历史日期，确认提醒是否符合真实计划。'},
+      {title:'家庭成员协作',desc:'让家人共同记录喂食和健康状态。',type:'暂缓功能',pain:'多人记录有价值，但早期会增加账号和权限复杂度。',validation:'先用共享截图验证家人是否愿意参与记录。'}
+    ].slice(0,count);
+  }
+  if(text.includes('排班')||text.includes('班表')||text.includes('门店')||text.includes('店长')||text.includes('员工')||text.includes('咖啡')){
+    return [
+      {title:'一键生成周班表',desc:'根据员工可上班时间、岗位和休息要求生成一周班表。',type:'核心功能',pain:'店长每周排班都要反复平衡人手、休息和岗位覆盖。',validation:'让 3 位店长用真实员工可用时间手工对比，记录是否减少排班时间。'},
+      {title:'换班冲突提醒',desc:'员工换班时自动检查岗位缺口、连续工时和已请假时段。',type:'体验功能',pain:'临时换班最容易漏掉岗位覆盖，导致高峰期没人顶上。',validation:'用 10 个真实换班案例检查是否能提前发现冲突。'},
+      {title:'高峰人手预估',desc:'按午晚高峰、周末和活动日标出需要加人的时段。',type:'验证功能',pain:'门店忙闲不均，排少了服务崩，排多了人工成本高。',validation:'拿过去一周客流记录预测班次，让店长判断是否符合经验。'},
+      {title:'员工偏好排班',desc:'记录员工偏好的班次和休息日，生成更容易被接受的排班。',type:'暂缓功能',pain:'员工满意度重要，但早期会把问题扩大到协商和绩效。',validation:'先让员工填一次偏好表，观察店长是否真的会参考。'}
+    ].slice(0,count);
+  }
+  if(text.includes('学习')||text.includes('计划')||text.includes('考试')||text.includes('课程')||text.includes('复习')){
+    return [
+      {title:'每日学习切片',desc:'把目标拆成今天能完成的 2-3 个学习任务。',type:'核心功能',pain:'学习计划太大时，用户不知道今天到底该做什么。',validation:'让 5 个用户连续 3 天执行切片任务，记录完成率。'},
+      {title:'错题复习提醒',desc:'根据错题时间和掌握程度提醒今天该复习哪些内容。',type:'体验功能',pain:'用户复习常靠感觉，容易忘掉真正薄弱的部分。',validation:'用 20 道错题生成复习清单，看用户是否觉得更有针对性。'},
+      {title:'进度偏差预警',desc:'发现计划落后时，给出缩小范围或调整节奏的建议。',type:'验证功能',pain:'计划失败后用户容易直接放弃，而不是调整。',validation:'模拟落后 2 天的计划，看用户是否接受调整建议。'},
+      {title:'同学打卡排行',desc:'和同学比较打卡进度。',type:'暂缓功能',pain:'社交激励可能有用，但会把早期重点带偏到排行。',validation:'先用群内截图验证是否真的增加完成率。'}
+    ].slice(0,count);
+  }
+  return [
+    {title:'最小录入流程',desc:'把使用门槛降到最低，让用户先完成第一次有效输入。',type:'核心功能',pain:'新工具最容易死在第一次录入太麻烦。',validation:'观察 5 个用户能否在 3 分钟内完成第一次输入。'},
+    {title:'结果解释卡片',desc:'每个建议都说明为什么值得继续看，以及可能解决什么问题。',type:'体验功能',pain:'用户面对建议时不知道该不该相信。',validation:'让用户标记哪些解释真的影响了收藏意愿。'},
+    {title:'分享结果页',desc:'把输出变成一张可分享的结果页，帮助冷启动传播。',type:'增长功能',pain:'早期项目缺少自然传播理由。',validation:'统计生成后用户是否复制链接或截图分享。'},
+    {title:'停止条件提醒',desc:'为每个功能设置失败信号，避免越做越大。',type:'验证功能',pain:'用户容易每个功能都想要，最后方向失控。',validation:'让用户在收藏功能前必须选择一个停止条件。'}
+  ].slice(0,count);
+}
+function addChildren(project,parent,ideas){
+  const existing=project.nodes.filter(n=>n.parentId===parent.id).length;
+  const positions=childPositions(parent,ideas.length,project);
+  ideas.forEach((idea,idx)=>{
+    const pos=positions[idx];
+    const nudgeX=parent.parentId&&existing?Math.min(8,existing*2):0;
+    const nudgeY=parent.parentId&&existing?Math.min(6,existing*2):0;
+    project.nodes.push({
+      id:uid('node_'),
+      parentId:parent.id,
+      title:String(idea.title||'新功能').slice(0,18),
+      desc:String(idea.desc||'围绕当前节点生成的功能点。').slice(0,90),
+      type:idea.type||'功能点',
+      pain:idea.pain||'需要进一步确认真实痛点。',
+      validation:idea.validation||'找 3 个目标用户做一次手工验证。',
+      difficulty:idea.difficulty||featureMetaFor(idea).difficulty,
+      estimate:idea.estimate||featureMetaFor(idea).estimate,
+      innovation:idea.innovation||featureMetaFor(idea).innovation,
+      decision:'maybe',
+      role:parent.parentId?'feature':'direction',
+      x:Math.min(88,Math.max(12,pos.x+nudgeX)),
+      y:Math.min(86,Math.max(12,pos.y+nudgeY))
+    });
+  });
+  parent.childrenGenerated=true;
+  project.updatedAt=new Date().toISOString();
+  syncProjectModel(project);
+  if(!parent.parentId&&project.pendingGeneratedMvp){
+    applyGeneratedMvp(project,parent,project.pendingGeneratedMvp);
+    delete project.pendingGeneratedMvp;
+  }
+  activeNodeId=parent.id;
+  project.activeNodeId=parent.id;
+}
+function applyGeneratedMvp(project,root,mvp){
+  const mustHave=Array.isArray(mvp.mustHaveFeatures)?mvp.mustHaveFeatures:[];
+  const byTitle=new Map(project.nodes.map(n=>[n.title,n]));
+  project.mvp={
+    goal:mvp.goal||root.desc||project.seed||project.title,
+    rootNodeId:root.id,
+    mustHaveFeatures:mustHave.slice(0,3).map((item,idx)=>{
+      const node=byTitle.get(item.title)||project.nodes.find(n=>n.parentId===root.id&&idx===0);
+      return {
+        nodeId:node?.id||'',
+        title:item.title||node?.title||`必做项 ${idx+1}`,
+        reason:item.reason||node?.pain||node?.desc||'直接影响用户第一次有效使用。',
+        validation:item.validation||node?.validation||'找 3 个目标用户做一次手工验证。'
+      };
+    }),
+    validation:mvp.validation||root.validation||'找 3 个目标用户做一次手工验证。',
+    updatedAt:project.updatedAt||new Date().toISOString()
+  };
+}
+function createFromForm(){
+  const title=document.getElementById('newProjectTitle').value.trim()||'新的项目';
+  const seed=document.getElementById('newProjectSeed').value.trim()||'描述这个项目想解决的问题。';
+  const p=createProject(null,title,seed);
+  const root=p.nodes.find(n=>!n.parentId)||p.nodes[0];
+  if(root)addChildren(p,root,fallbackGenerate(p,root,4));
+  projects.unshift(p);
+  activeProjectId=p.id;
+  activeNodeId=p.activeNodeId;
+  document.getElementById('newProjectTitle').value='';
+  document.getElementById('newProjectSeed').value='';
+  closeProjectModal();
+  render();
+  showToast(`已创建“${title}”功能图`);
+}
+function openProjectModal(){
+  const modal=document.getElementById('projectModal');
+  modal.classList.remove('hidden');
+  document.body.classList.add('modal-open');
+  setTimeout(()=>document.getElementById('newProjectTitle').focus(),0);
+}
+function closeProjectModal(){
+  document.getElementById('projectModal').classList.add('hidden');
+  document.body.classList.remove('modal-open');
+}
+function fillProjectExample(id){
+  const examples={
+    travel:['AI 旅行打包助手','出发前输入目的地、天数、天气和行程类型，帮用户生成可执行的行李清单，并提醒容易遗漏的物品。'],
+    wardrobe:['线上衣橱','把我的衣服拍照录入，帮我管理衣橱、生成穿搭，并把喜欢的搭配发布到社交媒体。'],
+    study:['学习计划助手','把考试日期、课程进度和每天可用时间录入后，帮我拆解复习计划并提醒执行。'],
+    pet:['宠物健康记录','记录宠物体重、疫苗、饮食和异常症状，帮我发现健康变化并整理给医生看。']
+  };
+  const item=examples[id];
+  if(!item)return;
+  document.getElementById('newProjectTitle').value=item[0];
+  document.getElementById('newProjectSeed').value=item[1];
+}
+function loadTemplate(id){
+  const p=createProject(id);
+  projects.unshift(p);
+  activeProjectId=p.id;
+  activeNodeId=p.activeNodeId;
+  render();
+}
+function showToast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;
+  el.classList.add('show');
+  clearTimeout(showToast.timer);
+  showToast.timer=setTimeout(()=>el.classList.remove('show'),1800);
+}
+function updateDockVisibility(){
+  if(window.innerWidth>760){
+    document.body.classList.remove('dock-away');
+    return;
+  }
+  const canvas=document.getElementById('canvas');
+  if(!canvas)return;
+  const rect=canvas.getBoundingClientRect();
+  const away=rect.bottom < window.innerHeight - 104 || rect.top > window.innerHeight - 80;
+  document.body.classList.toggle('dock-away',away);
+}
+window.addEventListener('scroll',updateDockVisibility,{passive:true});
+window.addEventListener('resize',updateDockVisibility);
+document.getElementById('loginBtn').onclick=()=>login(document.getElementById('loginName').value);
+document.getElementById('loginName').addEventListener('keydown',e=>{
+  if(e.key!=='Enter')return;
+  e.preventDefault();
+  login(document.getElementById('loginName').value);
 });
-
-// ============ 初始化 ============
-function init(){
-  document.getElementById('apiKeyInput').value=getApiKey();
-  const sessions=loadSessions();
-  const activeId=getActiveId();
-  let targetSession = null;
-  if(activeId) targetSession=sessions.find(s=>s.id===activeId);
-  if(!targetSession && sessions.length>0) targetSession=sessions[0];
-
-  if(targetSession){
-    switchToSession(targetSession.id);
-    // switchToSession 内部会根据有无节点决定显示/隐藏 entryOverlay
-  } else {
-    entryOverlay.classList.remove('hidden');
+document.querySelectorAll('[data-login]').forEach(btn=>btn.onclick=()=>login(btn.dataset.login));
+document.getElementById('logoutBtn').onclick=logout;
+document.getElementById('createProjectBtn').onclick=createFromForm;
+document.getElementById('newProjectBtn').onclick=openProjectModal;
+document.getElementById('topNewProjectBtn').onclick=openProjectModal;
+document.getElementById('sideCreateProjectBtn')?.addEventListener('click',openProjectModal);
+document.getElementById('closeProjectModal').onclick=closeProjectModal;
+document.getElementById('cancelProjectBtn').onclick=closeProjectModal;
+document.getElementById('chromeToggleBtn').onclick=()=>{
+  const app=document.getElementById('appView');
+  app.classList.toggle('chrome-collapsed');
+  const collapsed=app.classList.contains('chrome-collapsed');
+  document.getElementById('chromeToggleBtn').textContent=collapsed?'展开顶部栏':'收起顶部栏';
+};
+document.getElementById('exportMenuBtn').onclick=e=>{
+  e.stopPropagation();
+  document.getElementById('exportMenu').classList.toggle('open');
+};
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.export-wrap'))document.getElementById('exportMenu')?.classList.remove('open');
+});
+document.getElementById('exportProjectBtn').onclick=()=>{
+  document.getElementById('exportMenu')?.classList.remove('open');
+  exportProject('copy');
+};
+document.getElementById('downloadProjectBtn').onclick=()=>{
+  document.getElementById('exportMenu')?.classList.remove('open');
+  exportProject('download');
+};
+document.querySelectorAll('[data-project-example]').forEach(btn=>btn.onclick=()=>fillProjectExample(btn.dataset.projectExample));
+document.getElementById('newProjectTitle').addEventListener('keydown',e=>{
+  if(e.key!=='Enter')return;
+  e.preventDefault();
+  document.getElementById('newProjectSeed').focus();
+});
+document.getElementById('newProjectSeed').addEventListener('keydown',e=>{
+  if(e.key!=='Enter'||(!e.metaKey&&!e.ctrlKey))return;
+  e.preventDefault();
+  createFromForm();
+});
+document.getElementById('projectModal').onclick=e=>{if(e.target.id==='projectModal')closeProjectModal()};
+document.getElementById('closeNodeModal').onclick=closeNodeModal;
+document.getElementById('cancelNodeBtn').onclick=closeNodeModal;
+document.getElementById('saveNodeBtn').onclick=saveNodeModal;
+document.getElementById('nodeModal').onclick=e=>{if(e.target.id==='nodeModal')closeNodeModal()};
+document.getElementById('nodeValidationInput').addEventListener('keydown',e=>{
+  if(e.key!=='Enter'||(!e.metaKey&&!e.ctrlKey))return;
+  e.preventDefault();
+  saveNodeModal();
+});
+document.querySelectorAll('[data-template]').forEach(btn=>btn.onclick=()=>loadTemplate(btn.dataset.template));
+document.getElementById('generateBtn').onclick=()=>generateFromNode(currentNode()?.id);
+document.getElementById('emptyCreateBtn').onclick=()=>loadTemplate('wardrobe');
+document.getElementById('seedInput').addEventListener('change',()=>{
+  const n=currentNode();
+  if(!n)return;
+  n.title=document.getElementById('seedInput').value.trim()||n.title;
+  render();
+});
+async function init(){
+  appVersion=await readAppVersion();
+  activeUser=localStorage.getItem(USER_KEY)||'';
+  if(activeUser){
+    await loadProjects();
+    showApp();
+  }else{
+    renderRecentSpaces();
   }
-  renderSessionList();
+  startAppVersionWatcher();
 }
-init();
+if(!window.__FILE_MODE)init();
 </script>
 </body>
 </html>
