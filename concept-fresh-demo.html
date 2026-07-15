@@ -1,0 +1,703 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CanvasStorm Fresh Demo</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2318211d'/%3E%3Ctext x='32' y='39' text-anchor='middle' font-size='22' font-family='Arial' font-weight='700' fill='white'%3ECS%3C/text%3E%3C/svg%3E">
+<style>
+:root{
+  --paper:#fbfcf8;
+  --panel:#ffffff;
+  --ink:#18211d;
+  --muted:#67746e;
+  --line:#dfe6dd;
+  --line-strong:#b9c8bd;
+  --mint:#dff3e6;
+  --mint-strong:#8fcfa4;
+  --sky:#e8f3fb;
+  --blue:#7ab6d8;
+  --lemon:#f5efc6;
+  --rose:#f6e3df;
+  --shadow:0 18px 55px rgba(31,47,39,.09);
+  --radius:18px;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  min-height:100vh;
+  background:
+    linear-gradient(180deg,rgba(223,243,230,.62),rgba(251,252,248,.86) 260px),
+    radial-gradient(circle at 12% 12%,rgba(122,182,216,.16),transparent 260px),
+    var(--paper);
+  color:var(--ink);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  letter-spacing:0;
+}
+button{font:inherit}
+.shell{min-height:100vh;display:grid;grid-template-rows:auto 1fr}
+.shell.chrome-collapsed{grid-template-rows:auto 1fr}
+.topbar{
+  position:sticky;
+  top:0;
+  z-index:20;
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  align-items:center;
+  gap:18px;
+  padding:14px 24px;
+  background:rgba(251,252,248,.82);
+  border-bottom:1px solid rgba(185,200,189,.64);
+  backdrop-filter:blur(18px);
+  transition:padding .2s ease,background .2s ease;
+}
+.brand{display:flex;align-items:center;gap:12px;font-weight:900}
+.mark{
+  width:36px;height:36px;border-radius:10px;
+  display:grid;place-items:center;
+  background:#15201b;color:#fff;font-size:13px;
+}
+.top-meta{
+  min-width:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  color:var(--muted);
+  font-size:13px;
+}
+.top-meta b{color:var(--ink)}
+.top-actions{display:flex;align-items:center;gap:10px}
+.shell.chrome-collapsed .topbar{padding:9px 24px;background:rgba(251,252,248,.92)}
+.shell.chrome-collapsed .top-meta span,
+.shell.chrome-collapsed .export-wrap,
+.shell.chrome-collapsed .top-actions .dark{display:none}
+.shell.chrome-collapsed .top-meta{justify-content:flex-end}
+.shell.chrome-collapsed .topbar{grid-template-columns:auto 1fr auto}
+.ghost,.dark,.icon-btn{
+  min-height:40px;
+  border:1px solid var(--line-strong);
+  border-radius:999px;
+  background:rgba(255,255,255,.72);
+  color:var(--ink);
+  padding:0 15px;
+  font-weight:800;
+}
+.dark{background:#17201b;color:#fff;border-color:#17201b;box-shadow:0 10px 26px rgba(23,32,27,.16)}
+.icon-btn{width:42px;padding:0;display:grid;place-items:center}
+.export-wrap{position:relative}
+.export-menu{
+  position:absolute;
+  right:0;
+  top:48px;
+  width:196px;
+  padding:8px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:#fff;
+  box-shadow:var(--shadow);
+  display:none;
+}
+.export-menu.open{display:grid}
+.export-menu button{
+  width:100%;
+  border:0;
+  border-radius:10px;
+  background:transparent;
+  padding:10px 11px;
+  text-align:left;
+  color:var(--ink);
+  font-weight:800;
+}
+.export-menu button:hover{background:#f3f7f1}
+.workspace{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 340px;
+  gap:18px;
+  padding:18px 24px 22px;
+}
+.main{
+  min-width:0;
+  display:grid;
+  gap:14px;
+}
+.brief{
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:rgba(255,255,255,.7);
+  box-shadow:0 12px 36px rgba(31,47,39,.06);
+  overflow:hidden;
+}
+.brief-head{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:14px;
+  align-items:center;
+  padding:18px 18px 14px;
+}
+.eyebrow{
+  display:inline-flex;
+  width:max-content;
+  padding:5px 9px;
+  border-radius:999px;
+  background:var(--mint);
+  color:#3e7652;
+  font-size:12px;
+  font-weight:900;
+  margin-bottom:8px;
+}
+h1{font-size:34px;line-height:1.06;margin:0 0 7px;letter-spacing:0}
+.brief p{margin:0;color:var(--muted);line-height:1.55}
+.brief-body{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:10px;
+  padding:0 18px 18px;
+}
+.brief.collapsed .brief-body{display:none}
+.brief.collapsed .brief-head{padding-bottom:18px}
+.brief-chip{
+  min-width:0;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:#fff;
+  padding:12px;
+}
+.brief-chip small{display:block;color:var(--muted);font-size:12px;font-weight:900;margin-bottom:6px}
+.brief-chip b{display:block;font-size:15px;line-height:1.28}
+.brief-note{
+  margin-top:10px;
+  padding:10px 12px;
+  border-radius:12px;
+  background:#f6faf4;
+  color:#52635b;
+  font-size:13px;
+  line-height:1.5;
+}
+.map{
+  position:relative;
+  min-height:590px;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:
+    linear-gradient(var(--line) 1px,transparent 1px),
+    linear-gradient(90deg,var(--line) 1px,transparent 1px),
+    rgba(255,255,255,.64);
+  background-size:44px 44px;
+  overflow:hidden;
+  box-shadow:var(--shadow);
+}
+.map::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(180deg,rgba(251,252,248,.08),rgba(251,252,248,.86));
+  pointer-events:none;
+}
+.map-inner{
+  position:relative;
+  z-index:2;
+  height:100%;
+  padding:26px;
+  display:grid;
+  grid-template-columns:1fr 1.1fr 1.35fr;
+  gap:18px;
+  align-items:stretch;
+}
+.lane{
+  min-width:0;
+  display:grid;
+  align-content:center;
+  gap:12px;
+}
+.lane-title{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:var(--muted);
+  font-size:12px;
+  font-weight:900;
+}
+.dot{width:9px;height:9px;border-radius:99px;background:var(--mint-strong)}
+.card{
+  border:1px solid var(--line-strong);
+  border-radius:16px;
+  background:rgba(255,255,255,.9);
+  padding:15px;
+  box-shadow:0 10px 32px rgba(31,47,39,.07);
+}
+.card small{
+  display:inline-flex;
+  padding:4px 8px;
+  border-radius:999px;
+  background:#eef5ed;
+  color:#4c7459;
+  font-size:11px;
+  font-weight:900;
+  margin-bottom:10px;
+}
+.card h2,.card h3{margin:0 0 8px;line-height:1.13}
+.card h2{font-size:24px}
+.card h3{font-size:18px}
+.card p{margin:0;color:var(--muted);line-height:1.48;font-size:13px}
+.problem{background:#17201b;color:#fff;border-color:#17201b}
+.problem p{color:rgba(255,255,255,.72)}
+.mvp-card{
+  background:linear-gradient(180deg,#fff,#f5fbf6);
+  border-color:#9fcfab;
+  min-height:230px;
+}
+.mvp-list{display:grid;gap:8px;margin-top:12px}
+.mvp-list span{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-height:34px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:#fff;
+  padding:7px 9px;
+  font-size:13px;
+  font-weight:800;
+}
+.mvp-list i{
+  width:18px;height:18px;border-radius:50%;
+  background:var(--mint);
+  color:#437950;
+  display:grid;place-items:center;
+  font-style:normal;
+  font-size:11px;
+}
+.mvp-note{
+  margin-top:12px;
+  border-top:1px solid var(--line);
+  padding-top:10px;
+  color:#52635b;
+  font-size:12px;
+  line-height:1.5;
+}
+.branch-list{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.branch{
+  cursor:pointer;
+  transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease,background .16s ease;
+}
+.branch:hover{transform:translateY(-2px);box-shadow:0 16px 34px rgba(31,47,39,.11)}
+.branch.active{border-color:#17201b;background:#f8fbf4;box-shadow:0 0 0 4px rgba(143,207,164,.22)}
+.branch[data-kind="market"] small{background:var(--sky);color:#3f7494}
+.branch[data-kind="trust"] small{background:var(--lemon);color:#7c713a}
+.branch[data-kind="share"] small{background:var(--rose);color:#9a5b51}
+.feature-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:10px;
+}
+.feature-meta span{
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:rgba(255,255,255,.82);
+  color:#52635b;
+  padding:5px 8px;
+  font-size:11px;
+  font-weight:900;
+}
+.branch-actions{display:flex;gap:8px;margin-top:12px}
+.mini{
+  border:1px solid var(--line-strong);
+  border-radius:999px;
+  background:#fff;
+  padding:7px 10px;
+  font-size:12px;
+  font-weight:900;
+}
+.mini.keep{background:#17201b;color:#fff;border-color:#17201b}
+.panel{
+  min-width:0;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:rgba(255,255,255,.76);
+  box-shadow:var(--shadow);
+  align-self:start;
+  position:sticky;
+  top:88px;
+  overflow:hidden;
+}
+.panel-section{padding:18px;border-bottom:1px solid var(--line)}
+.panel-section:last-child{border-bottom:0}
+.panel h2{font-size:20px;line-height:1.14;margin:0 0 8px}
+.panel p{margin:0;color:var(--muted);line-height:1.55;font-size:13px}
+.metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.metric{
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:10px;
+  background:#fff;
+}
+.metric b{display:block;font-size:18px}
+.metric span{font-size:12px;color:var(--muted);font-weight:800}
+.panel-kv{
+  display:grid;
+  gap:8px;
+  margin-top:12px;
+}
+.panel-kv div{
+  display:grid;
+  grid-template-columns:76px 1fr;
+  gap:10px;
+  border-top:1px solid var(--line);
+  padding-top:8px;
+  font-size:13px;
+  line-height:1.45;
+}
+.panel-kv b{color:#4f6258}
+.agent-card{
+  margin-top:12px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:#fff;
+  padding:12px;
+}
+.agent-card h3{
+  margin:0 0 8px;
+  font-size:14px;
+}
+.agent-card p{font-size:12px}
+.checklist{display:grid;gap:8px;margin-top:12px}
+.check{
+  display:grid;
+  grid-template-columns:20px 1fr;
+  gap:8px;
+  align-items:start;
+  color:var(--ink);
+  font-size:13px;
+  line-height:1.4;
+}
+.check i{
+  width:18px;height:18px;border-radius:50%;
+  background:var(--mint);
+  color:#437950;
+  display:grid;place-items:center;
+  font-style:normal;
+  font-size:11px;
+  font-weight:900;
+}
+.toast{
+  position:fixed;
+  left:50%;
+  bottom:22px;
+  transform:translateX(-50%) translateY(14px);
+  background:#17201b;
+  color:#fff;
+  border-radius:999px;
+  padding:11px 16px;
+  font-size:13px;
+  font-weight:850;
+  opacity:0;
+  pointer-events:none;
+  transition:.18s ease;
+  z-index:30;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (max-width:980px){
+  .topbar{grid-template-columns:auto auto;justify-content:space-between}
+  .top-meta{grid-column:1 / -1;justify-content:flex-start}
+  .workspace{grid-template-columns:1fr}
+  .panel{position:static}
+  .map-inner{grid-template-columns:1fr}
+  .map{min-height:auto}
+  .lane{align-content:start}
+  .branch-list{grid-template-columns:1fr}
+  .brief-body{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="topbar">
+    <div class="brand"><span class="mark">CS</span><span>CanvasStorm</span></div>
+    <div class="top-meta"><b>AI 旅行打包助手</b><span>市场痛点 → 最小 MVP → 拓展功能池</span></div>
+    <div class="top-actions">
+      <button class="ghost" id="toggleChrome">收起顶部栏</button>
+      <div class="export-wrap">
+        <button class="ghost" id="exportBtn">导出</button>
+        <div class="export-menu" id="exportMenu">
+          <button id="copyMd">复制 Markdown</button>
+          <button id="downloadMd">下载 .md 文件</button>
+        </div>
+      </div>
+      <button class="dark">新建项目</button>
+    </div>
+  </header>
+  <main class="workspace">
+    <section class="main">
+      <section class="brief" id="brief">
+        <div class="brief-head">
+          <div>
+            <span class="eyebrow">先把问题拆成可验证 MVP</span>
+            <h1>从一个想法，拆到能解决市场痛点的最小版本</h1>
+            <p>这版不把所有功能都塞进画布。先固定“谁痛、痛在哪、最小怎么验证”，再把拓展功能放进可收藏的功能池。</p>
+            <div class="brief-note">MVP 和拓展功能可以属于同一个方向，但不能做重复清单。MVP 是现在必须先做、能证明用户会用的最薄一层；拓展功能是验证成立后再排期的候选项。</div>
+          </div>
+          <button class="icon-btn" id="briefIcon">⌃</button>
+        </div>
+        <div class="brief-body">
+          <div class="brief-chip"><small>目标用户</small><b>近期出行但讨厌打包的人</b></div>
+          <div class="brief-chip"><small>核心痛点</small><b>怕漏带东西，又不想从空白清单开始想</b></div>
+          <div class="brief-chip"><small>开发前验证</small><b>先手工做 5 份真实清单，看用户是否愿意照着用</b></div>
+        </div>
+      </section>
+
+      <section class="map" aria-label="MVP-first 功能图">
+        <div class="map-inner">
+          <div class="lane">
+            <div class="lane-title"><span class="dot"></span><span>市场问题</span></div>
+            <article class="card problem">
+              <small>真实痛点</small>
+              <h2>出发前总怕漏带东西</h2>
+              <p>用户知道自己要旅行，但每次都要从空白清单开始想。天气、天数、活动类型一变，清单就不可靠。</p>
+            </article>
+          </div>
+
+          <div class="lane">
+            <div class="lane-title"><span class="dot"></span><span>最小 MVP</span></div>
+            <article class="card mvp-card">
+              <small>先做这个</small>
+              <h2>智能行李清单</h2>
+              <p>输入目的地、天数和活动类型，生成一份可直接照着收拾的清单。</p>
+              <div class="mvp-list">
+                <span><i>1</i>目的地 + 天数 + 天气</span>
+                <span><i>2</i>按场景生成衣物和证件清单</span>
+                <span><i>3</i>用户勾选后保存一次出行记录</span>
+              </div>
+              <div class="mvp-note">只做能证明“用户愿意用清单解决打包焦虑”的部分，先不做社交、模板市场和复杂账号体系。</div>
+            </article>
+          </div>
+
+          <div class="lane">
+            <div class="lane-title"><span class="dot"></span><span>拓展功能池</span></div>
+            <div class="branch-list">
+              <article class="card branch active" data-title="天气衣物建议" data-kind="market">
+                <small>进入下一层</small>
+                <h3>天气衣物建议</h3>
+                <p>让用户对比天气数字和衣物建议，减少决策时间。</p>
+                <div class="feature-meta"><span>难度 中</span><span>3-5 天</span><span>创新切口：情境缺口</span></div>
+                <div class="branch-actions"><button class="mini keep">加入备选</button><button class="mini">展开</button></div>
+              </article>
+              <article class="card branch" data-title="遗漏风险提醒" data-kind="trust">
+                <small>进入下一层</small>
+                <h3>遗漏风险提醒</h3>
+                <p>出发前按目的地和活动检查容易漏带的物品。</p>
+                <div class="feature-meta"><span>难度 中</span><span>4-6 天</span><span>创新切口：风险扫描</span></div>
+                <div class="branch-actions"><button class="mini keep">加入备选</button><button class="mini">展开</button></div>
+              </article>
+              <article class="card branch" data-title="同行共享清单" data-kind="share">
+                <small>以后再看</small>
+                <h3>同行共享清单</h3>
+                <p>适合家庭或朋友共同出行，但会引入协作复杂度。</p>
+                <div class="feature-meta"><span>难度 高</span><span>1-2 周</span><span>创新切口：责任分摊</span></div>
+                <div class="branch-actions"><button class="mini keep">加入备选</button><button class="mini">展开</button></div>
+              </article>
+              <article class="card branch" data-title="常旅客模板" data-kind="market">
+                <small>补充方向</small>
+                <h3>常旅客模板</h3>
+                <p>把用户常用清单沉淀成模板，提高第二次使用效率。</p>
+                <div class="feature-meta"><span>难度 低</span><span>2-3 天</span><span>创新切口：复用记忆</span></div>
+                <div class="branch-actions"><button class="mini keep">加入备选</button><button class="mini">展开</button></div>
+              </article>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <aside class="panel">
+      <div class="panel-section">
+        <span class="eyebrow">当前判断</span>
+        <h2 id="panelTitle">天气衣物建议</h2>
+        <p id="panelDesc">这是 MVP 之后最自然的拓展，但不应该抢在“智能行李清单”之前做。先收藏，等 MVP 验证后再展开。</p>
+        <div class="metric-grid">
+          <div class="metric"><b id="panelTime">3-5 天</b><span>预计开发</span></div>
+          <div class="metric"><b id="panelDifficulty">中</b><span>实现难度</span></div>
+        </div>
+        <div class="panel-kv">
+          <div><b>创新切口</b><span id="panelNovelty">不是报天气，而是把天气翻译成“今天该带什么、不带什么”。</span></div>
+          <div><b>开发前验证</b><span id="panelValidation">手动做 5 份不同天气的打包建议，看用户是否愿意照着收拾。</span></div>
+        </div>
+      </div>
+      <div class="panel-section">
+        <h2>交给 Agent 的开发 Brief</h2>
+        <p>导出内容会写成任务说明，不只是灵感列表。</p>
+        <div class="agent-card">
+          <h3 id="agentTitle">天气衣物建议</h3>
+          <p id="agentBrief">输入目的地、日期、天气摘要和活动类型，输出衣物建议、可不带物品和原因；验收标准是 3 种天气场景都能生成清晰建议。</p>
+        </div>
+      </div>
+      <div class="panel-section">
+        <h2>开发前验证是什么意思</h2>
+        <p>它不是技术测试，而是先不写完整代码，用最低成本确认“用户真的会用”。通过了再开发，没通过就少浪费几天。</p>
+        <div class="checklist">
+          <div class="check"><i>✓</i><span>手动做 5 份不同天气的打包建议。</span></div>
+          <div class="check"><i>✓</i><span>让用户标记“照着收拾是否更安心”。</span></div>
+          <div class="check"><i>✓</i><span>只在 3 人以上愿意下次继续用时进入开发。</span></div>
+        </div>
+      </div>
+      <div class="panel-section">
+        <h2>导出会包含</h2>
+        <p>市场痛点、最小 MVP、开发前验证、拓展功能池、难度时间、创新切口、验收标准和可发给 agent 的实现 brief。</p>
+      </div>
+    </aside>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const shell=document.querySelector('.shell');
+const brief=document.getElementById('brief');
+const toggleChrome=document.getElementById('toggleChrome');
+const briefIcon=document.getElementById('briefIcon');
+const exportBtn=document.getElementById('exportBtn');
+const exportMenu=document.getElementById('exportMenu');
+const toast=document.getElementById('toast');
+let saved=['天气衣物建议'];
+let current='天气衣物建议';
+const features={
+  '天气衣物建议':{
+    desc:'这是 MVP 之后最自然的拓展，但不应该抢在“智能行李清单”之前做。先收藏，等 MVP 验证后再展开。',
+    difficulty:'中',
+    time:'3-5 天',
+    novelty:'不是报天气，而是把天气翻译成“今天该带什么、不带什么”。',
+    validation:'手动做 5 份不同天气的打包建议，看用户是否愿意照着收拾。',
+    agent:'输入目的地、日期、天气摘要和活动类型，输出衣物建议、可不带物品和原因；验收标准是 3 种天气场景都能生成清晰建议。'
+  },
+  '遗漏风险提醒':{
+    desc:'它强化“别漏带”的核心痛点，适合在清单可用之后补上，帮助用户出发前二次检查。',
+    difficulty:'中',
+    time:'4-6 天',
+    novelty:'不是普通提醒，而是按目的地、活动、证件和天气做风险缺口扫描。',
+    validation:'让 5 个用户用清单收拾后再看风险提醒，记录是否发现了原本会漏掉的物品。',
+    agent:'基于清单、目的地、活动类型生成风险项，按证件/衣物/药品/电子设备分组；验收标准是能解释每个风险为什么出现。'
+  },
+  '同行共享清单':{
+    desc:'它解决多人出行的分工问题，但会引入账号、权限和实时同步，应该等单人清单跑通后再做。',
+    difficulty:'高',
+    time:'1-2 周',
+    novelty:'把“谁负责带什么”变成清单责任，而不是只共享一个静态文档。',
+    validation:'让 2 组同行者用共享表格手动分工，观察是否减少重复购买和漏带。',
+    agent:'实现共享出行空间、成员任务分配和完成状态；验收标准是成员能看到自己负责的物品并完成勾选。'
+  },
+  '常旅客模板':{
+    desc:'它提高复用效率，适合用户完成一次真实出行后再出现，不该在第一次使用时抢注意力。',
+    difficulty:'低',
+    time:'2-3 天',
+    novelty:'把用户真实完成过的清单沉淀为个人记忆，而不是给一堆泛模板。',
+    validation:'观察用户第二次出行是否愿意从上次清单复制并修改，而不是重新生成。',
+    agent:'保存已完成出行清单为模板，支持复制到新行程并编辑；验收标准是模板能保留分类、勾选项和备注。'
+  }
+};
+function showToast(text){
+  toast.textContent=text;
+  toast.classList.add('show');
+  clearTimeout(showToast.timer);
+  showToast.timer=setTimeout(()=>toast.classList.remove('show'),1500);
+}
+function markdown(){
+  const feature=features[current];
+  const featureLines=Object.entries(features).map(([name,item])=>`- ${name}：难度 ${item.difficulty}，预计 ${item.time}。创新切口：${item.novelty}`).join('\\n');
+  return `# CanvasStorm Agent 开发 Brief：AI 旅行打包助手
+
+## 1. 市场痛点
+出发前总怕漏带东西，又不想从空白清单开始想。
+
+## 2. 最小 MVP（必须先做）
+智能行李清单：输入目的地、天数和活动类型，生成一份可直接照着收拾的清单。
+
+### MVP 必做项
+- 目的地 + 天数 + 天气
+- 按场景生成衣物和证件清单
+- 用户勾选后保存一次出行记录
+
+### MVP 暂不做
+- 社交协作
+- 模板市场
+- 复杂账号体系
+
+## 3. 开发前验证
+开发前验证不是技术测试，而是先不写完整代码，用最低成本确认用户真的需要。
+- 手动做 5 份不同天气的打包建议
+- 让用户标记“照着收拾是否更安心”
+- 3 人以上愿意下次继续用，才进入开发
+
+## 4. 拓展功能池
+${featureLines}
+
+## 5. 当前选中功能实现 Brief
+- 功能：${current}
+- 推荐判断：${feature.desc}
+- 实现难度：${feature.difficulty}
+- 预计时间：${feature.time}
+- 创新切口：${feature.novelty}
+- 开发前验证：${feature.validation}
+- Agent 任务：${feature.agent}
+
+## 已加入备选
+${saved.map(item=>`- ${item}`).join('\\n')}`;
+}
+toggleChrome.onclick=()=>{
+  shell.classList.toggle('chrome-collapsed');
+  const collapsed=shell.classList.contains('chrome-collapsed');
+  toggleChrome.textContent=collapsed?'展开顶部栏':'收起顶部栏';
+};
+briefIcon.onclick=()=>{
+  brief.classList.toggle('collapsed');
+  const collapsed=brief.classList.contains('collapsed');
+  briefIcon.textContent=collapsed?'⌄':'⌃';
+};
+exportBtn.onclick=()=>exportMenu.classList.toggle('open');
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.export-wrap'))exportMenu.classList.remove('open');
+});
+document.getElementById('copyMd').onclick=async()=>{
+  await navigator.clipboard?.writeText(markdown());
+  exportMenu.classList.remove('open');
+  showToast('已复制 Markdown');
+};
+document.getElementById('downloadMd').onclick=()=>{
+  const blob=new Blob([markdown()],{type:'text/markdown;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='AI旅行打包助手-MVP拆解.md';
+  a.click();
+  URL.revokeObjectURL(url);
+  exportMenu.classList.remove('open');
+  showToast('已下载 Markdown 文件');
+};
+function selectBranch(card){
+  document.querySelectorAll('.branch').forEach(item=>item.classList.remove('active'));
+  card.classList.add('active');
+  current=card.dataset.title;
+  const feature=features[current];
+  document.getElementById('panelTitle').textContent=current;
+  document.getElementById('panelDesc').textContent=feature.desc;
+  document.getElementById('panelTime').textContent=feature.time;
+  document.getElementById('panelDifficulty').textContent=feature.difficulty;
+  document.getElementById('panelNovelty').textContent=feature.novelty;
+  document.getElementById('panelValidation').textContent=feature.validation;
+  document.getElementById('agentTitle').textContent=current;
+  document.getElementById('agentBrief').textContent=feature.agent;
+}
+document.querySelectorAll('.branch').forEach(card=>{
+  card.onclick=e=>{
+    if(e.target.closest('button'))return;
+    selectBranch(card);
+  };
+  card.querySelector('.keep').onclick=e=>{
+    e.stopPropagation();
+    const title=card.dataset.title;
+    if(!saved.includes(title))saved.push(title);
+    selectBranch(card);
+    showToast(`已把“${title}”加入备选`);
+  };
+});
+</script>
+</body>
+</html>
