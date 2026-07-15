@@ -174,6 +174,10 @@ async function runTests() {
   assert(document.querySelectorAll('.project-card').length >= 3, '默认项目记录已创建');
   assert(document.querySelector('.project-card')?.getAttribute('title')?.includes('线上衣橱'), '项目卡保留完整标题，便于小屏截断时识别');
   assert(document.querySelector('.project-card')?.getAttribute('aria-label')?.includes('打开项目'), '项目卡有明确打开项目语义');
+  document.querySelector('#chromeToggleBtn')?.click();
+  assert(document.querySelector('#appView')?.classList.contains('chrome-collapsed'), '顶部工具栏可以收起');
+  document.querySelector('#chromeToggleBtn')?.click();
+  assert(!document.querySelector('#appView')?.classList.contains('chrome-collapsed'), '顶部工具栏可以展开');
   assert(document.querySelector('#projectTitle')?.textContent.includes('线上衣橱'), '默认打开用户更容易理解的线上衣橱示例');
   assert(document.querySelectorAll('.node').length >= 4, '首屏展示中心节点和第一层方向');
   assert(document.querySelector('#projectKicker')?.textContent.includes('当前层：功能方向'), '顶部明确当前层是功能方向');
@@ -200,9 +204,13 @@ async function runTests() {
   assert(document.querySelector('#decisionBoard')?.textContent.includes('灵感备选'), '结果摘要强调灵感备选库，而不是强迫只留一个');
   assert(document.querySelector('#mvpOverview')?.textContent.includes('核心 MVP'), '首屏明确展示核心 MVP 区块');
   assert(document.querySelector('#mvpOverview')?.textContent.includes('发散方向'), '首屏明确展示发散方向区块');
+  assert(document.querySelector('#mvpOverview')?.textContent.includes('开发前验证'), '首屏解释 MVP 的开发前验证');
+  assert(document.querySelector('#mvpOverview')?.textContent.includes('难度'), '方向卡片展示实现难度');
+  assert(document.querySelector('#mvpOverview')?.textContent.match(/[0-9]-[0-9] 天|1-2 周/), '方向卡片展示预计时间');
   assert(document.querySelector('#mvpOverview')?.textContent.includes('一键穿搭'), '首屏方向区展示可选择的一层方向');
   assert(document.querySelector('#mvpOverview')?.textContent.includes('进入下一层'), '方向区明确点击方向才进入下一层');
   assert(document.querySelectorAll('#mvpOverview [data-focus-direction]').length >= 3, '首屏方向区提供多个方向入口');
+  assert(document.querySelector('#nodeDetail')?.textContent.includes('交给 Agent 的开发 Brief'), '右侧详情包含可交给 Agent 的开发 Brief');
   const firstUserProjects = JSON.parse(localStorage.getItem('cs_graph_projects_米朵') || '[]');
   const wardrobe = firstUserProjects.find((project) => project.title === '线上衣橱');
   assert(document.querySelector('#mapNodeCount')?.textContent === String(wardrobe?.nodes.length), '功能图状态条保留完整项目节点数');
@@ -342,6 +350,11 @@ async function runTests() {
   assert(dom.window.__copiedMarkdown?.includes('# 线上衣橱'), '导出会复制当前项目 Markdown');
   assert(dom.window.__copiedMarkdown?.includes('## 核心 MVP'), '导出内容包含核心 MVP 区块');
   assert(dom.window.__copiedMarkdown?.includes('## 发散方向'), '导出内容包含发散方向区块');
+  assert(dom.window.__copiedMarkdown?.includes('CanvasStorm Agent 开发 Brief'), '导出内容是 Agent-ready brief');
+  assert(dom.window.__copiedMarkdown?.includes('实现难度'), '导出内容包含实现难度');
+  assert(dom.window.__copiedMarkdown?.includes('预计时间'), '导出内容包含预计时间');
+  assert(dom.window.__copiedMarkdown?.includes('创新切口'), '导出内容包含创新切口');
+  assert(dom.window.__copiedMarkdown?.includes('开发前验证'), '导出内容包含开发前验证');
   assert(dom.window.__copiedMarkdown?.includes('一键穿搭'), '导出内容包含发散方向内容');
   assert(dom.window.__copiedMarkdown?.includes('镜前预览卡片'), '导出内容包含手动编辑后的功能点');
   document.querySelector('#detailDeleteNode').click();

@@ -381,6 +381,55 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{
 .topbar .secondary{background:#fff;border-color:#111;color:#111}
 .topbar .secondary:hover{background:#f1f1ee}
 .topbar .primary{box-shadow:0 12px 24px rgba(23,21,16,.2)}
+.app.chrome-collapsed{
+  grid-template-rows:52px minmax(0,1fr) 82px;
+}
+.app.chrome-collapsed .topbar{
+  padding:0 20px;
+}
+.app.chrome-collapsed .topbar-title span,
+.app.chrome-collapsed .ai-status,
+.app.chrome-collapsed .export-wrap,
+.app.chrome-collapsed #topNewProjectBtn,
+.app.chrome-collapsed .user-pill,
+.app.chrome-collapsed #logoutBtn{
+  display:none;
+}
+.chrome-toggle{
+  min-height:40px;
+  border:1px solid var(--line-2);
+  border-radius:999px;
+  background:rgba(255,255,255,.72);
+  color:var(--ink);
+  padding:0 15px;
+  font-weight:900;
+}
+.export-wrap{position:relative}
+.export-menu{
+  position:absolute;
+  right:0;
+  top:48px;
+  width:198px;
+  padding:8px;
+  border:1px solid var(--line-2);
+  border-radius:14px;
+  background:#fffefa;
+  box-shadow:var(--shadow);
+  display:none;
+  z-index:30;
+}
+.export-menu.open{display:grid}
+.export-menu button{
+  width:100%;
+  border:0;
+  border-radius:10px;
+  background:transparent;
+  padding:10px 11px;
+  text-align:left;
+  color:var(--ink);
+  font-weight:900;
+}
+.export-menu button:hover{background:#f3f7f1}
 .sidebar{
   grid-column:1;
   grid-row:3;
@@ -645,6 +694,13 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{
   font-size:11px;
   font-weight:900;
 }
+.mvp-note{
+  border-top:1px solid rgba(17,17,17,.12);
+  padding-top:8px;
+  color:#52635b;
+  font-size:12px;
+  line-height:1.45;
+}
 .direction-panel{
   padding:10px;
   display:grid;
@@ -707,6 +763,24 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{
   margin-top:5px;
   color:inherit;
   opacity:.9;
+  font-style:normal;
+  font-size:10px;
+  font-weight:950;
+}
+.direction-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+  margin-top:7px;
+}
+.direction-meta i{
+  display:inline-flex;
+  border:1px solid rgba(17,17,17,.14);
+  background:rgba(255,255,255,.68);
+  border-radius:999px;
+  padding:3px 6px;
+  color:inherit;
+  opacity:.86;
   font-style:normal;
   font-size:10px;
   font-weight:950;
@@ -1229,6 +1303,40 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{
 }
 .meta-row b{display:block;font-size:12px;color:#475467}
 .meta-row span{font-size:12px;line-height:1.42;color:var(--ink)}
+.agent-brief{
+  border:1px solid rgba(17,17,17,.13);
+  background:#fffefa;
+  border-radius:14px;
+  padding:11px;
+  margin-top:12px;
+}
+.agent-brief b{
+  display:block;
+  font-size:13px;
+  margin-bottom:6px;
+  color:#171510;
+}
+.agent-brief span{
+  display:block;
+  color:#5f665e;
+  font-size:12px;
+  line-height:1.48;
+}
+.feature-tags{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:11px;
+}
+.feature-tags span{
+  border:1px solid rgba(17,17,17,.13);
+  border-radius:999px;
+  background:#f7faf3;
+  color:#4d6344;
+  padding:5px 8px;
+  font-size:11px;
+  font-weight:950;
+}
 .decision-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
 .decision-row .primary{grid-column:1/-1}
 .decision-row.secondary-mode .primary{
@@ -1446,14 +1554,25 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{
   border:1px solid rgba(17,17,17,.16);
   background:#fffdf7;
   box-shadow:none;
+  color:#171510;
+  opacity:1;
 }
 .inspector-card{
   padding:14px 14px 16px;
   border-bottom:1px solid rgba(17,17,17,.12);
+  color:#171510;
+  opacity:1;
 }
 .inspector-card:first-child{background:#fffdf7}
-.inspector-card h2{font-size:20px;letter-spacing:0}
-.inspector-card p{-webkit-line-clamp:4}
+.inspector-card h2{font-size:20px;letter-spacing:0;color:#171510}
+.inspector-card p{-webkit-line-clamp:4;color:#454b43}
+.inspector .recommend-box strong,
+.inspector .meta-row span,
+.inspector .agent-brief span,
+.inspector .child-choice b,
+.inspector .decision-item b{color:#171510}
+.inspector .detail-eyebrow,
+.inspector .feature-tags span{opacity:1}
 .detail-eyebrow{
   background:#efeee7;
   color:#171510;
@@ -1742,7 +1861,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{
     top:0;
     z-index:10;
     display:grid;
-    grid-template-columns:auto minmax(0,1fr) auto auto;
+    grid-template-columns:auto minmax(0,1fr) auto;
     align-items:center;
     gap:8px;
     height:auto;
@@ -1758,9 +1877,27 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{
   .topbar .brand span:not(.brand-mark){display:none}
   .topbar-title{display:none}
   .ai-status{display:none}
-  #topNewProjectBtn{
+  #chromeToggleBtn{
     grid-column:3;
     grid-row:1;
+    white-space:nowrap;
+    min-height:36px;
+    padding:0 10px;
+    font-size:12px;
+  }
+  .export-wrap{
+    grid-column:2;
+    grid-row:2;
+    justify-self:start;
+  }
+  .export-menu{
+    left:0;
+    right:auto;
+    top:42px;
+  }
+  #topNewProjectBtn{
+    grid-column:3;
+    grid-row:2;
     white-space:nowrap;
     font-size:13px;
     padding:0 10px;
@@ -1777,7 +1914,13 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{
     overflow:hidden;
     text-overflow:ellipsis;
   }
-  #logoutBtn{grid-column:4;grid-row:1}
+  #logoutBtn{display:none}
+  .app.chrome-collapsed .topbar{
+    grid-template-columns:auto minmax(0,1fr) auto;
+  }
+  .app.chrome-collapsed .user-pill,
+  .app.chrome-collapsed .export-wrap,
+  .app.chrome-collapsed #topNewProjectBtn{display:none}
   .topbar .primary,.topbar .secondary{min-height:38px;padding:0 12px}
   .workspace{margin:10px;border-left:1px solid #111;border-right:1px solid #111}
   .workspace{grid-column:1;grid-row:2}
@@ -1902,8 +2045,11 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{
     padding:10px;
     z-index:30;
     animation:fadeRise .28s ease both;
+    background:rgba(255,253,247,.98);
+    border-color:rgba(23,21,16,.22);
   }
   body.dock-away .action-dock{
+    display:none!important;
     opacity:0!important;
     pointer-events:none;
     transform:translateY(8px);
@@ -1971,10 +2117,17 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{
     <div class="brand"><span class="brand-mark">CS</span><span>CanvasStorm</span></div>
     <div class="topbar-title">
       <b id="topProjectTitle">项目功能图</b>
-      <span id="topProjectHint">从中心想法开始，点击节点继续发散。</span>
+      <span id="topProjectHint">市场痛点 → 最小 MVP → 拓展功能池</span>
     </div>
     <span class="ai-status" id="aiStatus">AI 检查中</span>
-    <button class="secondary" id="exportProjectBtn">导出</button>
+    <button class="chrome-toggle" id="chromeToggleBtn">收起顶部栏</button>
+    <div class="export-wrap">
+      <button class="secondary" id="exportMenuBtn">导出</button>
+      <div class="export-menu" id="exportMenu">
+        <button id="exportProjectBtn">复制 Markdown</button>
+        <button id="downloadProjectBtn">下载 .md 文件</button>
+      </div>
+    </div>
     <button class="primary" id="topNewProjectBtn">新建功能图</button>
     <div class="user-pill"><span class="avatar" id="userAvatar">U</span><span id="userName">用户</span></div>
     <button class="secondary" id="logoutBtn">退出</button>
@@ -2240,6 +2393,41 @@ function storageKey(){return PROJECT_PREFIX+activeUser}
 function currentProject(){return projects.find(p=>p.id===activeProjectId)||projects[0]||null}
 function currentNode(){const p=currentProject();return p?.nodes.find(n=>n.id===activeNodeId)||p?.nodes[0]||null}
 function rootNodeId(project){return project?.nodes.find(n=>!n.parentId)?.id||project?.nodes[0]?.id||''}
+function featureMetaFor(item={}){
+  const text=`${item.title||''} ${item.desc||''} ${item.type||''} ${item.pain||''}`.toLowerCase();
+  const type=item.type||'';
+  let difficulty='中';
+  let estimate='3-5 天';
+  let innovation='把真实使用场景里的阻塞点变成一个可执行入口。';
+  if(/暂缓|协作|分享|社交|多人|权限|同步/.test(type+text)){
+    difficulty='高';
+    estimate='1-2 周';
+    innovation='把多人责任和传播动作放进功能流，但需要等核心体验成立后再做。';
+  }else if(/录入|模板|清单|提醒|记录|入口|导出/.test(type+text)){
+    difficulty='低';
+    estimate='2-3 天';
+    innovation='降低第一次使用门槛，让用户更快完成一次有效结果。';
+  }else if(/天气|风险|匹配|推荐|识别|生成|解释|摘要/.test(type+text)){
+    difficulty='中';
+    estimate='3-5 天';
+    innovation='不是展示信息，而是把信息翻译成用户下一步能直接照做的判断。';
+  }
+  if(/风险|遗漏|证件|充电器|异常|冲突/.test(text))innovation='做风险缺口扫描，提前发现用户临到行动才会想起的问题。';
+  if(/天气|衣物|穿搭|打包/.test(text))innovation='把天气、场景和已有物品翻译成“今天该带什么/穿什么”。';
+  if(/模板|复用|历史|常旅客/.test(text))innovation='把用户真实完成过的结果沉淀成个人记忆，提升第二次使用效率。';
+  if(/分享|同行|协作|成员/.test(text))innovation='把“谁负责什么”明确到任务层，减少多人协作里的漏项。';
+  return {
+    difficulty:item.difficulty||item.effort||difficulty,
+    estimate:item.estimate||item.time||estimate,
+    innovation:item.innovation||item.novelty||innovation,
+    validation:item.validation||'找 3 个目标用户做一次开发前验证。'
+  };
+}
+function agentBriefFor(item={},project=currentProject()){
+  const meta=featureMetaFor(item);
+  const title=item.title||'当前功能';
+  return `实现“${title}”：输入项目背景、用户场景和必要参数，输出可直接使用的结果；验收标准是用户能在一次真实场景中完成任务，并能解释为什么这个功能解决了痛点。预计 ${meta.estimate}，难度 ${meta.difficulty}。`;
+}
 function saveUsers(){
   const users=JSON.parse(localStorage.getItem(USERS_KEY)||'[]');
   if(activeUser) {
@@ -2414,15 +2602,21 @@ function syncProjectModel(project){
     validation:existingMvp.validation||root?.validation||stableMustHave[0]?.validation||'找 3 个目标用户做一次手工验证。',
     updatedAt:existingMvp.updatedAt||project.updatedAt||new Date().toISOString()
   };
-  project.directions=directChildren.map(n=>({
-    id:n.id,
-    nodeId:n.id,
-    title:n.title,
-    desc:n.desc,
-    reason:n.pain||n.desc,
-    validation:n.validation,
-    decision:n.decision||'maybe'
-  }));
+  project.directions=directChildren.map(n=>{
+    const meta=featureMetaFor(n);
+    return {
+      id:n.id,
+      nodeId:n.id,
+      title:n.title,
+      desc:n.desc,
+      reason:n.pain||n.desc,
+      validation:n.validation,
+      decision:n.decision||'maybe',
+      difficulty:meta.difficulty,
+      estimate:meta.estimate,
+      innovation:meta.innovation
+    };
+  });
   project.decisions={
     ideaPool:project.nodes.filter(n=>n.parentId&&n.decision==='keep').map(n=>n.id),
     later:project.nodes.filter(n=>n.parentId&&n.decision==='drop').map(n=>n.id)
@@ -2536,7 +2730,8 @@ function renderMvpOverview(project,active){
       <div class="mvp-list">
         ${(mustHave.length?mustHave:directions.slice(0,2)).map(item=>`<span>${esc(item.title||'必做项')}</span>`).join('')}
       </div>
-      <span>${esc(mvp.validation||root?.validation||'找 3 个目标用户做一次手工验证。')}</span>
+      <span><strong>开发前验证：</strong>${esc(mvp.validation||root?.validation||'找 3 个目标用户做一次手工验证。')}</span>
+      <div class="mvp-note">MVP 只保留证明核心痛点成立的最薄一层。社交、模板市场、复杂账号体系先不做。</div>
     </section>
     <section class="direction-panel">
       <small>发散方向</small>
@@ -2544,9 +2739,11 @@ function renderMvpOverview(project,active){
         ${directions.slice(0,5).map(direction=>{
           const nodeId=direction.nodeId||direction.id;
           const isActive=nodeId===active?.id;
+          const meta=featureMetaFor(direction);
           return `<button class="direction-pill ${isActive?'active':''}" data-focus-direction="${esc(nodeId)}">
             <b>${esc(direction.title)}</b>
             <span>${esc(direction.reason||direction.desc||direction.validation||'继续展开这个方向')}</span>
+            <div class="direction-meta"><i>难度 ${esc(meta.difficulty)}</i><i>${esc(meta.estimate)}</i></div>
             <em>${isActive?'当前方向':'进入下一层'}</em>
           </button>`;
         }).join('')}
@@ -2855,11 +3052,14 @@ function renderInspector(){
   const childChoiceHtml=selectingChild?renderChildChoices(project,n,stagePick):'';
   const rowMode=n.parentId?'secondary-mode':'choice-mode';
   const decisionDone=n.parentId&&(nodeDepth(project,n)>1||n.decisionChangedAt)&&(n.decision==='keep'||n.decision==='drop');
+  const meta=featureMetaFor(n);
+  const agentBrief=agentBriefFor(n,project);
   if(decisionDone){
     detail.innerHTML=`
       <span class="detail-eyebrow">${n.decision==='keep'?'已加入备选':'已放到以后'} · 可以继续找思路</span>
       <h2>${esc(n.title)}</h2>
       <p>${esc(n.decision==='keep'?'这个点子已经收藏。接下来回到上一层继续看其他分支，也可以之后再从它继续发散。':'这个点子先放到以后。接下来回到上一层，继续收集更有启发的功能想法。')}</p>
+      <div class="feature-tags"><span>难度 ${esc(meta.difficulty)}</span><span>${esc(meta.estimate)}</span></div>
       <div class="recommend-box">
         <b>下一步</b>
         <strong>回到上一层</strong>
@@ -2867,8 +3067,10 @@ function renderInspector(){
       </div>
       <div class="meta-grid">
         <div class="meta-row"><b>为什么</b><span>${esc(n.pain||'需要继续验证真实痛点。')}</span></div>
-        <div class="meta-row"><b>验证</b><span>${esc(n.validation||'找 3 个目标用户验证这个功能是否有用。')}</span></div>
+        <div class="meta-row"><b>创新切口</b><span>${esc(meta.innovation)}</span></div>
+        <div class="meta-row"><b>开发前验证</b><span>${esc(n.validation||'找 3 个目标用户验证这个功能是否有用。')}</span></div>
       </div>
+      <div class="agent-brief"><b>交给 Agent 的开发 Brief</b><span>${esc(agentBrief)}</span></div>
       <div class="decision-row choice-mode">
         <button class="primary" id="expandSelected">回到上一层</button>
       </div>
@@ -2896,10 +3098,13 @@ function renderInspector(){
       <strong>${esc(rec.title)}</strong>
       <span>${esc(rec.reason)}</span>
     </div>
+    <div class="feature-tags"><span>难度 ${esc(meta.difficulty)}</span><span>${esc(meta.estimate)}</span></div>
     <div class="meta-grid">
       <div class="meta-row"><b>为什么</b><span>${esc(n.pain||'需要继续验证真实痛点。')}</span></div>
-      <div class="meta-row"><b>验证</b><span>${esc(n.validation||'找 3 个目标用户验证这个功能是否有用。')}</span></div>
+      <div class="meta-row"><b>创新切口</b><span>${esc(meta.innovation)}</span></div>
+      <div class="meta-row"><b>开发前验证</b><span>${esc(n.validation||'找 3 个目标用户验证这个功能是否有用。')}</span></div>
     </div>
+    <div class="agent-brief"><b>交给 Agent 的开发 Brief</b><span>${esc(agentBrief)}</span></div>
     ${childChoiceHtml}
     <div class="decision-row ${rowMode}">
       <button class="primary" id="expandSelected">${esc(expandLabel)}</button>
@@ -2981,7 +3186,7 @@ function renderActionDock(project,active,stage){
   const proofHtml=showProof?`
     <div class="action-proof" aria-label="当前选择依据">
       <span><b>痛点</b>${esc(proofNode.pain||'先确认用户是否真的需要。')}</span>
-      <span><b>验证</b>${esc(proofNode.validation||'找 3 个目标用户试用或访谈。')}</span>
+      <span><b>开发前验证</b>${esc(proofNode.validation||'找 3 个目标用户试用或访谈。')}</span>
     </div>
   `:'';
 
@@ -3044,11 +3249,15 @@ function renderChildChoices(project,parent,recommended){
   if(!children.length)return '';
   const listLabel=parent.parentId?'子功能选择':'方向选择';
   return `<div class="child-choice-list" aria-label="${esc(listLabel)}">
-    ${children.map(child=>`<button class="child-choice ${child.id===recommended?.id?'recommended-choice':''}" data-focus-child="${child.id}">
+    ${children.map(child=>{
+      const meta=featureMetaFor(child);
+      return `<button class="child-choice ${child.id===recommended?.id?'recommended-choice':''}" data-focus-child="${child.id}">
       <small>${child.id===recommended?.id?'建议进入':'进入下一层'}</small>
       <b>${esc(child.title)}</b>
+      <div class="direction-meta"><i>难度 ${esc(meta.difficulty)}</i><i>${esc(meta.estimate)}</i></div>
       <span>${esc(child.validation||child.desc)}</span>
-    </button>`).join('')}
+    </button>`;
+    }).join('')}
   </div>`;
 }
 function recommendationFor(n,project=currentProject()){
@@ -3113,7 +3322,7 @@ function renderDecisionBoard(project){
       <div class="decision-stat"><b>已收藏 ${saved.length}</b><span>${esc(savedNames)}</span></div>
       <div class="decision-stat"><b>待验证 ${validating.length}</b><span>${esc(validateFocus?.title||'暂无待验证功能')}</span></div>
       <div class="decision-stat"><b>以后再看 ${dropped.length}</b><span>${esc(dropFocus?.title||'还没有暂缓项')}</span></div>
-      <div class="decision-stat"><b>下一步验证</b><span>${esc(nextFocus)}</span></div>
+      <div class="decision-stat"><b>开发前验证</b><span>${esc(nextFocus)}</span></div>
       <div class="decision-stat"><b>原则</b><span>先找思路，再从备选里排优先级。</span></div>
     </div>
   `;
@@ -3298,23 +3507,37 @@ function projectMarkdown(project=currentProject()){
   const lineFor=(n,level=0)=>{
     const prefix='  '.repeat(level);
     const decision=n.decision==='keep'?'已收藏':n.decision==='drop'?'以后再看':'待验证';
+    const meta=featureMetaFor(n);
     const parts=[
       `${prefix}- ${n.title}（${n.type||'功能点'} · ${decision}）`,
       n.desc?`${prefix}  - 说明：${n.desc}`:'',
       n.pain?`${prefix}  - 痛点：${n.pain}`:'',
-      n.validation?`${prefix}  - 验证：${n.validation}`:''
+      `${prefix}  - 难度/时间：${meta.difficulty} · ${meta.estimate}`,
+      `${prefix}  - 创新切口：${meta.innovation}`,
+      n.validation?`${prefix}  - 开发前验证：${n.validation}`:''
     ].filter(Boolean);
     childrenOf(n.id).forEach(child=>parts.push(lineFor(child,level+1)));
     return parts.join('\n');
   };
   const saved=project.nodes.filter(n=>n.parentId&&n.decision==='keep');
   const later=project.nodes.filter(n=>n.parentId&&n.decision==='drop');
+  const current=currentNode()||root;
+  const currentMeta=featureMetaFor(current||{});
+  const directionLines=directions.length?directions.map(item=>{
+    const meta=featureMetaFor(item);
+    return `- ${item.title}：${item.reason||item.desc||'待补充说明'}\n  - 实现难度：${meta.difficulty}\n  - 预计时间：${meta.estimate}\n  - 创新切口：${meta.innovation}\n  - 开发前验证：${item.validation||meta.validation}\n  - 状态：${item.decision==='keep'?'已收藏':item.decision==='drop'?'以后再看':'待验证'}`;
+  }).join('\n'):'- 暂无方向';
   return [
     `# ${project.title}`,
+    '',
+    `CanvasStorm Agent 开发 Brief`,
     '',
     project.seed,
     '',
     `更新时间：${formatTime(project.updatedAt)}`,
+    '',
+    `## 1. 市场痛点`,
+    root?.pain||project.seed||'- 暂无市场痛点',
     '',
     `## 核心 MVP`,
     mvp.goal||root?.desc||project.seed||'- 暂无 MVP 目标',
@@ -3322,11 +3545,27 @@ function projectMarkdown(project=currentProject()){
     `### 必做项`,
     mustHave.length?mustHave.map(item=>`- ${item.title}：${item.reason||item.validation||'待补充原因'}`).join('\n'):'- 暂无必做项',
     '',
-    `### MVP 验证`,
+    `### MVP 暂不做`,
+    '- 社交协作',
+    '- 模板市场',
+    '- 复杂账号体系',
+    '',
+    `### 开发前验证`,
     mvp.validation||root?.validation||'- 暂无验证动作',
     '',
     `## 发散方向`,
-    directions.length?directions.map(item=>`- ${item.title}：${item.reason||item.desc||'待补充说明'}；验证：${item.validation||'待补充验证'}；状态：${item.decision==='keep'?'已收藏':item.decision==='drop'?'以后再看':'待验证'}`).join('\n'):'- 暂无方向',
+    directionLines,
+    '',
+    `## 当前选中功能实现 Brief`,
+    current?[
+      `- 功能：${current.title}`,
+      `- 推荐判断：${current.pain||current.desc||'待补充推荐理由'}`,
+      `- 实现难度：${currentMeta.difficulty}`,
+      `- 预计时间：${currentMeta.estimate}`,
+      `- 创新切口：${currentMeta.innovation}`,
+      `- 开发前验证：${current.validation||currentMeta.validation}`,
+      `- Agent 任务：${agentBriefFor(current,project)}`
+    ].join('\n'):'- 暂无当前功能',
     '',
     `## 灵感备选库`,
     saved.length?saved.map(n=>`- ${n.title}：${n.validation||n.desc}`).join('\n'):'- 暂无收藏',
@@ -3338,27 +3577,29 @@ function projectMarkdown(project=currentProject()){
     root?lineFor(root):'- 暂无节点'
   ].join('\n');
 }
-async function exportProject(){
+async function exportProject(mode='copy'){
   const project=currentProject();
   const text=projectMarkdown(project);
   if(!project||!text)return;
-  try{
-    if(navigator.clipboard?.writeText){
-      await navigator.clipboard.writeText(text);
-      showToast('已复制项目 Markdown');
-      return;
-    }
-  }catch(e){}
+  if(mode==='copy'){
+    try{
+      if(navigator.clipboard?.writeText){
+        await navigator.clipboard.writeText(text);
+        showToast('已复制 Agent 开发 Brief');
+        return;
+      }
+    }catch(e){}
+  }
   const blob=new Blob([text],{type:'text/markdown;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
   a.href=url;
-  a.download=`${project.title||'canvasstorm'}.md`;
+  a.download=`${project.title||'canvasstorm'}-Agent开发Brief.md`;
   document.body.appendChild(a);
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
-  showToast('已导出 Markdown 文件');
+  showToast(mode==='copy'?'剪贴板不可用，已下载 Markdown 文件':'已下载 Markdown 文件');
 }
 function childPositions(parent,count,project=currentProject()){
   if(!parent.parentId){
@@ -3421,8 +3662,8 @@ async function aiGenerate(project,parent,count){
   const prompt={
     systemPrompt:'你是面向独立开发者的产品功能发散顾问。先判断最小可做 MVP，再给功能方向；深入某个方向时，只生成这个方向下面的一层子功能。',
     userPrompt:isRoot
-      ? `项目：${project.title}\n项目描述：${project.seed}\n中心想法：${parent.title} - ${parent.desc}\n\n请生成 MVP-first 结构。要求：\n1. 先给出这个项目最小能成立的 MVP 主线，不要把所有功能都当成必做。\n2. 再给出 ${count} 个功能发散方向，方向必须像用户能理解的产品入口，例如“一键生成穿搭”“社交发布卡片”“旅行衣物清单”。\n3. 每个方向要包含真实痛点和 1 周内能手工完成的最小验证动作。\n4. 避免泛泛的评分、反馈、优化、数据分析、策略体系。\n5. 只输出 JSON 对象，格式：{"mvp":{"goal":"最小 MVP 目标","mustHaveFeatures":[{"title":"必做项","reason":"为什么必做","validation":"验证动作"}],"validation":"整体验证动作"},"directions":[{"title":"方向名","desc":"一句话说明","type":"核心功能|体验功能|增长功能|验证功能|暂缓功能","pain":"真实痛点","validation":"最小验证动作"}]}`
-      : `项目：${project.title}\n项目描述：${project.seed}\n当前功能点：${parent.title} - ${parent.desc}\n\n生成 ${count} 个当前功能点的下一层子功能。要求：\n1. 只沿当前功能继续发散，不要跳到同级方向、商业、运营、后台、技术实现或泛泛用户研究。\n2. 每个标题必须像真实产品里的功能入口，例如“一键生成穿搭”“社交发布卡片”“旅行衣物清单”。\n3. 至少 1 个是最小可做的核心功能，至少 1 个是明显可以暂缓或只手工验证的扩展功能。\n4. 每个功能点要包含真实痛点和 1 周内能手工完成的最小验证动作。\n5. 只输出 JSON 对象，格式：{"children":[{"title":"功能名","desc":"一句话说明","type":"核心功能|体验功能|增长功能|验证功能|暂缓功能","pain":"真实痛点","validation":"最小验证动作"}]}`,
+      ? `项目：${project.title}\n项目描述：${project.seed}\n中心想法：${parent.title} - ${parent.desc}\n\n请生成 MVP-first 结构。要求：\n1. 先给出这个项目最小能成立的 MVP 主线，不要把所有功能都当成必做。\n2. 再给出 ${count} 个功能发散方向，方向必须像用户能理解的产品入口，例如“一键生成穿搭”“社交发布卡片”“旅行衣物清单”。\n3. 每个方向要包含真实痛点、开发前验证、实现难度、预计时间和创新切口。\n4. 避免泛泛的评分、反馈、优化、数据分析、策略体系。\n5. 只输出 JSON 对象，格式：{"mvp":{"goal":"最小 MVP 目标","mustHaveFeatures":[{"title":"必做项","reason":"为什么必做","validation":"开发前验证"}],"validation":"整体验证动作"},"directions":[{"title":"方向名","desc":"一句话说明","type":"核心功能|体验功能|增长功能|验证功能|暂缓功能","pain":"真实痛点","validation":"开发前验证","difficulty":"低|中|高","estimate":"2-3 天|3-5 天|1-2 周","innovation":"创新切口"}]}`
+      : `项目：${project.title}\n项目描述：${project.seed}\n当前功能点：${parent.title} - ${parent.desc}\n\n生成 ${count} 个当前功能点的下一层子功能。要求：\n1. 只沿当前功能继续发散，不要跳到同级方向、商业、运营、后台、技术实现或泛泛用户研究。\n2. 每个标题必须像真实产品里的功能入口，例如“一键生成穿搭”“社交发布卡片”“旅行衣物清单”。\n3. 至少 1 个是最小可做的核心功能，至少 1 个是明显可以暂缓或只手工验证的扩展功能。\n4. 每个功能点要包含真实痛点、开发前验证、实现难度、预计时间和创新切口。\n5. 只输出 JSON 对象，格式：{"children":[{"title":"功能名","desc":"一句话说明","type":"核心功能|体验功能|增长功能|验证功能|暂缓功能","pain":"真实痛点","validation":"开发前验证","difficulty":"低|中|高","estimate":"2-3 天|3-5 天|1-2 周","innovation":"创新切口"}]}`,
     temperature:.72,
     max_tokens:2048
   };
@@ -3447,12 +3688,16 @@ function parseGenerationPayload(content){
   return parsed;
 }
 function normalizeIdea(idea,index=0){
+  const meta=featureMetaFor(idea||{});
   return {
     title:String(idea?.title||`新功能 ${index+1}`).slice(0,24),
     desc:String(idea?.desc||idea?.reason||'围绕当前节点生成的功能点。').slice(0,120),
     type:idea?.type||'功能点',
     pain:idea?.pain||idea?.reason||'需要进一步确认真实痛点。',
-    validation:idea?.validation||'找 3 个目标用户做一次手工验证。'
+    validation:idea?.validation||'找 3 个目标用户做一次手工验证。',
+    difficulty:idea?.difficulty||meta.difficulty,
+    estimate:idea?.estimate||meta.estimate,
+    innovation:idea?.innovation||meta.innovation
   };
 }
 function normalizeGenerationPayload(payload,project,parent,count=4){
@@ -3559,6 +3804,9 @@ function addChildren(project,parent,ideas){
       type:idea.type||'功能点',
       pain:idea.pain||'需要进一步确认真实痛点。',
       validation:idea.validation||'找 3 个目标用户做一次手工验证。',
+      difficulty:idea.difficulty||featureMetaFor(idea).difficulty,
+      estimate:idea.estimate||featureMetaFor(idea).estimate,
+      innovation:idea.innovation||featureMetaFor(idea).innovation,
       decision:'maybe',
       role:parent.parentId?'feature':'direction',
       x:Math.min(88,Math.max(12,pos.x+nudgeX)),
@@ -3672,7 +3920,27 @@ document.getElementById('topNewProjectBtn').onclick=openProjectModal;
 document.getElementById('sideCreateProjectBtn')?.addEventListener('click',openProjectModal);
 document.getElementById('closeProjectModal').onclick=closeProjectModal;
 document.getElementById('cancelProjectBtn').onclick=closeProjectModal;
-document.getElementById('exportProjectBtn').onclick=exportProject;
+document.getElementById('chromeToggleBtn').onclick=()=>{
+  const app=document.getElementById('appView');
+  app.classList.toggle('chrome-collapsed');
+  const collapsed=app.classList.contains('chrome-collapsed');
+  document.getElementById('chromeToggleBtn').textContent=collapsed?'展开顶部栏':'收起顶部栏';
+};
+document.getElementById('exportMenuBtn').onclick=e=>{
+  e.stopPropagation();
+  document.getElementById('exportMenu').classList.toggle('open');
+};
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.export-wrap'))document.getElementById('exportMenu')?.classList.remove('open');
+});
+document.getElementById('exportProjectBtn').onclick=()=>{
+  document.getElementById('exportMenu')?.classList.remove('open');
+  exportProject('copy');
+};
+document.getElementById('downloadProjectBtn').onclick=()=>{
+  document.getElementById('exportMenu')?.classList.remove('open');
+  exportProject('download');
+};
 document.querySelectorAll('[data-project-example]').forEach(btn=>btn.onclick=()=>fillProjectExample(btn.dataset.projectExample));
 document.getElementById('newProjectTitle').addEventListener('keydown',e=>{
   if(e.key!=='Enter')return;

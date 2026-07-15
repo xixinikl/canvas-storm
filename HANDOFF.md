@@ -6,10 +6,10 @@
 
 CanvasStorm 现在有两条线：
 
-1. `index.html` 是当前主应用，已经完成 MVP-first 功能图重构，PR #5 正在等待用户最终验收。
-2. `concept-fresh-demo.html` 是用户刚确认的新版视觉和产品表达 demo，用来指导下一轮把主应用界面改得更清晰、更清爽。
+1. `index.html` 是当前主应用，已经完成 MVP-first 功能图重构，并已把用户确认的 fresh demo 核心体验合入主界面。
+2. `concept-fresh-demo.html` 仍保留为设计/产品方向参考样板，方便后续继续对照视觉和信息结构。
 
-这次新增的 `concept-fresh-demo.html` 不要误当成正式主入口。它是“设计/产品方向样板”，作用是给下一位开发者或另一个电脑上的 Codex 看懂：下一版 CanvasStorm 应该怎么呈现 MVP、拓展功能、难度、时间、创新切口和可交给 agent 的开发 brief。
+这次主应用已迁入的内容包括：顶部栏折叠、导出复制/下载、MVP 与拓展功能的清晰说明、开发前验证、实现难度、预计时间、创新切口、右侧 Agent 开发 Brief、agent-ready Markdown 导出。
 
 ## 仓库与分支
 
@@ -38,17 +38,18 @@ npm start
 http://127.0.0.1:3000/
 ```
 
-新版方向 demo：
+参考 demo：
 
 ```text
 http://127.0.0.1:3000/concept-fresh-demo.html
 ```
 
-## 这次新增 demo 做了什么
+## 这次已合入主应用的体验
 
-文件：`concept-fresh-demo.html`
+主应用文件：`index.html`
+参考样板：`concept-fresh-demo.html`
 
-用户已确认“就这样”，因此这份 demo 代表下一步 UI/产品方向：
+用户已确认 demo 方向后，已迁入主应用：
 
 - 顶部栏可折叠，减少工具区视觉占用。
 - 页面视觉更清爽，浅色、留白、柔和边界，不再像重型画布工具。
@@ -96,39 +97,38 @@ http://127.0.0.1:3000/concept-fresh-demo.html
 - 默认项目：线上衣橱、AI 旅行打包助手、AI 简历优化助手。
 - 新建项目：输入项目点和真实场景，生成中心节点和第一层功能分支。
 - MVP-first 结构：保存 `mvp / directions / decisions` 等字段。
+- Fresh 主界面：顶部栏可折叠，方向卡展示难度/预计时间，右侧详情展示创新切口、开发前验证和 Agent 开发 Brief。
 - 功能图浏览：点击节点进入当前节点视图，显示当前路径和下一层节点。
 - AI 发散：配置 `DEEPSEEK_API_KEY` 后走 `/api/storm`，未配置时使用本地 fallback。
 - 节点操作：编辑、手动加点子、删除节点/子树。
 - 决策记录：加入备选库、以后再看。
-- 导出：当前项目可复制/导出 Markdown。
+- 导出：当前项目可复制/下载 agent-ready Markdown。
 - 后端 API：会话、用户项目空间、AI 状态、版本检查。
 - WebSocket：保留多人通道基础测试。
 - CI：`.github/workflows/realtime-preview-ci.yml` 会在 PR 上跑 `npm ci` + `npm test`。
 
 ## 当前不足
 
-主应用功能已经能跑，但用户仍觉得：
+主应用功能已经能跑，并已把 demo 的核心表达合入。但后续仍可继续优化：
 
-- 画布观感不够好，容易晕。
-- 层级和动作语义仍需要更直观。
-- 节点布局仍可能显得拥挤。
-- “加入备选库”等反馈可以更强。
-- UI 应该继续向 `concept-fresh-demo.html` 的清爽方向靠拢。
+- 画布节点布局仍可继续做更精细的防重叠和自动排版。
+- 移动端顶部栏可再压缩，但当前已可用。
+- AI 输出质量还可以通过更多真实项目样例继续调 prompt。
+- `concept-fresh-demo.html` 是参考样板，后续不要把它当成独立产品线继续堆功能。
 
-因此下一步不要继续在旧视觉上小修太多，建议把 demo 的信息架构迁回主应用。
+因此下一步建议围绕主应用继续打磨，而不是继续只改 demo。
 
 ## 下一步建议拆分
 
-建议新开后续任务或 PR，不要直接把 demo 粗暴替换主应用：
+建议新开后续任务或 PR，继续在主应用上打磨：
 
-1. 把主应用顶部栏改为 demo 的清爽工具栏，并支持折叠。
-2. 把主应用首屏改成“市场问题 / 最小 MVP / 拓展功能池”的清晰结构。
-3. 给功能节点补充难度、预计时间、创新切口、开发前验证。
-4. 改造导出 Markdown，让它输出 agent-ready brief。
-5. 优化画布布局，减少节点重叠和跳动。
-6. 保留现有后端、用户空间、持久化和测试，不要为了 UI demo 牺牲已有功能。
+1. 继续优化画布布局，减少节点重叠和跳动。
+2. 提升移动端顶部栏和画布阅读效率。
+3. 用更多真实项目样例调优 AI 输出，让功能建议更有创新性和实现判断。
+4. 考虑把难度、时间、创新切口做成可编辑字段。
+5. 保留现有后端、用户空间、持久化和测试，不要为了视觉再牺牲已有功能。
 
-重要：`concept-fresh-demo.html` 目前是纯静态 demo，不接后端、不保存真实用户数据。迁入主应用时要接回现有 `users` API 和本地持久化逻辑。
+重要：`concept-fresh-demo.html` 目前仍是纯静态参考 demo，不接后端、不保存真实用户数据。正式体验请看 `index.html`。
 
 ## 验证证据
 
@@ -143,29 +143,29 @@ npm test
 - HTML syntax：通过
 - API：56 passed, 0 failed
 - WebSocket：12 passed, 0 failed
-- Frontend：170 passed, 0 failed
+- Frontend：181 passed, 0 failed
 
-demo 浏览器验证：
+主应用浏览器验证：
 
 - 桌面无横向溢出。
 - 手机无横向溢出。
 - 顶部栏 `收起顶部栏 / 展开顶部栏` 正常。
-- 说明卡折叠正常。
-- 点击拓展功能后右侧详情会更新。
+- 右侧详情包含 `交给 Agent 的开发 Brief`。
+- 方向卡片包含难度和预计时间。
 - 导出菜单正常打开。
-- `markdown()` 内容包含：
+- `projectMarkdown()` 内容包含：
   - `CanvasStorm Agent 开发 Brief`
   - `开发前验证`
   - `实现难度`
   - `预计时间`
-  - 当前选中功能名
+  - `创新切口`
 - console：0 errors, 0 warnings。
 
 安全检查：
 
 - `.env` 已在 `.gitignore`。
 - 不要提交真实 API key。
-- `concept-fresh-demo.html` 已扫描，没有真实 `sk-...` 或 GitHub token。
+- `index.html`、`tests/frontend-data.test.js`、`HANDOFF.md`、`concept-fresh-demo.html` 已扫描，没有真实 `sk-...` 或 GitHub token。
 
 ## 关键文件
 
