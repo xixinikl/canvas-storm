@@ -18,18 +18,55 @@ CanvasStorm 现在有两条线：
 - 当前 PR：[#5 feat: CanvasStorm workbench baseline and MVP-first refactor plan](https://github.com/xixinikl/canvas-storm/pull/5)
 - PR 目标分支：`main`
 - PR 状态：Draft，保持给用户验收，不要未经确认直接合并。
-- 最近远端提交：`f24cbdb fix: improve canvas readability and keep feedback`
+- 最近远端提交：`31cbe64 feat: merge fresh MVP workbench into app`
 
-另一个电脑继续工作：
+## 另一个电脑拉取和启动
+
+如果另一台电脑还没有这个项目：
 
 ```bash
 git clone https://github.com/xixinikl/canvas-storm.git
 cd canvas-storm
 git checkout cx/direction-workbench-ci
-cp .env.example .env
-# 如需真实 AI，再编辑 .env 填 DEEPSEEK_API_KEY
 npm install
 npm start
+```
+
+如果另一台电脑已经 clone 过这个项目：
+
+```bash
+cd canvas-storm
+git fetch origin
+git checkout cx/direction-workbench-ci
+git pull --ff-only origin cx/direction-workbench-ci
+npm install
+npm start
+```
+
+确认没有拉错版本：
+
+```bash
+git status --short --branch
+git log --oneline -3
+```
+
+应该看到当前分支是：
+
+```text
+cx/direction-workbench-ci
+```
+
+最新提交应该包含：
+
+```text
+31cbe64 feat: merge fresh MVP workbench into app
+```
+
+如需真实 AI：
+
+```bash
+cp .env.example .env
+# 编辑 .env，填入 DEEPSEEK_API_KEY
 ```
 
 主应用入口：
